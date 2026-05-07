@@ -1778,13 +1778,14 @@ Vue.component("user_list", {
                             </button>
                         </div>
                         <form class="validate-form" method="POST" @submit.stop.prevent="resetPassword()">
+                            <input type="text" name="username" autocomplete="username" :value="userPass.loginid || ''" hidden readonly />
                             <div class="modal-body">
                                 <div class="form-group">
                                     <div class="d-flex justify-content-between">
                                         <label for="login-password">New Password</label>
                                     </div>
                                     <div class="input-group input-group-merge form-password-toggle1">
-                                        <input type="password" required class="form-control new_password" v-model="userPass.pass"  name="new_password" tabindex="2" placeholder="********" aria-describedby="login-password" />
+                                        <input type="password" required autocomplete="new-password" class="form-control new_password" v-model="userPass.pass"  name="new_password" tabindex="2" placeholder="********" aria-describedby="login-password" />
                                         <div class="input-group-append">
                                             <span class="input-group-text cursor-pointer"><i data-feather="eye"></i></span>
                                         </div>
