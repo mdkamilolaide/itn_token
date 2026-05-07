@@ -288,7 +288,7 @@ if (IsPrivilegeInArray(json_decode($privilege, true), $privi)) {
 
     <?php
     $extra_script = "";
-    $extra_script .= '<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDNj94sO6Ly0yBQKStyUa2Vej7viKe4-54&callback=runMap&libraries=&v=weekly" async></script>';
+    $extra_script .= '<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDNj94sO6Ly0yBQKStyUa2Vej7viKe4-54&callback=runMap&libraries=&v=weekly&loading=async" async></script>';
     $extra_script .= '<script src="' . $config_pre_append_link . 'app-assets/app/mobilization/map.js' . '"></script>';
     ?>
 
