@@ -1,0 +1,910 @@
+-- Comprehensive ipolongo test database seed
+-- Schema extracted from ipolongo_v5 20250615_160043.sql
+-- Includes all table definitions with minimal sample data
+
+DROP DATABASE IF EXISTS ipolongo_test;
+CREATE DATABASE ipolongo_test CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+USE ipolongo_test;
+
+SET FOREIGN_KEY_CHECKS = 0;
+
+-- Core user and system tables
+CREATE TABLE usr_role (
+  roleid INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  title VARCHAR(100) NOT NULL,
+  role_code VARCHAR(50) DEFAULT NULL,
+  system_privilege LONGTEXT NULL,
+  platform VARCHAR(50) DEFAULT 'web',
+  module LONGTEXT NULL,
+  priority INT DEFAULT 1,
+  created DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated DATETIME DEFAULT CURRENT_TIMESTAMP,
+  KEY role_code (role_code)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE usr_login (
+  userid INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  loginid VARCHAR(100) NOT NULL,
+  username VARCHAR(100) DEFAULT NULL,
+  pwd VARCHAR(255) NOT NULL,
+  guid VARCHAR(100) DEFAULT NULL,
+  roleid INT NOT NULL,
+  geo_level VARCHAR(50) DEFAULT 'ward',
+  geo_level_id INT DEFAULT NULL,
+  user_group VARCHAR(50) DEFAULT 'default',
+  active TINYINT(1) DEFAULT 1,
+  is_change_password TINYINT(1) DEFAULT 0,
+  device_sn VARCHAR(100) DEFAULT NULL,
+  created DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated DATETIME DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT fk_usr_login_role FOREIGN KEY (roleid) REFERENCES usr_role(roleid),
+  KEY device_sn (device_sn)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE usr_identity (
+  id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  userid INT NOT NULL,
+  first VARCHAR(100) DEFAULT NULL,
+  middle VARCHAR(100) DEFAULT NULL,
+  last VARCHAR(100) DEFAULT NULL,
+  gender VARCHAR(20) DEFAULT NULL,
+  email VARCHAR(150) DEFAULT NULL,
+  phone VARCHAR(50) DEFAULT NULL,
+  created DATETIME DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT fk_usr_identity_login FOREIGN KEY (userid) REFERENCES usr_login(userid),
+  KEY userid (userid)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE usr_finance (
+  id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  userid INT NOT NULL,
+  bank_name VARCHAR(100) DEFAULT NULL,
+  account_name VARCHAR(150) DEFAULT NULL,
+  account_no VARCHAR(50) DEFAULT NULL,
+  verification_status VARCHAR(50) DEFAULT NULL,
+  verified_account_name VARCHAR(150) DEFAULT NULL,
+  last_verified_date DATETIME DEFAULT NULL,
+  created DATETIME DEFAULT CURRENT_TIMESTAMP,
+  KEY userid (userid)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE usr_security (
+  id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  userid INT NOT NULL,
+  created DATETIME DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE usr_user_activity (
+  id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  uid INT DEFAULT NULL,
+  module VARCHAR(100) DEFAULT NULL,
+  ip VARCHAR(50) DEFAULT NULL,
+  description TEXT DEFAULT NULL,
+  result VARCHAR(50) DEFAULT NULL,
+  created DATETIME DEFAULT CURRENT_TIMESTAMP,
+  KEY userid (uid)
+) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+
+CREATE TABLE usr_workhour_extension (
+  id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  userid INT DEFAULT NULL,
+  extension_minutes INT DEFAULT 0,
+  created DATETIME DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- System tables
+CREATE TABLE sys_geo_level (
+  id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  level_name VARCHAR(100) DEFAULT NULL,
+  created DATETIME DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE sys_geo_codex (
+  id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  geo_level VARCHAR(50) DEFAULT NULL,
+  geo_level_id INT DEFAULT NULL,
+  geo_value INT DEFAULT 0,
+  title VARCHAR(100) DEFAULT NULL,
+  geo_string VARCHAR(255) DEFAULT NULL,
+  comid INT DEFAULT NULL,
+  created DATETIME DEFAULT CURRENT_TIMESTAMP,
+  KEY geo_level (geo_level),
+  KEY comid (comid)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE sys_device_login (
+  id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  device_serial VARCHAR(100) DEFAULT NULL,
+  loginid VARCHAR(100) DEFAULT NULL,
+  created DATETIME DEFAULT CURRENT_TIMESTAMP,
+  KEY loginid (loginid)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE sys_device_registry (
+  id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  serial_no VARCHAR(100) DEFAULT NULL,
+  device_code VARCHAR(100) DEFAULT NULL,
+  device_name VARCHAR(150) DEFAULT NULL,
+  connected DATETIME DEFAULT NULL,
+  connected_loginid VARCHAR(100) DEFAULT NULL,
+  created DATETIME DEFAULT CURRENT_TIMESTAMP,
+  KEY serial_no (serial_no)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE sys_list_module (
+  id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  module_name VARCHAR(100) DEFAULT NULL,
+  created DATETIME DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE sys_list_platform (
+  id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  platform_name VARCHAR(100) DEFAULT NULL,
+  created DATETIME DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE sys_list_privileges (
+  id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  privilege_name VARCHAR(100) DEFAULT NULL,
+  created DATETIME DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE sys_bank_code (
+  id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  bank_code VARCHAR(50) DEFAULT NULL,
+  bank_name VARCHAR(150) DEFAULT NULL,
+  created DATETIME DEFAULT CURRENT_TIMESTAMP,
+  KEY bank_code (bank_code)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE sys_geo_hierachy_define (
+  id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  hierarchy_name VARCHAR(100) DEFAULT NULL,
+  created DATETIME DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE sys_default_settings (
+  id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  setting_key VARCHAR(100) DEFAULT NULL,
+  setting_value LONGTEXT DEFAULT NULL,
+  created DATETIME DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE sys_request_counts (
+  id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  date DATE DEFAULT NULL,
+  hour INT DEFAULT NULL,
+  count INT DEFAULT 0,
+  created DATETIME DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY unique_hour (date, hour)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE sys_working_hours (
+  id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  start_time TIME DEFAULT NULL,
+  end_time TIME DEFAULT NULL,
+  created DATETIME DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Master data tables
+CREATE TABLE ms_geo_state (
+  StateId INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  Fullname VARCHAR(100) DEFAULT NULL,
+  created DATETIME DEFAULT CURRENT_TIMESTAMP,
+  KEY msstate_Fullname (Fullname)
+) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+
+CREATE TABLE ms_geo_lga (
+  LgaId INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  LgaName VARCHAR(100) DEFAULT NULL,
+  StateId INT DEFAULT NULL,
+  created DATETIME DEFAULT CURRENT_TIMESTAMP,
+  KEY StateId (StateId)
+) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+
+CREATE TABLE ms_geo_ward (
+  wardid INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  ward_name VARCHAR(100) DEFAULT NULL,
+  lgaid INT DEFAULT NULL,
+  created DATETIME DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE ms_geo_cluster (
+  clusterid INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  cluster_name VARCHAR(100) DEFAULT NULL,
+  wardid INT DEFAULT NULL,
+  created DATETIME DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE ms_geo_dp (
+  dpid INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  dp_name VARCHAR(100) DEFAULT NULL,
+  clusterid INT DEFAULT NULL,
+  created DATETIME DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE ms_geo_comm (
+  comid INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  comm_name VARCHAR(100) DEFAULT NULL,
+  dpid INT DEFAULT NULL,
+  created DATETIME DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE ms_product_item (
+  itemid INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  item_name VARCHAR(100) DEFAULT NULL,
+  item_code VARCHAR(50) DEFAULT NULL,
+  created DATETIME DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE ms_product_sgtin (
+  sgtinid INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  sgtin VARCHAR(50) DEFAULT NULL,
+  itemid INT DEFAULT NULL,
+  batch VARCHAR(50) DEFAULT NULL,
+  expiry DATE DEFAULT NULL,
+  created DATETIME DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE ms_product_sscc (
+  ssccid INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  sscc VARCHAR(50) DEFAULT NULL,
+  itemid INT DEFAULT NULL,
+  created DATETIME DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT ms_product_item_fk FOREIGN KEY (itemid) REFERENCES ms_product_item(itemid)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Mobilization & Distribution tables
+CREATE TABLE hhm_location_categories (
+  id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  location VARCHAR(50) DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE hhm_mobilization (
+  hhid INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  mobilization_date DATETIME DEFAULT NULL,
+  created DATETIME DEFAULT CURRENT_TIMESTAMP,
+  dp_id INT DEFAULT NULL,
+  KEY dp_id (dp_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE hhm_distribution (
+  dis_id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  dp_id INT DEFAULT NULL,
+  hhid INT DEFAULT NULL,
+  etoken_id INT DEFAULT NULL,
+  etoken_serial VARCHAR(50) DEFAULT NULL,
+  recorder_id INT DEFAULT NULL,
+  distributor_id INT DEFAULT NULL,
+  collected_nets INT DEFAULT NULL,
+  is_gs_net TINYINT(1) NOT NULL DEFAULT 0,
+  gs_net_serial LONGTEXT DEFAULT NULL,
+  eolin_bring_old_net TINYINT(1) DEFAULT NULL,
+  eolin_total_old_net INT DEFAULT NULL,
+  longitude VARCHAR(100) DEFAULT NULL,
+  latitude VARCHAR(100) DEFAULT NULL,
+  device_serial VARCHAR(50) DEFAULT NULL,
+  app_version VARCHAR(50) DEFAULT NULL,
+  collected_date DATETIME DEFAULT CURRENT_TIMESTAMP,
+  created DATETIME DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY etoken_serial (etoken_serial),
+  KEY is_gs_net (is_gs_net),
+  KEY dp_id (dp_id),
+  KEY hhid (hhid)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE hhm_gs_net_serial (
+  snid INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  dis_id INT DEFAULT NULL,
+  hhid INT DEFAULT NULL,
+  etoken_id INT DEFAULT NULL,
+  net_serial VARCHAR(255) DEFAULT NULL,
+  gtin VARCHAR(20) DEFAULT NULL,
+  sgtin VARCHAR(20) DEFAULT NULL,
+  batch VARCHAR(20) DEFAULT NULL,
+  expiry VARCHAR(20) DEFAULT NULL,
+  is_verified TINYINT(4) NOT NULL DEFAULT 0,
+  created DATETIME DEFAULT CURRENT_TIMESTAMP,
+  KEY sgtin (sgtin)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE hhm_gs_net_verification (
+  id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  sgtinid INT NOT NULL,
+  snid INT NOT NULL,
+  sgtin VARCHAR(50) DEFAULT NULL,
+  status VARCHAR(50) DEFAULT NULL,
+  note LONGTEXT DEFAULT NULL,
+  created DATETIME DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE hhm_gs_net_verification_log (
+  logid INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  total_verification INT DEFAULT NULL,
+  description LONGTEXT DEFAULT NULL,
+  created DATETIME DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE dsh_mob_summary_dp (
+  id INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  dpid INT DEFAULT NULL,
+  wardid INT DEFAULT NULL,
+  clusterid INT DEFAULT NULL,
+  lgaid INT DEFAULT NULL,
+  households INT DEFAULT NULL,
+  enetcards INT DEFAULT NULL,
+  family_size INT DEFAULT NULL,
+  geo_string VARCHAR(255) DEFAULT NULL,
+  KEY dpid (dpid),
+  KEY wardid (wardid),
+  KEY lgaid (lgaid)
+) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+
+-- Net Card (NC) tables
+CREATE TABLE nc_token_batch (
+  batchid INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  batch_no VARCHAR(100) DEFAULT NULL,
+  created DATETIME DEFAULT CURRENT_TIMESTAMP,
+  KEY batch_no (batch_no)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE nc_token (
+  tokenid INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  token_code VARCHAR(100) DEFAULT NULL,
+  batchid INT DEFAULT NULL,
+  status VARCHAR(50) DEFAULT NULL,
+  serial_no VARCHAR(100) DEFAULT NULL,
+  created DATETIME DEFAULT CURRENT_TIMESTAMP,
+  KEY serial_no (serial_no)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE nc_netcard (
+  ncid INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  netcard_code VARCHAR(100) DEFAULT NULL,
+  tokenid INT DEFAULT NULL,
+  mobilizer_userid INT DEFAULT NULL,
+  device_serial VARCHAR(50) DEFAULT NULL,
+  location_value INT DEFAULT 40,
+  wardid INT DEFAULT NULL,
+  created DATETIME DEFAULT CURRENT_TIMESTAMP,
+  KEY device_serial (device_serial)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE nc_netcard_allocation (
+  atid INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  ncid INT DEFAULT NULL,
+  allocated_to INT DEFAULT NULL,
+  quantity INT DEFAULT NULL,
+  origin VARCHAR(50) DEFAULT NULL,
+  created DATETIME DEFAULT CURRENT_TIMESTAMP,
+  KEY origin (origin)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE nc_netcard_allocation_online (
+  id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  allocation_id INT DEFAULT NULL,
+  created DATETIME DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE nc_netcard_allocation_order (
+  orderid INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  allocation_id INT DEFAULT NULL,
+  order_date DATETIME DEFAULT NULL,
+  device_serial VARCHAR(50) DEFAULT NULL,
+  created DATETIME DEFAULT CURRENT_TIMESTAMP,
+  KEY device_serial (device_serial)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE nc_netcard_download (
+  sn INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  netcard_count INT DEFAULT NULL,
+  userid INT DEFAULT NULL,
+  created DATETIME DEFAULT CURRENT_TIMESTAMP,
+  KEY user_id (userid)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE nc_netcard_movement (
+  mtid INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  netcard_id INT DEFAULT NULL,
+  from_location VARCHAR(100) DEFAULT NULL,
+  to_location VARCHAR(100) DEFAULT NULL,
+  created DATETIME DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE nc_netcard_unlocked_log (
+  id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  netcard_id INT DEFAULT NULL,
+  unlocked_by INT DEFAULT NULL,
+  device_serial VARCHAR(50) DEFAULT NULL,
+  created DATETIME DEFAULT CURRENT_TIMESTAMP,
+  KEY device_serial (device_serial)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE nc_netcard_unused_pushed (
+  id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  netcard_id INT DEFAULT NULL,
+  pushed_date DATETIME DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE nc_netcard_usage (
+  utid INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  ncid_list LONGTEXT DEFAULT NULL,
+  usage_count INT DEFAULT 0,
+  created DATETIME DEFAULT CURRENT_TIMESTAMP,
+  KEY utid (utid, ncid_list(20))
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- SMC (Seasonal Malaria Chemoprevention) tables
+CREATE TABLE smc_period (
+  periodid INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  period_name VARCHAR(100) DEFAULT NULL,
+  created DATETIME DEFAULT CURRENT_TIMESTAMP,
+  KEY periodid (periodid)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE smc_commodity (
+  product_id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(100) DEFAULT NULL,
+  description LONGTEXT DEFAULT NULL,
+  created DATETIME DEFAULT CURRENT_TIMESTAMP,
+  KEY drug_index (name)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE smc_product (
+  product_id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(100) DEFAULT NULL,
+  description LONGTEXT DEFAULT NULL,
+  created DATETIME DEFAULT CURRENT_TIMESTAMP,
+  KEY drug_index (name)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE smc_child (
+  child_id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  household_id INT DEFAULT NULL,
+  age_months INT DEFAULT NULL,
+  created DATETIME DEFAULT CURRENT_TIMESTAMP,
+  dpid INT DEFAULT NULL,
+  KEY comid (dpid)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE smc_child_household (
+  hhid INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  dpid INT DEFAULT NULL,
+  hh_token VARCHAR(100) DEFAULT NULL,
+  created DATETIME DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY hh_token (hh_token)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE smc_cms_location (
+  location_id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  location_name VARCHAR(100) DEFAULT NULL,
+  created DATETIME DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE smc_drug_administration (
+  adm_id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  child_id INT DEFAULT NULL,
+  drug_id INT DEFAULT NULL,
+  administration_date DATETIME DEFAULT NULL,
+  dose INT DEFAULT NULL,
+  redose_count INT DEFAULT 0,
+  redose_issue_id INT DEFAULT NULL,
+  created DATETIME DEFAULT CURRENT_TIMESTAMP,
+  KEY resode_issue_id (redose_issue_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE smc_icc_issue (
+  issue_id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  issue_date DATETIME DEFAULT NULL,
+  issue_drug INT DEFAULT NULL,
+  quantity INT DEFAULT NULL,
+  created DATETIME DEFAULT CURRENT_TIMESTAMP,
+  KEY issue_drug (issue_drug)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE smc_icc_collection (
+  id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  issue_id INT DEFAULT NULL,
+  collector_id INT DEFAULT NULL,
+  collection_date DATETIME DEFAULT NULL,
+  quantity_collected INT DEFAULT NULL,
+  periodid INT DEFAULT NULL,
+  created DATETIME DEFAULT CURRENT_TIMESTAMP,
+  KEY periodid (periodid)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE smc_icc_download_log (
+  id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  issue_id INT DEFAULT NULL,
+  downloader_id INT DEFAULT NULL,
+  cdd_lead_id INT DEFAULT NULL,
+  created DATETIME DEFAULT CURRENT_TIMESTAMP,
+  KEY cdd_lead_id (cdd_lead_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE smc_icc_push (
+  push_id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  issue_id INT DEFAULT NULL,
+  pusher_id INT DEFAULT NULL,
+  quantity_pushed INT DEFAULT NULL,
+  created DATETIME DEFAULT CURRENT_TIMESTAMP,
+  KEY issue_id (issue_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE smc_icc_receive (
+  receive_id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  issue_id INT DEFAULT NULL,
+  receiver_id INT DEFAULT NULL,
+  receive_date DATETIME DEFAULT NULL,
+  quantity_received INT DEFAULT NULL,
+  periodid INT DEFAULT NULL,
+  created DATETIME DEFAULT CURRENT_TIMESTAMP,
+  KEY periodid (periodid)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE smc_icc_reconcile (
+  recon_id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  issue_id INT DEFAULT NULL,
+  reconciler_id INT DEFAULT NULL,
+  reconcile_date DATETIME DEFAULT NULL,
+  device_serial VARCHAR(50) DEFAULT NULL,
+  created DATETIME DEFAULT CURRENT_TIMESTAMP,
+  KEY device_serial (device_serial)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE smc_icc_reconcile_log (
+  log_id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  reconcile_id INT DEFAULT NULL,
+  drug INT DEFAULT NULL,
+  balance INT DEFAULT NULL,
+  created DATETIME DEFAULT CURRENT_TIMESTAMP,
+  KEY drug (drug)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE smc_icc_unlock (
+  unlock_id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  issue_id INT DEFAULT NULL,
+  unlocked_by INT DEFAULT NULL,
+  created DATETIME DEFAULT CURRENT_TIMESTAMP,
+  KEY issue_id (issue_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE smc_icc_aggragator (
+  id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  aggregation_data LONGTEXT DEFAULT NULL,
+  drug INT DEFAULT NULL,
+  created DATETIME DEFAULT CURRENT_TIMESTAMP,
+  KEY drug (drug)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE smc_inventory_central (
+  inventory_id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  product_id INT DEFAULT NULL,
+  quantity INT DEFAULT 0,
+  expiry DATE DEFAULT NULL,
+  created DATETIME DEFAULT CURRENT_TIMESTAMP,
+  KEY expiry (expiry)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE smc_inventory_central_transit (
+  inventory_id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  product_id INT DEFAULT NULL,
+  quantity INT DEFAULT 0,
+  shipment_id INT DEFAULT NULL,
+  created DATETIME DEFAULT CURRENT_TIMESTAMP,
+  KEY shipment_id (shipment_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE smc_inventory_inbound (
+  inbound_id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  product_id INT DEFAULT NULL,
+  quantity INT DEFAULT 0,
+  inbound_date DATETIME DEFAULT NULL,
+  location_id INT DEFAULT NULL,
+  created DATETIME DEFAULT CURRENT_TIMESTAMP,
+  KEY location_id (location_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE smc_inventory_outbound (
+  outbound_id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  product_id INT DEFAULT NULL,
+  quantity INT DEFAULT 0,
+  outbound_date DATETIME DEFAULT NULL,
+  shipment_id INT DEFAULT NULL,
+  created DATETIME DEFAULT CURRENT_TIMESTAMP,
+  KEY shipment_id (shipment_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE smc_inventory_transaction (
+  trans_id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  product_id INT DEFAULT NULL,
+  quantity INT DEFAULT 0,
+  transaction_type VARCHAR(50) DEFAULT NULL,
+  expiry DATE DEFAULT NULL,
+  created DATETIME DEFAULT CURRENT_TIMESTAMP,
+  KEY expiry (expiry)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE smc_inventory_transfer (
+  transfer_id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  from_location_id INT DEFAULT NULL,
+  to_location_id INT DEFAULT NULL,
+  transfer_date DATETIME DEFAULT NULL,
+  created DATETIME DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE smc_process_setting (
+  id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  process_name VARCHAR(100) DEFAULT NULL,
+  pointer VARCHAR(100) DEFAULT NULL,
+  created DATETIME DEFAULT CURRENT_TIMESTAMP,
+  KEY key_value (pointer)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE smc_referer_record (
+  ref_id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  beneficiary_id INT DEFAULT NULL,
+  referral_date DATETIME DEFAULT NULL,
+  referral_reason VARCHAR(255) DEFAULT NULL,
+  created DATETIME DEFAULT CURRENT_TIMESTAMP,
+  KEY beneficiary_id (beneficiary_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Logistics tables
+CREATE TABLE smc_logistics_shipment (
+  shipment_id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  shipment_code VARCHAR(100) DEFAULT NULL,
+  source_location_id INT DEFAULT NULL,
+  destination_location_id INT DEFAULT NULL,
+  shipment_date DATETIME DEFAULT NULL,
+  status_value VARCHAR(50) DEFAULT NULL,
+  created DATETIME DEFAULT CURRENT_TIMESTAMP,
+  KEY status_value (status_value)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE smc_logistics_shipment_item (
+  item_id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  shipment_id INT DEFAULT NULL,
+  product_code VARCHAR(100) DEFAULT NULL,
+  quantity INT DEFAULT 0,
+  created DATETIME DEFAULT CURRENT_TIMESTAMP,
+  KEY destination_id (product_code)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE smc_logistics_shipment_sorting (
+  sorting_id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  shipment_id INT DEFAULT NULL,
+  product_code VARCHAR(100) DEFAULT NULL,
+  sorted_quantity INT DEFAULT 0,
+  created DATETIME DEFAULT CURRENT_TIMESTAMP,
+  KEY product_code (product_code)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE smc_logistics_issues (
+  issue_id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  shipment_id INT DEFAULT NULL,
+  issue_description LONGTEXT DEFAULT NULL,
+  periodid INT DEFAULT NULL,
+  created DATETIME DEFAULT CURRENT_TIMESTAMP,
+  KEY periodid (periodid)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE smc_logistics_movement (
+  movement_id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  shipment_id INT DEFAULT NULL,
+  source_approval_id INT DEFAULT NULL,
+  conveyor_approval_id INT DEFAULT NULL,
+  destination_approval_id INT DEFAULT NULL,
+  movement_date DATETIME DEFAULT NULL,
+  created DATETIME DEFAULT CURRENT_TIMESTAMP,
+  KEY conveyor_approval_id (conveyor_approval_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE smc_logistics_movement_items (
+  item_id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  movement_id INT DEFAULT NULL,
+  shipment_id INT DEFAULT NULL,
+  product_code VARCHAR(100) DEFAULT NULL,
+  created DATETIME DEFAULT CURRENT_TIMESTAMP,
+  KEY shipment_id (shipment_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE smc_logistics_approvals (
+  approval_id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  movement_id INT DEFAULT NULL,
+  approver_id INT DEFAULT NULL,
+  approval_date DATETIME DEFAULT NULL,
+  approval_type VARCHAR(50) DEFAULT NULL,
+  user_id INT DEFAULT NULL,
+  created DATETIME DEFAULT CURRENT_TIMESTAMP,
+  KEY user_id (user_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE smc_logistics_transporter (
+  transporter_id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  transporter_name VARCHAR(100) DEFAULT NULL,
+  created DATETIME DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Monitoring/Dashboard tables
+CREATE TABLE mo_form_structures (
+  id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  form_name VARCHAR(100) DEFAULT NULL,
+  created DATETIME DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE mo_form_i9a (
+  id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  userid INT DEFAULT NULL,
+  form_date DATETIME DEFAULT NULL,
+  uid VARCHAR(100) DEFAULT NULL,
+  created DATETIME DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uid (uid)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE mo_form_i9b (
+  id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  userid INT DEFAULT NULL,
+  form_date DATETIME DEFAULT NULL,
+  uid VARCHAR(100) DEFAULT NULL,
+  created DATETIME DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uid (uid)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE mo_form_i9c (
+  id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  userid INT DEFAULT NULL,
+  form_date DATETIME DEFAULT NULL,
+  uid VARCHAR(100) DEFAULT NULL,
+  created DATETIME DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uid (uid)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE mo_form_five_revisit (
+  id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  userid INT DEFAULT NULL,
+  form_date DATETIME DEFAULT NULL,
+  uid VARCHAR(100) DEFAULT NULL,
+  created DATETIME DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uid (uid)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE mo_form_end_process (
+  id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  userid INT DEFAULT NULL,
+  form_date DATETIME DEFAULT NULL,
+  uid VARCHAR(100) DEFAULT NULL,
+  created DATETIME DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uid (uid)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE mo_smc_supervisor_cdd (
+  id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  userid INT DEFAULT NULL,
+  form_date DATETIME DEFAULT NULL,
+  uid VARCHAR(100) DEFAULT NULL,
+  created DATETIME DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uid (uid)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE mo_smc_supervisor_hfw (
+  id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  userid INT DEFAULT NULL,
+  form_date DATETIME DEFAULT NULL,
+  uid VARCHAR(100) DEFAULT NULL,
+  created DATETIME DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uid (uid)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Training tables
+CREATE TABLE tra_training (
+  trainingid INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  title VARCHAR(150) DEFAULT NULL,
+  description LONGTEXT DEFAULT NULL,
+  training_date DATETIME DEFAULT NULL,
+  geo_location VARCHAR(100) DEFAULT NULL,
+  active TINYINT(1) DEFAULT 1,
+  created DATETIME DEFAULT CURRENT_TIMESTAMP,
+  KEY geo_location (geo_location)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE tra_session (
+  sessionid INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  trainingid INT DEFAULT NULL,
+  session_date DATETIME DEFAULT NULL,
+  guid VARCHAR(100) DEFAULT NULL,
+  created DATETIME DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY guid (guid)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE tra_participants (
+  participant_id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  userid INT DEFAULT NULL,
+  trainingid INT DEFAULT NULL,
+  attendance_status VARCHAR(50) DEFAULT NULL,
+  created DATETIME DEFAULT CURRENT_TIMESTAMP,
+  KEY trainingid (trainingid)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE tra_attendant (
+  attendant_id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  userid INT DEFAULT NULL,
+  session_id INT DEFAULT NULL,
+  attendance_date DATETIME DEFAULT NULL,
+  created DATETIME DEFAULT CURRENT_TIMESTAMP,
+  KEY session_id (session_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Socket/Queue tables
+CREATE TABLE socket_connect (
+  id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  userid INT DEFAULT NULL,
+  connection_time DATETIME DEFAULT NULL,
+  status VARCHAR(50) DEFAULT NULL,
+  created DATETIME DEFAULT CURRENT_TIMESTAMP,
+  KEY userid (userid)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE socket_queue (
+  id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  userid INT DEFAULT NULL,
+  queue_message LONGTEXT DEFAULT NULL,
+  queue_date DATETIME DEFAULT NULL,
+  created DATETIME DEFAULT CURRENT_TIMESTAMP,
+  KEY userid (userid)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Analytics/Reporting tables (empty views/materialized tables)
+CREATE TABLE mnt_mob_summary (id INT PRIMARY KEY AUTO_INCREMENT) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+CREATE TABLE mnt_mob_summary_by_date (id INT PRIMARY KEY AUTO_INCREMENT) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+CREATE TABLE mnt_mob_today_dp_summary (id INT PRIMARY KEY AUTO_INCREMENT) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+CREATE TABLE mnt_mob_aggregate_dp (id INT PRIMARY KEY AUTO_INCREMENT) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+CREATE TABLE mnt_mob_aggregate_dp_with_id (id INT PRIMARY KEY AUTO_INCREMENT) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+CREATE TABLE mnt_mob_aggregate_lga (id INT PRIMARY KEY AUTO_INCREMENT) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+CREATE TABLE mnt_mob_daterange_dp (id INT PRIMARY KEY AUTO_INCREMENT) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+CREATE TABLE mnt_mob_hhm_mobilization (id INT PRIMARY KEY AUTO_INCREMENT) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+CREATE TABLE mnt_mob_mobilizer_performance_daily (id INT PRIMARY KEY AUTO_INCREMENT) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+CREATE TABLE mnt_dis_daily_today (id INT PRIMARY KEY AUTO_INCREMENT) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+CREATE TABLE mnt_dis_date_summary (id INT PRIMARY KEY AUTO_INCREMENT) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+CREATE TABLE mnt_netcard_lga_sum_location_balance (id INT PRIMARY KEY AUTO_INCREMENT) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+CREATE TABLE mnt_netcard_vs_allocated (id INT PRIMARY KEY AUTO_INCREMENT) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Dataset tables
+CREATE TABLE dataset_activity_participants (id INT PRIMARY KEY AUTO_INCREMENT) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+CREATE TABLE dataset_activity_session (id INT PRIMARY KEY AUTO_INCREMENT) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+CREATE TABLE dataset_mobilization_distribution (id INT PRIMARY KEY AUTO_INCREMENT) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+CREATE TABLE dataset_users_all (id INT PRIMARY KEY AUTO_INCREMENT) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- AMF tables
+CREATE TABLE amf_distribution (id INT PRIMARY KEY AUTO_INCREMENT) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+CREATE TABLE amf_five_revisit (id INT PRIMARY KEY AUTO_INCREMENT) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+CREATE TABLE amf_mobilization (id INT PRIMARY KEY AUTO_INCREMENT) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- PMI tables
+CREATE TABLE pmi_mobilization_geo_location (id INT PRIMARY KEY AUTO_INCREMENT) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Miscellaneous tables
+CREATE TABLE sms_reasons (
+  id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  reason_text VARCHAR(255) DEFAULT NULL,
+  created DATETIME DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Seed test user
+INSERT INTO usr_role (roleid, title, role_code, system_privilege, platform, module, priority)
+VALUES (1, 'Admin', 'ADMIN', '{"can_login":true}', 'web', 'users,reporting,smc,distribution,mobilization,monitoring,netcard', 1);
+
+-- Use bcrypt hash for password 'Test123!'
+INSERT INTO usr_login (userid, loginid, username, pwd, guid, roleid, geo_level, geo_level_id, user_group, active, is_change_password)
+VALUES (1000, 'test.user', 'test.user', '$2y$12$JzORkG88911reN2NanLt4uV/8Osi1gdgbXoKEU4gJIrdlnnKkjmWi', 'GUID-TEST-1000', 1, 'ward', 1, 'default', 1, 0);
+
+INSERT INTO usr_identity (userid, first, middle, last, gender, email, phone)
+VALUES (1000, 'Test', '', 'User', 'N/A', 'test.user@example.com', '+234-0000-0000');
+
+INSERT INTO sys_geo_codex (geo_level, geo_level_id, geo_value, title, geo_string)
+VALUES ('ward', 1, 1, 'Ward 1', 'State > LGA > Ward 1');
+
+INSERT INTO sys_device_registry (serial_no, device_name)
+VALUES ('TEST-DEVICE-001', 'Test Device');
+
+SET FOREIGN_KEY_CHECKS = 1;

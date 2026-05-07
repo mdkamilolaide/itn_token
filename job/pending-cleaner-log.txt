@@ -1,0 +1,5 @@
+[2025-04-18 23:36:01] No record found
+[2025-05-08 13:18:31] Pending cleaned successfully - Issue ID: 5, DP ID:3852, Drug: SPAQ 1, Qty: 10 Record updated: 1 
+[2025-05-08 13:18:31] Pending cleaned successfully - Issue ID: 6, DP ID:3852, Drug: SPAQ 2, Qty: 10 Record updated: 1 
+[2025-05-08 13:18:31] Pending cleaned successfully - Issue ID: 7, DP ID:3852, Drug: SPAQ 1, Qty: 15 Record updated: 1 
+[2025-05-08 13:18:31] Pending cleaned successfully - Issue ID: 8, DP ID:3852, Drug: SPAQ 2, Qty: 30 Record updated: 1 

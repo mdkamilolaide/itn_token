@@ -1,0 +1,1023 @@
+{
+  "module_list": [
+    "admin",
+    "users",
+    "beneficiary",
+    "smc",
+    "distribution",
+    "logistics",
+    "mobilization",
+    "netcard",
+    "activity",
+    "sample",
+    "device",
+    "monitoring",
+    "reporting",
+    "eolin"
+  ],
+  "general_css": [
+    "app-assets/vendors/css/vendors.min.css",
+    "app-assets/vendors/css/extensions/jstree.min.css",
+    "app-assets/vendors/css/extensions/tether-theme-arrows.css",
+    "app-assets/vendors/css/extensions/toastr.min.css",
+    "app-assets/vendors/css/confirm/jquery-confirm.css",
+    "app-assets/css/bootstrap.css",
+    "app-assets/css/bootstrap-extended.css",
+    "app-assets/vendors/css/extensions/tether.min.css",
+    "app-assets/vendors/css/extensions/shepherd.min.css",
+    "app-assets/fonts/font-awesome/css/font-awesome.min.css",
+    "app-assets/fonts/feather/iconfont.css",
+    "app-assets/fonts/tabler/tabler-icons.css",
+    "app-assets/css/colors.css",
+    "app-assets/css/components.css",
+    "app-assets/css/themes/dark-layout.css",
+    "app-assets/css/themes/bordered-layout.css",
+    "app-assets/css/themes/semi-dark-layout.css",
+    "app-assets/css/core/menu/menu-types/vertical-menu.css",
+    "app-assets/css/plugins/forms/form-validation.css",
+    "app-assets/vendors/third-parties/toastr/toastr.css",
+    "app-assets/css/plugins/extensions/ext-component-tree.css",
+    "app-assets/css/plugins/extensions/ext-component-tour.css",
+    "app-assets/css/pages/app-file-manager.css",
+    "assets/css/style.css"
+  ],
+  "general_js": [
+    "app-assets/vendors/js/vendors.min.js",
+    "app-assets/vendors/third-parties/vue/vue.js",
+    "app-assets/vendors/third-parties/axios/axios.min.js",
+    "app-assets/vendors/third-parties/toastr/toastr.min.js",
+    "app-assets/vendors/js/confirm/jquery-confirm.js",
+    "app-assets/vendors/js/forms/validation/jquery.validate.min.js",
+    "app-assets/vendors/js/extensions/tether.min.js",
+    "app-assets/vendors/js/extensions/shepherd.min.js",
+    "app-assets/vendors/js/i18n/i18n.js",
+    "app-assets/js/core/app-menu.js",
+    "app-assets/js/scripts/extensions/ext-component-tour.js",
+    "app-assets/js/scripts/components/components-tooltips.js",
+    "app-assets/js/core/app.js",
+    "app-assets/app/common.js"
+  ],
+  "css_structure": {
+    "admin": ["app-assets/vendors/css/pickers/flatpickr/flatpickr.min.css"],
+    "users": [
+      "app-assets/vendors/css/forms/select/select2.min.css",
+      "app-assets/vendors/css/pickers/flatpickr/flatpickr.min.css"
+    ],
+    "beneficiary": [],
+    "distribution": [
+      "app-assets/vendors/css/perfect-scrollbar/perfect-scrollbar.min.css",
+      "app-assets/vendors/css/charts/apexcharts.css",
+      "app-assets/vendors/css/forms/select/select2.min.css",
+      "app-assets/vendors/css/pickers/flatpickr/flatpickr.min.css"
+    ],
+    "logistics": [],
+    "mobilization": [
+      "app-assets/vendors/css/perfect-scrollbar/perfect-scrollbar.min.css",
+      "app-assets/vendors/css/charts/apexcharts.css",
+      "app-assets/vendors/css/forms/select/select2.min.css",
+      "app-assets/vendors/css/pickers/flatpickr/flatpickr.min.css"
+    ],
+    "netcard": [
+      "app-assets/vendors/css/pickers/flatpickr/flatpickr.min.css",
+      "app-assets/vendors/css/forms/wizard/bs-stepper.min.css",
+      "app-assets/css/plugins/forms/form-wizard.css",
+      "app-assets/css/core/menu/menu-types/vertical-menu.css",
+      "app-assets/vendors/css/forms/select/select2.min.css"
+    ],
+    "eolin": [
+      "app-assets/vendors/css/pickers/flatpickr/flatpickr.min.css",
+      "app-assets/vendors/css/forms/wizard/bs-stepper.min.css",
+      "app-assets/css/plugins/forms/form-wizard.css",
+      "app-assets/css/core/menu/menu-types/vertical-menu.css",
+      "app-assets/vendors/css/forms/select/select2.min.css"
+    ],
+    "activity": [
+      "app-assets/vendors/css/forms/select/select2.min.css",
+      "app-assets/vendors/css/pickers/flatpickr/flatpickr.min.css"
+    ],
+    "smc": [
+      "app-assets/vendors/css/perfect-scrollbar/perfect-scrollbar.min.css",
+      "app-assets/vendors/css/charts/apexcharts.css",
+      "app-assets/vendors/css/forms/select/select2.min.css",
+      "app-assets/vendors/css/pickers/flatpickr/flatpickr.min.css"
+    ],
+    "monitoring": [
+      "app-assets/vendors/css/forms/select/select2.min.css",
+      "app-assets/vendors/css/pickers/flatpickr/flatpickr.min.css"
+    ],
+    "reporting": [
+      "app-assets/vendors/css/forms/select/select2.min.css",
+      "app-assets/vendors/css/pickers/flatpickr/flatpickr.min.css"
+    ],
+    "sample": [
+      "app-assets/vendors/css/tables/datatable/dataTables.bootstrap4.min.css",
+      "app-assets/vendors/css/tables/datatable/responsive.bootstrap4.min.css"
+    ],
+    "device": ["app-assets/vendors/css/pickers/flatpickr/flatpickr.min.css"]
+  },
+  "js_structure": {
+    "admin": {
+      "module": [
+        "app-assets/vendors/js/tables/datatable/jquery.dataTables.min.js",
+        "app-assets/vendors/js/tables/datatable/datatables.bootstrap4.min.js",
+        "app-assets/vendors/js/tables/datatable/dataTables.responsive.min.js",
+        "app-assets/vendors/js/tables/datatable/responsive.bootstrap4.js",
+        "app-assets/app/admin/dashboard.js"
+      ],
+      "submodule": {
+        "log": ["app-assets/app/admin/log.js"],
+        "provision": [
+          "app-assets/vendors/js/pickers/flatpickr/flatpickr.min.js",
+          "app-assets/vendors/js/moment/moment.min.js",
+          "app-assets/app/admin/provision.js"
+        ]
+      }
+    },
+    "users": {
+      "module": [
+        "app-assets/vendors/js/tables/datatable/jquery.dataTables.min.js",
+        "app-assets/vendors/js/tables/datatable/datatables.bootstrap4.min.js",
+        "app-assets/vendors/js/tables/datatable/dataTables.responsive.min.js",
+        "app-assets/vendors/js/tables/datatable/responsive.bootstrap4.js",
+        "app-assets/app/users/dashboard.js"
+      ],
+      "submodule": {
+        "group": [
+          "app-assets/vendors/js/forms/validation/jquery.validate.min.js",
+          "app-assets/js/scripts/forms/form-validation.js",
+          "app-assets/app/users/group.js"
+        ],
+        "list": [
+          "app-assets/vendors/third-parties/excel/xlsx.core.min.js",
+          "app-assets/vendors/third-parties/excel/Blob.js",
+          "app-assets/vendors/third-parties/excel/FileSaver.js",
+          "app-assets/vendors/third-parties/excel/jhxlsx.js",
+          "app-assets/vendors/js/forms/select/select2.full.min.js",
+          "app-assets/vendors/js/pickers/flatpickr/flatpickr.min.js",
+          "app-assets/app/users/list.js"
+        ],
+        "log": [
+          "app-assets/vendors/js/tables/datatable/jquery.dataTables.min.js",
+          "app-assets/vendors/js/tables/datatable/datatables.bootstrap4.min.js",
+          "app-assets/vendors/js/tables/datatable/dataTables.responsive.min.js",
+          "app-assets/vendors/js/tables/datatable/responsive.bootstrap4.js",
+          "app-assets/app/users/log.js"
+        ]
+      }
+    },
+    "beneficiary": [],
+    "distribution": {
+      "module": [
+        "app-assets/vendors/js/tables/datatable/jquery.dataTables.min.js",
+        "app-assets/vendors/js/tables/datatable/datatables.bootstrap4.min.js",
+        "app-assets/vendors/js/tables/datatable/dataTables.responsive.min.js",
+        "app-assets/vendors/js/tables/datatable/responsive.bootstrap4.js",
+        "app-assets/vendors/js/pickers/flatpickr/flatpickr.min.js",
+        "app-assets/vendors/js/perfectscrollbar/perfect-scrollbar.min.js",
+        "app-assets/vendors/js/charts/apexcharts.min.js",
+        "app-assets/vendors/js/charts/vue-apexcharts.js",
+        "app-assets/app/distribution/dashboard.js"
+      ],
+      "submodule": {
+        "dplist": [
+          "app-assets/vendors/js/tables/datatable/jquery.dataTables.min.js",
+          "app-assets/vendors/js/tables/datatable/datatables.bootstrap4.min.js",
+          "app-assets/vendors/js/tables/datatable/dataTables.responsive.min.js",
+          "app-assets/vendors/js/tables/datatable/responsive.bootstrap4.js",
+          "app-assets/app/distribution/dplist.js"
+        ],
+        "list": [
+          "app-assets/vendors/third-parties/excel/xlsx.core.min.js",
+          "app-assets/vendors/third-parties/excel/Blob.js",
+          "app-assets/vendors/third-parties/excel/FileSaver.js",
+          "app-assets/vendors/third-parties/excel/jhxlsx.js",
+          "app-assets/vendors/js/forms/select/select2.full.min.js",
+          "app-assets/vendors/js/pickers/flatpickr/flatpickr.min.js",
+          "app-assets/app/distribution/list.js"
+        ],
+        "unredeemnet": [
+          "app-assets/vendors/third-parties/excel/xlsx.core.min.js",
+          "app-assets/vendors/third-parties/excel/Blob.js",
+          "app-assets/vendors/third-parties/excel/FileSaver.js",
+          "app-assets/vendors/third-parties/excel/jhxlsx.js",
+          "app-assets/vendors/js/forms/select/select2.full.min.js",
+          "app-assets/vendors/js/pickers/flatpickr/flatpickr.min.js",
+          "app-assets/app/distribution/unredeemnet.js"
+        ],
+        "reporting": [
+          "app-assets/vendors/third-parties/excel/xlsx.core.min.js",
+          "app-assets/vendors/third-parties/excel/Blob.js",
+          "app-assets/vendors/third-parties/excel/FileSaver.js",
+          "app-assets/vendors/third-parties/excel/jhxlsx.js",
+          "app-assets/vendors/js/forms/select/select2.full.min.js",
+          "app-assets/vendors/js/pickers/flatpickr/flatpickr.min.js",
+          "app-assets/app/distribution/reporting.js"
+        ]
+      }
+    },
+    "logistics": [],
+    "mobilization": {
+      "module": [
+        "app-assets/vendors/js/tables/datatable/jquery.dataTables.min.js",
+        "app-assets/vendors/js/tables/datatable/datatables.bootstrap4.min.js",
+        "app-assets/vendors/js/tables/datatable/dataTables.responsive.min.js",
+        "app-assets/vendors/js/tables/datatable/responsive.bootstrap4.js",
+        "app-assets/vendors/js/pickers/flatpickr/flatpickr.min.js",
+        "app-assets/vendors/js/perfectscrollbar/perfect-scrollbar.min.js",
+        "app-assets/vendors/js/charts/apexcharts.min.js",
+        "app-assets/vendors/js/charts/vue-apexcharts.js",
+        "app-assets/app/mobilization/dashboard.js"
+      ],
+      "submodule": {
+        "list": [
+          "app-assets/vendors/third-parties/excel/xlsx.core.min.js",
+          "app-assets/vendors/third-parties/excel/Blob.js",
+          "app-assets/vendors/third-parties/excel/FileSaver.js",
+          "app-assets/vendors/third-parties/excel/jhxlsx.js",
+          "app-assets/vendors/js/forms/select/select2.full.min.js",
+          "app-assets/vendors/js/pickers/flatpickr/flatpickr.min.js",
+          "app-assets/app/mobilization/list.js"
+        ],
+        "map": ["app-assets/vendors/js/pickers/flatpickr/flatpickr.min.js"],
+        "microlist": [
+          "app-assets/vendors/third-parties/excel/xlsx.core.min.js",
+          "app-assets/vendors/third-parties/excel/Blob.js",
+          "app-assets/vendors/third-parties/excel/FileSaver.js",
+          "app-assets/vendors/third-parties/excel/jhxlsx.js",
+          "app-assets/app/mobilization/microlist.js"
+        ],
+        "reporting": [
+          "app-assets/vendors/third-parties/excel/xlsx.core.min.js",
+          "app-assets/vendors/third-parties/excel/Blob.js",
+          "app-assets/vendors/third-parties/excel/FileSaver.js",
+          "app-assets/vendors/third-parties/excel/jhxlsx.js",
+          "app-assets/vendors/js/forms/select/select2.full.min.js",
+          "app-assets/vendors/js/pickers/flatpickr/flatpickr.min.js",
+          "app-assets/app/mobilization/reporting.js"
+        ]
+      }
+    },
+    "netcard": {
+      "module": [
+        "app-assets/vendors/js/tables/datatable/jquery.dataTables.min.js",
+        "app-assets/vendors/js/tables/datatable/datatables.bootstrap4.min.js",
+        "app-assets/vendors/js/tables/datatable/dataTables.responsive.min.js",
+        "app-assets/vendors/js/tables/datatable/responsive.bootstrap4.js",
+        "app-assets/app/netcard/dashboard.js"
+      ],
+      "submodule": {
+        "movement": [
+          "app-assets/vendors/js/pickers/flatpickr/flatpickr.min.js",
+          "app-assets/vendors/js/moment/moment.min.js",
+          "app-assets/vendors/js/forms/spinner/jquery.bootstrap-touchspin.js",
+          "app-assets/app/netcard/movement.js"
+        ],
+        "allocation": [
+          "app-assets/vendors/js/pickers/flatpickr/flatpickr.min.js",
+          "app-assets/vendors/js/moment/moment.min.js",
+          "app-assets/app/netcard/allocation.js"
+        ],
+        "unlock": [
+          "app-assets/vendors/js/pickers/flatpickr/flatpickr.min.js",
+          "app-assets/vendors/js/moment/moment.min.js",
+          "app-assets/vendors/js/forms/spinner/jquery.bootstrap-touchspin.js",
+          "app-assets/app/netcard/unlock.js"
+        ],
+        "pushed": [
+          "app-assets/vendors/third-parties/excel/xlsx.core.min.js",
+          "app-assets/vendors/third-parties/excel/Blob.js",
+          "app-assets/vendors/third-parties/excel/FileSaver.js",
+          "app-assets/vendors/third-parties/excel/jhxlsx.js",
+          "app-assets/vendors/js/forms/select/select2.full.min.js",
+          "app-assets/vendors/js/pickers/flatpickr/flatpickr.min.js",
+          "app-assets/app/netcard/pushed.js"
+        ],
+        "usage": ["app-assets/app/netcard/dashboard.js"]
+      }
+    },
+    "eolin": {
+      "module": [
+        "app-assets/vendors/js/tables/datatable/jquery.dataTables.min.js",
+        "app-assets/vendors/js/tables/datatable/datatables.bootstrap4.min.js",
+        "app-assets/vendors/js/tables/datatable/dataTables.responsive.min.js",
+        "app-assets/vendors/js/tables/datatable/responsive.bootstrap4.js",
+        "app-assets/app/eolin/dashboard.js"
+      ]
+    },
+    "activity": {
+      "module": [
+        "app-assets/vendors/js/tables/datatable/jquery.dataTables.min.js",
+        "app-assets/vendors/js/tables/datatable/datatables.bootstrap4.min.js",
+        "app-assets/vendors/js/tables/datatable/dataTables.responsive.min.js",
+        "app-assets/vendors/js/tables/datatable/responsive.bootstrap4.js",
+        "app-assets/vendors/js/moment/moment.min.js",
+        "app-assets/app/activity/dashboard.js"
+      ],
+      "submodule": {
+        "list": [
+          "app-assets/vendors/js/pickers/flatpickr/flatpickr.min.js",
+          "app-assets/vendors/third-parties/excel/xlsx.core.min.js",
+          "app-assets/vendors/third-parties/excel/Blob.js",
+          "app-assets/vendors/third-parties/excel/FileSaver.js",
+          "app-assets/vendors/third-parties/excel/jhxlsx.js",
+          "app-assets/vendors/js/forms/select/select2.full.min.js",
+          "app-assets/app/activity/list.js"
+        ],
+        "reporting": [
+          "app-assets/vendors/third-parties/excel/xlsx.core.min.js",
+          "app-assets/vendors/third-parties/excel/Blob.js",
+          "app-assets/vendors/third-parties/excel/FileSaver.js",
+          "app-assets/vendors/third-parties/excel/jhxlsx.js",
+          "app-assets/vendors/js/forms/select/select2.full.min.js",
+          "app-assets/vendors/js/pickers/flatpickr/flatpickr.min.js",
+          "app-assets/vendors/css/forms/select/select2.min.css",
+          "app-assets/app/activity/reporting.js"
+        ]
+      }
+    },
+    "sample": {
+      "module": ["app-assets/app/test.js"],
+      "submodule": {
+        "table": ["app-assets/app/sample/table.js"],
+        "datatable": [
+          "app-assets/vendors/js/tables/datatable/jquery.dataTables.min.js",
+          "app-assets/vendors/js/tables/datatable/datatables.bootstrap4.min.js",
+          "app-assets/vendors/js/tables/datatable/dataTables.responsive.min.js",
+          "app-assets/vendors/js/tables/datatable/responsive.bootstrap4.js",
+          "app-assets/app/sample/datatable.js"
+        ],
+        "sample": ["app-assets/app/test.js"]
+      }
+    },
+    "device": {
+      "module": [
+        "app-assets/vendors/js/tables/datatable/jquery.dataTables.min.js",
+        "app-assets/vendors/js/tables/datatable/datatables.bootstrap4.min.js",
+        "app-assets/vendors/js/tables/datatable/dataTables.responsive.min.js",
+        "app-assets/vendors/js/tables/datatable/responsive.bootstrap4.js"
+      ],
+      "submodule": {
+        "registry": ["app-assets/app/device/registry.js"],
+        "loginlog": [
+          "app-assets/vendors/js/pickers/flatpickr/flatpickr.min.js",
+          "app-assets/vendors/js/moment/moment.min.js",
+          "app-assets/app/device/loginlog.js"
+        ],
+        "allocation": [
+          "app-assets/vendors/js/pickers/flatpickr/flatpickr.min.js",
+          "app-assets/vendors/js/moment/moment.min.js",
+          "app-assets/vendors/js/qrcode/html5-qrcode.min.js",
+          "app-assets/app/device/deviceallocation.js"
+        ]
+      }
+    },
+    "monitoring": {
+      "module": [
+        "app-assets/vendors/js/tables/datatable/jquery.dataTables.min.js",
+        "app-assets/vendors/js/tables/datatable/datatables.bootstrap4.min.js",
+        "app-assets/vendors/js/tables/datatable/dataTables.responsive.min.js",
+        "app-assets/vendors/js/tables/datatable/responsive.bootstrap4.js",
+        "app-assets/vendors/third-parties/excel/xlsx.core.min.js",
+        "app-assets/vendors/third-parties/excel/Blob.js",
+        "app-assets/vendors/third-parties/excel/FileSaver.js",
+        "app-assets/vendors/third-parties/excel/jhxlsx.js",
+        "app-assets/vendors/js/forms/select/select2.full.min.js",
+        "app-assets/vendors/js/pickers/flatpickr/flatpickr.min.js",
+        "app-assets/app/monitoring/home.js"
+      ],
+      "submodule": []
+    },
+    "smc": {
+      "module": [
+        "app-assets/vendors/js/tables/datatable/jquery.dataTables.min.js",
+        "app-assets/vendors/js/moment/moment.min.js",
+        "app-assets/vendors/js/tables/datatable/datatables.bootstrap4.min.js",
+        "app-assets/vendors/js/tables/datatable/dataTables.responsive.min.js",
+        "app-assets/vendors/js/tables/datatable/responsive.bootstrap4.js",
+        "app-assets/vendors/js/forms/select/select2.full.min.js",
+        "app-assets/vendors/js/pickers/flatpickr/flatpickr.min.js",
+
+        "app-assets/vendors/js/perfectscrollbar/perfect-scrollbar.min.js",
+        "app-assets/vendors/js/i18n/i18n.js",
+        "app-assets/vendors/js/charts/apexcharts.min.js",
+        "app-assets/vendors/js/charts/vue-apexcharts.js",
+        "app-assets/app/smc/dashboard.js"
+      ],
+      "submodule": {
+        "visit": [
+          "app-assets/vendors/js/pickers/flatpickr/flatpickr.min.js",
+          "app-assets/vendors/third-parties/excel/xlsx.core.min.js",
+          "app-assets/vendors/third-parties/excel/Blob.js",
+          "app-assets/vendors/third-parties/excel/FileSaver.js",
+          "app-assets/vendors/third-parties/excel/jhxlsx.js",
+          "app-assets/vendors/js/forms/select/select2.full.min.js",
+          "app-assets/app/smc/visit.js"
+        ],
+        "childregistry": [
+          "app-assets/vendors/js/pickers/flatpickr/flatpickr.min.js",
+          "app-assets/vendors/third-parties/excel/xlsx.core.min.js",
+          "app-assets/vendors/third-parties/excel/Blob.js",
+          "app-assets/vendors/third-parties/excel/FileSaver.js",
+          "app-assets/vendors/third-parties/excel/jhxlsx.js",
+          "app-assets/vendors/js/forms/select/select2.full.min.js",
+          "app-assets/app/smc/childregistry.js"
+        ],
+        "drugadministration": [
+          "app-assets/vendors/js/pickers/flatpickr/flatpickr.min.js",
+          "app-assets/vendors/third-parties/excel/xlsx.core.min.js",
+          "app-assets/vendors/third-parties/excel/Blob.js",
+          "app-assets/vendors/third-parties/excel/FileSaver.js",
+          "app-assets/vendors/third-parties/excel/jhxlsx.js",
+          "app-assets/vendors/js/forms/select/select2.full.min.js",
+          "app-assets/app/smc/administration.js"
+        ],
+        "cohorttracking": [
+          "app-assets/vendors/js/pickers/flatpickr/flatpickr.min.js",
+          "app-assets/vendors/third-parties/excel/xlsx.core.min.js",
+          "app-assets/vendors/third-parties/excel/Blob.js",
+          "app-assets/vendors/third-parties/excel/FileSaver.js",
+          "app-assets/vendors/third-parties/excel/jhxlsx.js",
+          "app-assets/vendors/js/forms/select/select2.full.min.js",
+          "app-assets/app/smc/cohorttracking.js"
+        ],
+        "referral": [
+          "app-assets/vendors/js/pickers/flatpickr/flatpickr.min.js",
+          "app-assets/vendors/third-parties/excel/xlsx.core.min.js",
+          "app-assets/vendors/third-parties/excel/Blob.js",
+          "app-assets/vendors/third-parties/excel/FileSaver.js",
+          "app-assets/vendors/third-parties/excel/jhxlsx.js",
+          "app-assets/vendors/js/forms/select/select2.full.min.js",
+          "app-assets/app/smc/referral.js"
+        ],
+        "icc": [
+          "app-assets/vendors/js/pickers/flatpickr/flatpickr.min.js",
+          "app-assets/vendors/third-parties/excel/xlsx.core.min.js",
+          "app-assets/vendors/third-parties/excel/Blob.js",
+          "app-assets/vendors/third-parties/excel/FileSaver.js",
+          "app-assets/vendors/third-parties/excel/jhxlsx.js",
+          "app-assets/vendors/js/forms/select/select2.full.min.js",
+          "app-assets/app/smc/icc.js"
+        ],
+        "balance": [
+          "app-assets/vendors/js/pickers/flatpickr/flatpickr.min.js",
+          "app-assets/vendors/js/moment/moment.min.js",
+          "app-assets/vendors/js/forms/select/select2.full.min.js",
+          "app-assets/app/smc/balance.js"
+        ],
+        "logisticsallocation": [
+          "app-assets/vendors/js/pickers/flatpickr/flatpickr.min.js",
+          "app-assets/vendors/js/moment/moment.min.js",
+          "app-assets/vendors/js/forms/select/select2.full.min.js",
+          "app-assets/app/smc/logistics/allocation.js"
+        ],
+        "logisticsavailabilitycheck": [
+          "app-assets/vendors/js/pickers/flatpickr/flatpickr.min.js",
+          "app-assets/vendors/js/moment/moment.min.js",
+          "app-assets/vendors/js/forms/select/select2.full.min.js",
+          "app-assets/app/smc/logistics/availabilitycheck.js"
+        ],
+        "logisticsinboundwarehouse": [
+          "app-assets/vendors/js/pickers/flatpickr/flatpickr.min.js",
+          "app-assets/vendors/js/moment/moment.min.js",
+          "app-assets/app/smc/logistics/inboundwarehouse.js"
+        ],
+        "logisticsstockbatchmanagement": [
+          "app-assets/vendors/js/pickers/flatpickr/flatpickr.min.js",
+          "app-assets/vendors/js/moment/moment.min.js",
+          "app-assets/vendors/third-parties/excel/pdfmaker.js",
+          "app-assets/vendors/third-parties/excel/vfs_fonts.js",
+          "app-assets/vendors/js/forms/select/select2.full.min.js",
+          "app-assets/app/smc/logistics/stockbatchmanagement.js"
+        ],
+        "logisticsshipment": [
+          "app-assets/vendors/js/pickers/flatpickr/flatpickr.min.js",
+          "app-assets/vendors/js/moment/moment.min.js",
+          "app-assets/vendors/third-parties/excel/pdfmaker.js",
+          "app-assets/vendors/third-parties/excel/vfs_fonts.js",
+          "app-assets/vendors/js/forms/select/select2.full.min.js",
+          "app-assets/app/smc/logistics/shipment.js"
+        ],
+        "logisticsmovement": [
+          "app-assets/vendors/js/pickers/flatpickr/flatpickr.min.js",
+          "app-assets/vendors/js/moment/moment.min.js",
+          "app-assets/vendors/third-parties/excel/pdfmaker.js",
+          "app-assets/vendors/third-parties/excel/vfs_fonts.js",
+          "app-assets/vendors/js/forms/select/select2.full.min.js",
+          "app-assets/app/smc/logistics/movement.js"
+        ]
+      }
+    }
+  },
+  "nav_structure": [
+    {
+      "name": "Home",
+      "icon": "home",
+      "href": "",
+      "data-i18n": "Home",
+      "group": "",
+      "privilege": "public",
+      "submenu": [
+        {
+          "name": "Home",
+          "href": "",
+          "icon": "circle",
+          "data-i18n": "Home"
+        }
+      ]
+    },
+    {
+      "name": "System Admin",
+      "icon": "monitor",
+      "href": "#",
+      "data-i18n": "System Admin",
+      "group": "Admin Section",
+      "privilege": "system",
+      "submenu": [
+        {
+          "name": "Activity Log",
+          "href": "admin/log",
+          "icon": "circle",
+          "data-i18n": "Activity Log"
+        },
+        {
+          "name": "Provision Device",
+          "href": "admin/provision",
+          "icon": "circle",
+          "data-i18n": "Provision Device"
+        }
+      ]
+    },
+    {
+      "name": "Device Mgmt.",
+      "icon": "tool",
+      "href": "#",
+      "data-i18n": "Device Management",
+      "group": "Admin Section",
+      "privilege": "system",
+      "submenu": [
+        {
+          "name": "Login Logs",
+          "href": "device/loginlog",
+          "icon": "circle",
+          "data-i18n": "Login Logs"
+        },
+        {
+          "name": "Device Registry",
+          "href": "device/registry",
+          "icon": "circle",
+          "data-i18n": "Device Registry"
+        },
+        {
+          "name": "Device Allocation",
+          "href": "device/allocation",
+          "icon": "circle",
+          "data-i18n": "Device Allocation"
+        }
+      ]
+    },
+    {
+      "name": "Users ",
+      "icon": "users",
+      "href": "users",
+      "data-i18n": "Users",
+      "group": "Admin Section",
+      "privilege": "users",
+      "submenu": [
+        {
+          "name": "Home",
+          "href": "users",
+          "icon": "circle",
+          "data-i18n": "Home"
+        },
+        {
+          "name": "User Group",
+          "href": "users/group",
+          "icon": "circle",
+          "data-i18n": "group"
+        },
+        {
+          "name": "Users List",
+          "href": "users/list",
+          "icon": "circle",
+          "data-i18n": "list"
+        }
+      ]
+    },
+    {
+      "name": "e-Netcard",
+      "icon": "credit-card",
+      "href": "netcard",
+      "data-i18n": "e-Netcard",
+      "group": "Admin Section",
+      "privilege": "enetcard",
+      "submenu": [
+        {
+          "name": "Dashboard",
+          "href": "netcard",
+          "icon": "circle",
+          "data-i18n": "e-Netcard"
+        },
+        {
+          "name": "Movement",
+          "href": "netcard/movement",
+          "icon": "circle",
+          "data-i18n": "Movement"
+        },
+        {
+          "name": "Allocation",
+          "href": "netcard/allocation",
+          "icon": "circle",
+          "data-i18n": "Allocation"
+        },
+        {
+          "name": "e-Netcard Unlock",
+          "href": "netcard/unlock",
+          "icon": "circle",
+          "data-i18n": "e-Netcard Unlock"
+        },
+        {
+          "name": "e-Netcard Pushed",
+          "href": "netcard/pushed",
+          "icon": "circle",
+          "data-i18n": "e-Netcard Wallet"
+        }
+      ]
+    },
+    {
+      "name": "Activity Mgmt.",
+      "icon": "clipboard",
+      "href": "activity",
+      "data-i18n": "Activity Mgmt.",
+      "group": "Operational Section",
+      "privilege": "activity",
+      "submenu": [
+        {
+          "name": "Home",
+          "href": "activity",
+          "icon": "circle",
+          "data-i18n": "Home"
+        },
+        {
+          "name": "Activity List",
+          "href": "activity/list",
+          "icon": "circle",
+          "data-i18n": "list"
+        },
+        {
+          "name": "Reporting",
+          "href": "activity/reporting",
+          "icon": "circle",
+          "data-i18n": "Activity Report"
+        }
+      ]
+    },
+    {
+      "name": "Monitoring Tools",
+      "icon": "activity",
+      "href": "",
+      "data-i18n": "System Admin",
+      "group": "Operational Section",
+      "privilege": "monitoring",
+      "submenu": [
+        {
+          "name": "Home",
+          "href": "monitoring",
+          "icon": "circle",
+          "data-i18n": "Home"
+        }
+      ]
+    },
+    {
+      "name": "Mobilization ",
+      "icon": "shopping-cart",
+      "href": "mobilization",
+      "data-i18n": "Mobilization ",
+      "group": "Operational Section",
+      "privilege": "mobilization",
+      "submenu": [
+        {
+          "name": "Dashboard",
+          "href": "mobilization",
+          "icon": "circle",
+          "data-i18n": "Mobilization dashboard"
+        },
+        {
+          "name": "Reporting",
+          "href": "mobilization/reporting",
+          "icon": "circle",
+          "data-i18n": "Mobilization Report"
+        },
+        {
+          "name": "Map View",
+          "href": "mobilization/map",
+          "icon": "circle",
+          "data-i18n": "Map View"
+        },
+        {
+          "name": "Mobilization List",
+          "href": "mobilization/list",
+          "icon": "circle",
+          "data-i18n": "Mobilization List"
+        },
+        {
+          "name": "Micro Position",
+          "href": "mobilization/microlist",
+          "icon": "circle",
+          "data-i18n": "Micro Position List"
+        }
+      ]
+    },
+    {
+      "name": "Distribution ",
+      "icon": "gift",
+      "href": "distribution",
+      "data-i18n": "Distribution ",
+      "group": "Operational Section",
+      "privilege": "distribution",
+      "submenu": [
+        {
+          "name": "Dashboard",
+          "href": "distribution",
+          "icon": "circle",
+          "data-i18n": "Home"
+        },
+        {
+          "name": "Reporting",
+          "href": "distribution/reporting",
+          "icon": "circle",
+          "data-i18n": "Distribution Report"
+        },
+        {
+          "name": "DP List",
+          "href": "distribution/dplist",
+          "icon": "circle",
+          "data-i18n": "DP List"
+        },
+        {
+          "name": "Distribution List",
+          "href": "distribution/list",
+          "icon": "circle",
+          "data-i18n": "DP List"
+        },
+        {
+          "name": "UnRedeemed e-Token",
+          "href": "distribution/unredeemnet",
+          "icon": "circle",
+          "data-i18n": "DP List"
+        }
+      ]
+    },
+    {
+      "name": "EOLIN",
+      "icon": "life-buoy",
+      "href": "eolin",
+      "data-i18n": "EOLIN",
+      "group": "Operational Section",
+      "privilege": "enetcard",
+      "submenu": [
+        {
+          "name": "Dashboard",
+          "href": "eolin",
+          "icon": "circle",
+          "data-i18n": "EOLIN"
+        }
+      ]
+    },
+    {
+      "name": "SMC",
+      "icon": "package",
+      "href": "smc",
+      "data-i18n": "Visit Mgmt.",
+      "group": "Operational Section",
+      "privilege": "smc",
+      "submenu": [
+        {
+          "name": "Dashboard",
+          "href": "smc",
+          "icon": "circle",
+          "data-i18n": "dashboard"
+        },
+        {
+          "name": "Visit Mgmt.",
+          "href": "smc/visit",
+          "icon": "circle",
+          "data-i18n": "Visit Management"
+        },
+        {
+          "name": "Child Registry",
+          "href": "smc/childregistry",
+          "icon": "circle",
+          "data-i18n": "Child Registry"
+        },
+        {
+          "name": "Drug Administration",
+          "href": "smc/drugadministration",
+          "icon": "circle",
+          "data-i18n": "Drug Administration"
+        },
+        {
+          "name": "Referral",
+          "href": "smc/referral",
+          "icon": "circle",
+          "data-i18n": "Referral"
+        },
+        {
+          "name": "Cohort Tracking",
+          "href": "smc/cohorttracking",
+          "icon": "circle",
+          "data-i18n": "Cohort Tracking"
+        },
+        {
+          "name": "Inventory Control",
+          "href": "smc/icc",
+          "icon": "circle",
+          "data-i18n": "ICC"
+        },
+        {
+          "name": "IC Balance",
+          "href": "smc/balance",
+          "icon": "circle",
+          "data-i18n": "IC Balanace"
+        }
+      ]
+    },
+    {
+      "name": "SMC Logistics",
+      "icon": "truck",
+      "href": "smc/logistics",
+      "data-i18n": "Logistics",
+      "group": "Operational Section",
+      "privilege": "smc",
+      "submenu": [
+        {
+          "name": "Inbound Warehouse",
+          "href": "smc/logistics/inbound/warehouse",
+          "icon": "circle",
+          "data-i18n": "Inbound Warehouse"
+        },
+        {
+          "name": "Bulk Allocation",
+          "href": "smc/logistics/allocation",
+          "icon": "circle",
+          "data-i18n": "dashboard"
+        },
+        {
+          "name": "Availability Check",
+          "href": "smc/logistics/availability/check",
+          "icon": "circle",
+          "data-i18n": "Availability Check"
+        },
+        {
+          "name": "Stock-Batch Mgt.",
+          "href": "smc/logistics/stock/batch/management",
+          "icon": "circle",
+          "data-i18n": "Stock Batch Management"
+        },
+        {
+          "name": "Shipment Mgt.",
+          "href": "smc/logistics/shipment",
+          "icon": "circle",
+          "data-i18n": "Shipment Management"
+        },
+        {
+          "name": "Movement Mgt.",
+          "href": "smc/logistics/movement",
+          "icon": "circle",
+          "data-i18n": "Movement Management"
+        }
+      ]
+    },
+    {
+      "name": "Beneficiary",
+      "icon": "list",
+      "href": "#",
+      "data-i18n": "Beneficiary",
+      "group": "Operational Section",
+      "privilege": "beneficiary",
+      "submenu": []
+    },
+    {
+      "name": "Info",
+      "icon": "info",
+      "href": "sample",
+      "data-i18n": "Beneficiary",
+      "group": "Operational Section",
+      "privilege": "public",
+      "submenu": [
+        {
+          "name": "Download SOP",
+          "href": "sample/sample",
+          "icon": "circle",
+          "data-i18n": "Nav Item"
+        }
+      ]
+    }
+  ],
+  "page_structure": {
+    "home": {
+      "css": [],
+      "js": [],
+      "nav": {
+        "Home": "./home"
+      }
+    },
+    "admin": {
+      "css": [],
+      "js": [],
+      "nav": {
+        "Devices": "./admin"
+      }
+    },
+    "users": {
+      "css": ["app-assets/app/common.js"],
+      "js": [],
+      "nav": {
+        "Users": "./users"
+      }
+    },
+    "beneficiary": {
+      "css": [],
+      "js": [],
+      "nav": {
+        "Beneficiary": "./Beneficiary"
+      }
+    },
+    "distribution": {
+      "css": [],
+      "js": [],
+      "nav": {
+        "Distribution": "./distribution"
+      }
+    },
+    "logistics": {
+      "css": [],
+      "js": [],
+      "nav": {
+        "Logistics": "./logistics"
+      }
+    },
+    "mobilization": {
+      "css": [],
+      "js": [],
+      "nav": {
+        "Mobilization": "./mobilization"
+      }
+    },
+    "netcard": {
+      "css": ["app-assets/app/common.js"],
+      "js": [],
+      "nav": {
+        "Netcard": "./netcard"
+      }
+    },
+    "eolin": {
+      "css": ["app-assets/app/common.js"],
+      "js": [],
+      "nav": {
+        "Netcard": "./eolin"
+      }
+    },
+    "activity": {
+      "css": ["app-assets/app/common.js"],
+      "js": [],
+      "nav": {
+        "Activity": "./activity"
+      }
+    },
+    "reporting": {
+      "css": ["app-assets/app/common.js"],
+      "js": [],
+      "nav": {
+        "Reporting": "./reporting"
+      }
+    },
+    "monitoring": {
+      "css": ["app-assets/app/common.js"],
+      "js": [],
+      "nav": {
+        "Monitoring": "./monitoring"
+      }
+    },
+    "sample": {
+      "css": ["app-assets/app/common.js", "app-assets/app/test.js"],
+      "js": [],
+      "nav": {
+        "Sample": "./sample"
+      }
+    },
+    "device": {
+      "css": ["app-assets/app/common.js"],
+      "js": [],
+      "nav": {
+        "Device": "./device"
+      }
+    },
+    "smc": {
+      "css": ["app-assets/app/common.js"],
+      "js": [],
+      "nav": {
+        "Activity": "./smc"
+      }
+    }
+  }
+}

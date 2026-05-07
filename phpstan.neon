@@ -1,0 +1,4 @@
+# Local phpstan entry (keeps CI using phpstan.neon.dist by default)
+# This file exists so developers can override locally (kept intentionally minimal).
+includes:
+  - phpstan.neon.dist

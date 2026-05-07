@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:noNamespaceSchemaLocation="https://schema.phpunit.de/12.0/phpunit.xsd"
+         colors="true"
+         bootstrap="tests/bootstrap.php"
+         failOnWarning="true"
+         failOnRisky="true"
+         failOnIncomplete="false"
+         failOnSkipped="false"
+>
+    <testsuites>
+        <testsuite name="Unit">
+            <directory suffix="Test.php">tests/Unit</directory>
+        </testsuite>
+        <testsuite name="Feature">
+            <directory suffix="Test.php">tests/Feature</directory>
+        </testsuite>
+        <testsuite name="Integration">
+            <directory suffix="Test.php">tests/Integration</directory>
+        </testsuite>
+    </testsuites>
+    <coverage processUncoveredFiles="true">
+        <include>
+            <directory>lib</directory>
+        </include>
+        <exclude>
+            <directory>lib/vendor</directory>
+            <file>lib/composer-setup.php</file>
+        </exclude>
+    </coverage>
+    <php>
+        <env name="IPOLONGO_DB_DSN" value="mysql:host=127.0.0.1;dbname=ipolongo;charset=utf8mb4"/>
+        <env name="IPOLONGO_DB_USER" value="root"/>
+        <!-- DB password must come from environment/CI secrets. Do NOT commit plaintext secrets. -->
+        <env name="IPOLONGO_DB_PASS" value=""/>
+        <env name="IPOLONGO_DB_NAME" value="ipolongo"/>
+        <env name="IPOLONGO_DB_HOST" value="127.0.0.1"/>
+        <env name="DB_DATABASE" value="ipolongo"/>
+    </php>
+</phpunit>

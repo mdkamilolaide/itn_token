@@ -1,0 +1,23 @@
+parameters:
+    level: 5
+    paths:
+        - lib
+    # Legacy codebase uses lots of @phpdoc types; treatPhpDocTypesAsCertain=false
+    # reduces spurious "alwaysTrue/alwaysFalse" warnings originating from PHPDoc-only types.
+    treatPhpDocTypesAsCertain: false
+    excludePaths:
+        - vendor/*
+        - lib/vendor/**
+        - lib/vendor/*/**    # vendored libs committed under lib/ (mpdf lives here)
+        - tests/*
+        - app-assets/*
+        - assets/*
+        - db/*
+        - tmp/*
+        - apk_downloads/*
+
+
+includes:
+    - phpstan-baseline.neon
+
+# Gradual rollout: start at level 6 and add baseline to silence existing issues

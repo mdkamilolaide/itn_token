@@ -1,0 +1,41 @@
+<?php
+
+    #   Module definitions
+    #   
+    $config_base_dir = __DIR__;
+    #   HTTP access protocol secure of not
+    $config_ht_protocol_secure = true;
+    $config_ht_protocol_prefix = $config_ht_protocol_secure? "https://":"http://";
+    $config_pre_append_link = $config_ht_protocol_prefix.$_SERVER['SERVER_NAME']."/";     //  Fill the remainder
+    #   Loading system structure configuration file
+    $config_json_data = file_get_contents("lib/data/system_structure.json");
+    $config_system_structure = json_decode($config_json_data,true);
+    $config_page_structure = $config_system_structure["page_structure"];
+    $config_modules = $config_system_structure["module_list"];
+    $config_css_general = $config_system_structure["general_css"];
+    $config_css_structure = $config_system_structure["css_structure"];
+    $config_js_general = $config_system_structure["general_js"];
+    $config_js_structure = $config_system_structure["js_structure"];
+    $config_nav_structure = $config_system_structure["nav_structure"];
+    #
+    #   Configuration for storage and padding
+    #
+    $secret_code_default = "GHSC-PSM-SID-SALT";
+    $secret_code_id = "dsxkw7556yihngwoj12yu0nwzg1yfx4jeru";
+    /*
+     *
+     *      Database date & time format configuration
+     * 
+     */
+    $conf_db_date_format = '%d/%m/%Y';  //  13/01/2020
+    $conf_db_date_medium_format = '%a. %d/%m/%Y';   //  Mon. 13/01/2020
+    $conf_db_data_long_format = '%M %e, %Y';     //  January 14, 2020
+    $conf_db_date_full_format = '%W %M %e, %Y';     //  Monday January 14, 2020
+    $conf_db_date_short_full_format = '%a. %b. %e, %Y';   //  Mon. Jan. 14, 2020
+    #  Time
+    $conf_db_time_format = '%r';    // 	Time, 12-hour (hh:mm:ss followed by AM or PM)
+    $conf_db_dateTime_format = '%d/%m/%Y %r'; //  13/01/2020 01:00:01 PM
+    $conf_db_dateTime_medium_format = '%a. %d/%m/%Y %r'; //  Mon. 13/01/2020 01:00:01 PM
+    $conf_db_dateTime_long_format = '%M %e, %Y %r';     //  January 14, 2020 01:00:01 PM
+    $conf_db_dateTime_full_format = '%W %M %e, %Y %r';     //  Monday January 14, 2020 01:00:01 PM
+?>

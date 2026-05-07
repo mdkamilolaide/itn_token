@@ -1,0 +1,166 @@
+name: Static analysis & strict tests (gradual)
+
+on:
+  pull_request:
+  push:
+    branches: [ main, dev, tests, '**/fix/**', '**/chore/**' ]
+
+jobs:
+  phpstan:
+    name: PHPStan (report only for now)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: mbstring, pdo, pdo_mysql
+
+      - name: Get composer cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.composer/cache
+          key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-composer-
+
+      - name: Repository diagnostics — check for committed vendor (non-failing)
+        run: |
+          echo 'Checking for tracked files under vendor/ (warning only)'
+          if git ls-files vendor | sed -n '1,1p' >/dev/null 2>&1; then
+            echo 'WARNING: tracked files found under vendor/'
+            git ls-files vendor | sed -n '1,10p' || true
+          else
+            echo 'No tracked vendor/ files found.'
+          fi
+
+      - name: Validate composer.json / composer.lock
+        run: |
+          composer validate --no-check-publish
+          if [ ! -f composer.lock ]; then
+            echo 'composer.lock is missing' >&2
+            exit 1
+          fi
+          if ! composer show --locked phpstan/phpstan >/dev/null 2>&1; then
+            echo 'composer.lock does not contain phpstan/phpstan' >&2
+            exit 1
+          fi
+
+      - name: Install dependencies
+        run: composer install --no-progress --prefer-dist
+
+      - name: Ensure phpstan is executable
+        run: chmod +x vendor/bin/phpstan || true
+
+      - name: Run PHPStan (level 5)
+        run: php vendor/bin/phpstan analyse --configuration=phpstan.neon.dist --error-format=github || true
+
+  phpunit-strict:
+    name: PHPUnit (warnings/deprecations -> exceptions, non-blocking initially)
+    runs-on: ubuntu-latest
+    needs: phpstan
+
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: ${{ secrets.TEST_DB_PASSWORD }}
+          MYSQL_ALLOW_EMPTY_PASSWORD: 'yes'
+          MYSQL_DATABASE: ipolongo_test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping --silent"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
+    env:
+      DB_DSN: "mysql:host=127.0.0.1;port=3306;dbname=ipolongo_test;charset=utf8mb4"
+      DB_USER: root
+      DB_PASS: ${{ secrets.TEST_DB_PASSWORD }}
+      DB_DATABASE: ipolongo_test
+      IPOLONGO_DB_DSN: "mysql:host=127.0.0.1;port=3306;dbname=ipolongo_test;charset=utf8mb4"
+      IPOLONGO_DB_USER: root
+      IPOLONGO_DB_PASS: ${{ secrets.TEST_DB_PASSWORD }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: mbstring, pdo, pdo_mysql
+
+      - name: Install composer deps
+        run: composer install --no-progress --prefer-dist
+
+      - name: DB secret diagnostics
+        run: |
+          if [ -z "${{ secrets.TEST_DB_PASSWORD }}" ]; then
+            echo 'TEST_DB_PASSWORD missing – empty root password allowed'
+          else
+            echo 'TEST_DB_PASSWORD present'
+          fi
+
+      - name: Wait for MySQL to be ready
+        run: |
+          set -eo pipefail
+          echo 'Waiting for MySQL...'
+
+          for i in {1..90}; do
+            if php -r "new PDO(getenv('DB_DSN'), getenv('DB_USER'), getenv('DB_PASS'));"; then
+              echo 'Connected to MySQL'
+              break
+            fi
+            sleep 2
+          done
+
+          echo "Effective DB_DSN='${DB_DSN:-<unset>}'"
+
+          php <<'PHP'
+          <?php
+          $dsn = getenv('DB_DSN') ?: getenv('IPOLONGO_DB_DSN');
+          echo "php-getenv DB_DSN=" . ($dsn ?? '<unset>') . PHP_EOL;
+
+          if (!$dsn) {
+              fwrite(STDERR, "DB_DSN is not set\n");
+              exit(1);
+          }
+
+          try {
+              new PDO(
+                  $dsn,
+                  getenv('DB_USER'),
+                  getenv('DB_PASS'),
+                  [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]
+              );
+              echo "connected\n";
+          } catch (Throwable $e) {
+              fwrite(STDERR, $e->getMessage() . "\n");
+              exit(1);
+          }
+          PHP
+
+      - name: Import test database schema and seed data
+        run: |
+          echo 'Importing test database schema...'
+          if [ -z "${{ secrets.TEST_DB_PASSWORD }}" ]; then
+            mysql -h 127.0.0.1 -P 3306 -u root < tests/database/ipolongo_test_seed.sql
+            echo 'Importing test data...'
+            mysql -h 127.0.0.1 -P 3306 -u root ipolongo_test < tests/database/test_data.sql
+          else
+            mysql -h 127.0.0.1 -P 3306 -u root -p"${{ secrets.TEST_DB_PASSWORD }}" < tests/database/ipolongo_test_seed.sql
+            echo 'Importing test data...'
+            mysql -h 127.0.0.1 -P 3306 -u root -p"${{ secrets.TEST_DB_PASSWORD }}" ipolongo_test < tests/database/test_data.sql
+          fi
+          echo 'Database setup complete.'
+
+      - name: Ensure phpunit is executable
+        run: chmod +x vendor/bin/phpunit || true
+
+      - name: Run PHPUnit (CI mode - excludes schema-dependent tests)
+        run: php vendor/bin/phpunit --configuration=phpunit.ci.xml

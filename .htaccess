@@ -1,0 +1,23 @@
+Order Allow,Deny
+Allow from All
+
+RewriteEngine on
+
+RewriteBase /
+
+RewriteCond %{REQUEST_FILENAME} -f [OR]
+RewriteCond %{REQUEST_FILENAME} -d
+RewriteRule ^ - [L]
+
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^(.*)/$ /$1 [R=301,L]
+
+
+RewriteRule ^(test|login|logout|api|doc|login_api|export|on|dns|sample|documentation)$ $1.php [NC,L]
+RewriteRule ^(pbi)$ $1.php [NC,L]
+RewriteRule ^(printbadge)$ badge.processor.php [NC,L]
+RewriteRule ^(printdpbadge)$ dp.badge.processor.php [NC,L]
+RewriteRule ^(download)$ apk.update.download.processor.php?module=$1 [QSA]
+RewriteRule ^(download)/([A-Za-z0-9]+)$ apk.update.download.processor.php?module=$1&submodule=$2 [QSA]
+RewriteRule ^([A-Za-z0-9]+)$ index.php?module=$1 [QSA]
+RewriteRule ^([A-Za-z0-9]+)/(.+)$ index.php?module=$1&submodule=$2 [QSA]

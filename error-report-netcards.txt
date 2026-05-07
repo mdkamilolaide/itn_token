@@ -1,0 +1,208 @@
+-- A1-eNetcard Movement Error --
+ MITD: 48, Total: 10500, State ID: 32, LGA ID: 665, User ID: 3
+Error: There is no active transaction
+-- A1-eNetcard Movement Error --
+ MITD: 49, Total: 10500, State ID: 32, LGA ID: 665, User ID: 3
+Error: There is no active transaction
+-- A1-eNetcard Movement Error --
+ MITD: 50, Total: 10500, State ID: 32, LGA ID: 665, User ID: 3
+Error: There is no active transaction
+-- A1-eNetcard Movement Error --
+ MITD: 51, Total: 10500, State ID: 32, LGA ID: 665, User ID: 3
+Error: There is no active transaction
+-- Unlock Netcard Error --
+ User ID: 1052, Device Serial: TEST-DEVICE, Requester ID: 1
+Error: SQLSTATE[42000]: Syntax error or access violation: 1064 You have an error in your SQL syntax; check the manual that corresponds to your MariaDB server version for the right syntax to use near 'WHERE nc_netcard.ncid = 5851' at line 8
+-- Unlock Netcard Error --
+ User ID: 1052, Device Serial: TEST-DEVICE, Requester ID: 1
+Error: SQLSTATE[42000]: Syntax error or access violation: 1064 You have an error in your SQL syntax; check the manual that corresponds to your MariaDB server version for the right syntax to use near 'WHERE nc_netcard.ncid = 5851' at line 8
+-- A1-eNetcard Movement Error --
+ MITD: 127, Total: 1, State ID: 1, LGA ID: 0, User ID: 13038
+Error: There is no active transaction
+-- A1-eNetcard Movement Error --
+ MITD: 128, Total: 1, State ID: 1, LGA ID: 0, User ID: 13038
+Error: There is no active transaction
+-- A1-eNetcard Movement Error --
+ MITD: 129, Total: 1, State ID: 1, LGA ID: 0, User ID: 10818
+Error: There is no active transaction
+[2026-01-30 06:04:31] Push e-Netcard online - Error ------
+-- A1-eNetcard Movement Error --
+ MITD: 130, Total: 1, State ID: 1, LGA ID: 0, User ID: 6640
+Error: There is no active transaction
+[2026-01-30 06:07:33] Push e-Netcard online - Error ------
+[2026-01-30 06:07:55] Push e-Netcard online - Error ------
+[2026-01-30 06:07:55] Push e-Netcard online - Error ------
+No UUIDs provided or not in array format
+ HHM ID: 1
+ Device Serial: DEVICE-EMPTY
+[2026-01-30 06:07:55] Push e-Netcard online - Error ------
+[2026-01-30 06:07:55] Push e-Netcard online - Error ------
+-- A1-eNetcard Movement Error --
+ MITD: 131, Total: 1, State ID: 1, LGA ID: 0, User ID: 13193
+Error: There is no active transaction
+[2026-01-30 06:11:39] Push e-Netcard online - Error ------
+[2026-01-30 06:12:02] Push e-Netcard online - Error ------
+[2026-01-30 06:12:02] Push e-Netcard online - Error ------
+No UUIDs provided or not in array format
+ HHM ID: 1
+ Device Serial: DEVICE-EMPTY
+[2026-01-30 06:12:02] Push e-Netcard online - Error ------
+[2026-01-30 06:12:02] Push e-Netcard online - Error ------
+[2026-01-30 06:14:42] Push e-Netcard online - Error ------
+[2026-01-30 06:14:42] Push e-Netcard online - Error ------
+No UUIDs provided or not in array format
+ HHM ID: 1
+ Device Serial: DEVICE-EMPTY
+[2026-01-30 06:14:42] Push e-Netcard online - Error ------
+[2026-01-30 06:14:42] Push e-Netcard online - Error ------
+[2026-01-30 06:16:21] Push e-Netcard online - Error ------
+[2026-01-30 06:16:21] Push e-Netcard online - Error ------
+No UUIDs provided or not in array format
+ HHM ID: 1
+ Device Serial: DEVICE-EMPTY
+[2026-01-30 06:16:21] Push e-Netcard online - Error ------
+[2026-01-30 06:16:21] Push e-Netcard online - Error ------
+-- A1-eNetcard Movement Error --
+ MITD: 132, Total: 1, State ID: 1, LGA ID: 0, User ID: 13260
+Error: There is no active transaction
+[2026-01-30 06:21:07] Push e-Netcard online - Error ------
+[2026-01-30 06:21:18] Push e-Netcard online - Error ------
+[2026-01-30 06:21:18] Push e-Netcard online - Error ------
+No UUIDs provided or not in array format
+ HHM ID: 1
+ Device Serial: DEVICE-EMPTY
+[2026-01-30 06:21:18] Push e-Netcard online - Error ------
+[2026-01-30 06:21:18] Push e-Netcard online - Error ------
+-- A1-eNetcard Movement Error --
+ MITD: 133, Total: 1, State ID: 1, LGA ID: 0, User ID: 13260
+Error: There is no active transaction
+[2026-01-30 06:36:37] Push e-Netcard online - Error ------
+[2026-01-30 06:36:53] Push e-Netcard online - Error ------
+[2026-01-30 06:36:53] Push e-Netcard online - Error ------
+No UUIDs provided or not in array format
+ HHM ID: 1
+ Device Serial: DEVICE-EMPTY
+[2026-01-30 06:36:53] Push e-Netcard online - Error ------
+[2026-01-30 06:36:53] Push e-Netcard online - Error ------
+[2026-01-30 07:26:36] Push e-Netcard online - Error ------
+No UUIDs provided or not in array format
+ HHM ID: 1
+ Device Serial: DEVICE-EMPTY
+[2026-01-30 07:34:13] Push e-Netcard online - Error ------
+No UUIDs provided or not in array format
+ HHM ID: 1
+ Device Serial: DEVICE-EMPTY
+[2026-01-30 07:36:56] Push e-Netcard online - Error ------
+No UUIDs provided or not in array format
+ HHM ID: 1
+ Device Serial: DEVICE-EMPTY
+[2026-01-30 07:43:05] Push e-Netcard online - Error ------
+No UUIDs provided or not in array format
+ HHM ID: 1
+ Device Serial: DEVICE-EMPTY
+[2026-01-30 07:47:42] Push e-Netcard online - Error ------
+No UUIDs provided or not in array format
+ HHM ID: 1
+ Device Serial: DEVICE-EMPTY
+-- A1-eNetcard Movement Error --
+ MITD: 1, Total: 1, State ID: 7, LGA ID: 119, User ID: 1101
+Error: There is no active transaction
+[2026-01-30 08:00:34] Push e-Netcard online - Error ------
+[2026-01-30 08:00:55] Push e-Netcard online - Error ------
+[2026-01-30 08:00:55] Push e-Netcard online - Error ------
+No UUIDs provided or not in array format
+ HHM ID: 1
+ Device Serial: DEVICE-EMPTY
+[2026-01-30 08:00:55] Push e-Netcard online - Error ------
+[2026-01-30 08:00:55] Push e-Netcard online - Error ------
+-- A1-eNetcard Movement Error --
+ MITD: 2, Total: 1, State ID: 7, LGA ID: 119, User ID: 1101
+Error: There is no active transaction
+[2026-01-30 08:07:31] Push e-Netcard online - Error ------
+[2026-01-30 08:07:51] Push e-Netcard online - Error ------
+[2026-01-30 08:07:51] Push e-Netcard online - Error ------
+No UUIDs provided or not in array format
+ HHM ID: 1
+ Device Serial: DEVICE-EMPTY
+[2026-01-30 08:07:51] Push e-Netcard online - Error ------
+[2026-01-30 08:07:51] Push e-Netcard online - Error ------
+-- A1-eNetcard Movement Error --
+ MITD: 3, Total: 1, State ID: 7, LGA ID: 119, User ID: 1101
+Error: There is no active transaction
+[2026-01-30 08:12:25] Push e-Netcard online - Error ------
+[2026-01-30 08:12:45] Push e-Netcard online - Error ------
+[2026-01-30 08:12:45] Push e-Netcard online - Error ------
+No UUIDs provided or not in array format
+ HHM ID: 1
+ Device Serial: DEVICE-EMPTY
+[2026-01-30 08:12:45] Push e-Netcard online - Error ------
+[2026-01-30 08:12:45] Push e-Netcard online - Error ------
+[2026-01-30 08:15:52] Push e-Netcard online - Error ------
+[2026-01-30 08:15:52] Push e-Netcard online - Error ------
+No UUIDs provided or not in array format
+ HHM ID: 1
+ Device Serial: DEVICE-EMPTY
+[2026-01-30 08:15:52] Push e-Netcard online - Error ------
+[2026-01-30 08:15:52] Push e-Netcard online - Error ------
+-- A1-eNetcard Movement Error --
+ MITD: 4, Total: 1, State ID: 7, LGA ID: 119, User ID: 1101
+Error: There is no active transaction
+[2026-01-30 08:16:32] Push e-Netcard online - Error ------
+[2026-01-30 08:16:53] Push e-Netcard online - Error ------
+[2026-01-30 08:16:53] Push e-Netcard online - Error ------
+No UUIDs provided or not in array format
+ HHM ID: 1
+ Device Serial: DEVICE-EMPTY
+[2026-01-30 08:16:53] Push e-Netcard online - Error ------
+[2026-01-30 08:16:53] Push e-Netcard online - Error ------
+-- A1-eNetcard Movement Error --
+ MITD: 5, Total: 1, State ID: 7, LGA ID: 119, User ID: 1101
+Error: There is no active transaction
+[2026-01-30 08:17:57] Push e-Netcard online - Error ------
+[2026-01-30 08:18:18] Push e-Netcard online - Error ------
+[2026-01-30 08:18:18] Push e-Netcard online - Error ------
+No UUIDs provided or not in array format
+ HHM ID: 1
+ Device Serial: DEVICE-EMPTY
+[2026-01-30 08:18:18] Push e-Netcard online - Error ------
+[2026-01-30 08:18:18] Push e-Netcard online - Error ------
+-- A1-eNetcard Movement Error --
+ MITD: 6, Total: 1, State ID: 7, LGA ID: 119, User ID: 1101
+Error: There is no active transaction
+[2026-01-30 09:32:06] Push e-Netcard online - Error ------
+[2026-01-30 09:32:27] Push e-Netcard online - Error ------
+[2026-01-30 09:32:27] Push e-Netcard online - Error ------
+No UUIDs provided or not in array format
+ HHM ID: 1
+ Device Serial: DEVICE-EMPTY
+[2026-01-30 09:32:27] Push e-Netcard online - Error ------
+[2026-01-30 09:32:27] Push e-Netcard online - Error ------
+-- A1-eNetcard Movement Error --
+ MITD: 7, Total: 1, State ID: 7, LGA ID: 119, User ID: 1101
+Error: There is no active transaction
+[2026-01-30 09:33:31] Push e-Netcard online - Error ------
+[2026-01-30 09:33:52] Push e-Netcard online - Error ------
+[2026-01-30 09:33:52] Push e-Netcard online - Error ------
+No UUIDs provided or not in array format
+ HHM ID: 1
+ Device Serial: DEVICE-EMPTY
+[2026-01-30 09:33:52] Push e-Netcard online - Error ------
+[2026-01-30 09:33:52] Push e-Netcard online - Error ------
+[2026-01-30 09:46:31] Push e-Netcard online - Error ------
+[2026-01-30 09:46:31] Push e-Netcard online - Error ------
+No UUIDs provided or not in array format
+ HHM ID: 1
+ Device Serial: DEVICE-EMPTY
+[2026-01-30 09:46:31] Push e-Netcard online - Error ------
+[2026-01-30 09:46:31] Push e-Netcard online - Error ------
+-- A1-eNetcard Movement Error --
+ MITD: 8, Total: 1, State ID: 7, LGA ID: 119, User ID: 1101
+Error: There is no active transaction
+[2026-01-30 10:22:39] Push e-Netcard online - Error ------
+[2026-01-30 10:23:00] Push e-Netcard online - Error ------
+[2026-01-30 10:23:00] Push e-Netcard online - Error ------
+No UUIDs provided or not in array format
+ HHM ID: 1
+ Device Serial: DEVICE-EMPTY
+[2026-01-30 10:23:00] Push e-Netcard online - Error ------
+[2026-01-30 10:23:00] Push e-Netcard online - Error ------

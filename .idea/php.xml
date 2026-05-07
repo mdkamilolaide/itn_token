@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="MessDetectorOptionsConfiguration">
+    <option name="transferred" value="true" />
+  </component>
+  <component name="PHPCSFixerOptionsConfiguration">
+    <option name="transferred" value="true" />
+  </component>
+  <component name="PHPCodeSnifferOptionsConfiguration">
+    <option name="highlightLevel" value="WARNING" />
+    <option name="transferred" value="true" />
+  </component>
+  <component name="PhpIncludePathManager">
+    <include_path>
+      <path value="$PROJECT_DIR$/lib/vendor/phpunit/php-timer" />
+      <path value="$PROJECT_DIR$/lib/vendor/phpunit/phpunit" />
+      <path value="$PROJECT_DIR$/lib/vendor/setasign/fpdi" />
+      <path value="$PROJECT_DIR$/lib/vendor/phpunit/php-invoker" />
+      <path value="$PROJECT_DIR$/lib/vendor/phpunit/php-text-template" />
+      <path value="$PROJECT_DIR$/lib/vendor/phpunit/php-file-iterator" />
+      <path value="$PROJECT_DIR$/lib/vendor/psr/log" />
+      <path value="$PROJECT_DIR$/lib/vendor/phpunit/php-code-coverage" />
+      <path value="$PROJECT_DIR$/lib/vendor/psr/http-message" />
+      <path value="$PROJECT_DIR$/lib/vendor/theseer/tokenizer" />
+      <path value="$PROJECT_DIR$/lib/vendor/nikic/php-parser" />
+      <path value="$PROJECT_DIR$/lib/vendor/phar-io/version" />
+      <path value="$PROJECT_DIR$/lib/vendor/phar-io/manifest" />
+      <path value="$PROJECT_DIR$/lib/vendor/mpdf/psr-http-message-shim" />
+      <path value="$PROJECT_DIR$/lib/vendor/doctrine/instantiator" />
+      <path value="$PROJECT_DIR$/lib/vendor/paragonie/random_compat" />
+      <path value="$PROJECT_DIR$/lib/vendor/mpdf/qrcode" />
+      <path value="$PROJECT_DIR$/lib/vendor/mpdf/mpdf" />
+      <path value="$PROJECT_DIR$/lib/vendor/mpdf/psr-log-aware-trait" />
+      <path value="$PROJECT_DIR$/lib/vendor/sebastian/type" />
+      <path value="$PROJECT_DIR$/lib/vendor/sebastian/diff" />
+      <path value="$PROJECT_DIR$/lib/vendor/myclabs/deep-copy" />
+      <path value="$PROJECT_DIR$/lib/vendor/sebastian/lines-of-code" />
+      <path value="$PROJECT_DIR$/lib/vendor/sebastian/object-enumerator" />
+      <path value="$PROJECT_DIR$/lib/vendor/sebastian/comparator" />
+      <path value="$PROJECT_DIR$/lib/vendor/sebastian/code-unit" />
+      <path value="$PROJECT_DIR$/lib/vendor/sebastian/exporter" />
+      <path value="$PROJECT_DIR$/lib/vendor/firebase/php-jwt" />
+      <path value="$PROJECT_DIR$/lib/vendor/sebastian/cli-parser" />
+      <path value="$PROJECT_DIR$/lib/vendor/sebastian/version" />
+      <path value="$PROJECT_DIR$/lib/vendor/sebastian/complexity" />
+      <path value="$PROJECT_DIR$/lib/vendor/composer" />
+      <path value="$PROJECT_DIR$/lib/vendor/sebastian/recursion-context" />
+      <path value="$PROJECT_DIR$/lib/vendor/sebastian/resource-operations" />
+      <path value="$PROJECT_DIR$/lib/vendor/sebastian/code-unit-reverse-lookup" />
+      <path value="$PROJECT_DIR$/lib/vendor/sebastian/global-state" />
+      <path value="$PROJECT_DIR$/lib/vendor/sebastian/environment" />
+      <path value="$PROJECT_DIR$/lib/vendor/sebastian/object-reflector" />
+    </include_path>
+  </component>
+  <component name="PhpProjectSharedConfiguration" php_language_level="8.4">
+    <option name="suggestChangeDefaultLanguageLevel" value="false" />
+  </component>
+  <component name="PhpStanOptionsConfiguration">
+    <option name="transferred" value="true" />
+  </component>
+  <component name="PhpUnit">
+    <phpunit_settings>
+      <PhpUnitSettings custom_loader_path="$PROJECT_DIR$/lib/vendor/autoload.php" />
+    </phpunit_settings>
+  </component>
+  <component name="PsalmOptionsConfiguration">
+    <option name="transferred" value="true" />
+  </component>
+</project>

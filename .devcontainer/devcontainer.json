@@ -1,0 +1,42 @@
+{
+    "name": "PHP 8.4 Development Environment",
+    "dockerComposeFile": "docker-compose.yml",
+    "service": "app",
+    "workspaceFolder": "/var/www/html",
+    "features": {
+        "ghcr.io/devcontainers/features/git:1": {}
+    },
+    "customizations": {
+        "vscode": {
+            "extensions": [
+                "bmewburn.vscode-intelephense-client",
+                "xdebug.php-debug",
+                "zobo.php-intellisense",
+                "recca0120.vscode-phpunit",
+                "neilbrayfield.php-docblocker",
+                "mtxr.sqltools",
+                "mtxr.sqltools-driver-mysql"
+            ],
+            "settings": {
+                "php.validate.executablePath": "/usr/local/bin/php",
+                "editor.formatOnSave": true
+            }
+        }
+    },
+    "forwardPorts": [
+        80,
+        3306
+    ],
+    "portsAttributes": {
+        "80": {
+            "label": "Web App",
+            "onAutoForward": "notify"
+        },
+        "3306": {
+            "label": "MySQL",
+            "onAutoForward": "silent"
+        }
+    },
+    "postCreateCommand": "bash .devcontainer/post-create.sh",
+    "remoteUser": "root"
+}
