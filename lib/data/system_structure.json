@@ -330,7 +330,6 @@
           "app-assets/vendors/third-parties/excel/jhxlsx.js",
           "app-assets/vendors/js/forms/select/select2.full.min.js",
           "app-assets/vendors/js/pickers/flatpickr/flatpickr.min.js",
-          "app-assets/vendors/css/forms/select/select2.min.css",
           "app-assets/app/activity/reporting.js"
         ]
       }
