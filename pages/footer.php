@@ -15,6 +15,9 @@
             </div>
             <div class="modal-body flex-grow-1">
                 <form class="validate-form" id="change-password" method="POST">
+                    <input type="text" name="username" autocomplete="username"
+                           value="<?= htmlspecialchars($v_g_loginid ?? '', ENT_QUOTES) ?>"
+                           hidden readonly />
                     <div class="form-group">
                         <div class="d-flex justify-content-between">
                             <label for="login-password">Old Password</label>
