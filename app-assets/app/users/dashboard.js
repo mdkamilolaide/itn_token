@@ -60,40 +60,48 @@ Vue.component("dashboard_container", {
                 url + "?qid=010", //Get User Group Data [6]
             ];
 
-            // Return our response in the allData variable as an array
+            // Return our response in the allData variable as an array.
+            // Each endpoint is null-guarded — an empty result set should
+            // render zeros, not crash the whole dashboard.
+            const fmt = (v) => parseInt(v || 0).toLocaleString();
+
             Promise.all(endpoints.map((endpoint) => axios.get(endpoint))).then(
                 axios.spread((...allData) => {
                     overlay.show();
 
                     // Total Users
-                    self.totalUser = parseInt(allData[0].data.total_user[0].total).toLocaleString();
+                    var totalUserRow = allData[0]?.data?.total_user?.[0];
+                    self.totalUser = totalUserRow ? fmt(totalUserRow.total) : "0";
 
                     // User Active Status
-                    self.userStatus.totalActiveUser = parseInt(allData[1].data.data[0].active).toLocaleString();
-                    self.userStatus.totalInactiveUser = parseInt(allData[1].data.data[0].inactive).toLocaleString();
+                    var statusRow = allData[1]?.data?.data?.[0];
+                    self.userStatus.totalActiveUser = statusRow ? fmt(statusRow.active) : "0";
+                    self.userStatus.totalInactiveUser = statusRow ? fmt(statusRow.inactive) : "0";
 
                     // Geo Distribution
-                    // console.log(allData[2].data.data);
-                    allData[2].data.data.map((stat) => {
-                        self.geoUserDistribution.state = stat["geo_level"] == "state" ? parseInt(stat["total"]).toLocaleString() : self.geoUserDistribution.state;
-                        self.geoUserDistribution.lga = stat["geo_level"] == "lga" ? parseInt(stat["total"]).toLocaleString() : self.geoUserDistribution.lga;
-                        self.geoUserDistribution.cluster = stat["geo_level"] == "cluster" ? parseInt(stat["total"]).toLocaleString() : self.geoUserDistribution.cluster;
-                        self.geoUserDistribution.ward = stat["geo_level"] == "ward" ? parseInt(stat["total"]).toLocaleString() : self.geoUserDistribution.ward;
-                        self.geoUserDistribution.dp = stat["geo_level"] == "dp" ? parseInt(stat["total"]).toLocaleString() : self.geoUserDistribution.dp;
+                    var geoRows = allData[2]?.data?.data || [];
+                    geoRows.forEach((stat) => {
+                        self.geoUserDistribution.state = stat["geo_level"] == "state" ? fmt(stat["total"]) : self.geoUserDistribution.state;
+                        self.geoUserDistribution.lga = stat["geo_level"] == "lga" ? fmt(stat["total"]) : self.geoUserDistribution.lga;
+                        self.geoUserDistribution.cluster = stat["geo_level"] == "cluster" ? fmt(stat["total"]) : self.geoUserDistribution.cluster;
+                        self.geoUserDistribution.ward = stat["geo_level"] == "ward" ? fmt(stat["total"]) : self.geoUserDistribution.ward;
+                        self.geoUserDistribution.dp = stat["geo_level"] == "dp" ? fmt(stat["total"]) : self.geoUserDistribution.dp;
                     });
 
                     //Group Data
-                    self.totalGroup = allData[4].data.data[0].total ? parseInt(allData[4].data.data[0].total).toLocaleString() : 0;
+                    var groupRow = allData[4]?.data?.data?.[0];
+                    self.totalGroup = groupRow && groupRow.total ? fmt(groupRow.total) : 0;
 
                     // Gender
-                    allData[5].data.data.map((stat) => {
-                        self.gender.others = stat["gender"] == null ? parseInt(stat["total"]).toLocaleString() : self.gender.others;
-                        self.gender.male = stat["gender"] == "Male" ? parseInt(stat["total"]).toLocaleString() : self.gender.male;
-                        self.gender.female = stat["gender"] == "Female" ? parseInt(stat["total"]).toLocaleString() : self.gender.female;
+                    var genderRows = allData[5]?.data?.data || [];
+                    genderRows.forEach((stat) => {
+                        self.gender.others = stat["gender"] == null ? fmt(stat["total"]) : self.gender.others;
+                        self.gender.male = stat["gender"] == "Male" ? fmt(stat["total"]) : self.gender.male;
+                        self.gender.female = stat["gender"] == "Female" ? fmt(stat["total"]) : self.gender.female;
                     });
 
                     // User Group List
-                    self.userGroupData = allData[6].data.data;
+                    self.userGroupData = allData[6]?.data?.data || [];
 
                     overlay.hide();
                 })
