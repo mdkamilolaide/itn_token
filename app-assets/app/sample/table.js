@@ -1,243 +1,183 @@
-Vue.component('page-body', {
-    data: function() {
-        return {
-            page: 'home', //  page by name home | result | ...
-        }
-    },
-    mounted() {
-        /*  Manages events Listening    */
+/**
+ * sample/table submodule — Vue 3 Composition API in place.
+ * Full Vue-driven table: server-side pagination, sorting, filtering, all reactive.
+ * Uses qid=200 against TableService.
+ */
 
-    },
-    methods: {
+const { ref, reactive, computed, onMounted } = Vue;
+const { useApp, useFormat, safeMessage } = window.utils;
 
+const PageBody = {
+    setup() {
+        const page = ref('home');
+        return { page };
     },
     template: `
     <div>
-
         <div class="content-body">
             <sample_table/>
         </div>
     </div>
-    `
-});
-Vue.component('sample_table', {
-    data: function() {
-        return {
-            "tableData": [],
-            "checkToggle": false,
-            "filterState": false,
-            "filters": false,
-            "tableOptions": {
-                "total": 1, //Total record 
-                "pageLength": 1, //Total 
-                "perPage": 10,
-                "currentPage": 1,
-                "orderDir": "asc", // (asc|desc)
-                "orderField": 0, //(Order fields)
-                "limitStart": 0, //(currentPage - 1) * perPage
-                "isNext": false,
-                "isPrev": false,
-                "aLength": [10, 20, 50, 100],
-                "filterParameters": {
-                    "loginid": "",
-                    "firstname": ""
-                }
+    `,
+};
 
-            }
-        }
-    },
-    mounted() {
-        /*  Manages events Listening    */
-        this.loadTableData();
-    },
+const SampleTable = {
+    setup() {
+        const fmtUtils = useFormat();
 
-    methods: {
-        loadTableData() {
-            /*  Manages the loading of table data */
-            var self = this;
-            var url = common.TableService;
+        const tableData = ref([]);
+        const checkToggle = ref(false);
+        const filterState = ref(false);
+        const filters = ref(false);
+
+        const tableOptions = reactive({
+            total: 1,
+            pageLength: 1,
+            perPage: 10,
+            currentPage: 1,
+            orderDir: 'asc',
+            orderField: 0,
+            limitStart: 0,
+            isNext: false,
+            isPrev: false,
+            aLength: [10, 20, 50, 100],
+            filterParameters: {
+                loginid: '',
+                firstname: '',
+            },
+        });
+
+        function loadTableData() {
             overlay.show();
-            axios.get(url + "?qid=200&draw=" + self.tableOptions.currentPage + "&order_column=" + self.tableOptions.orderField + "&length=" + self.tableOptions.perPage + "&start=" + self.tableOptions.limitStart + "&order_dir=" + self.tableOptions.orderDir)
-                .then(function(response) {
-
-                    self.tableData = response.data.data; //All Data
-                    self.tableOptions.total = response.data.recordsTotal; //Total Records
-                    if (self.tableOptions.currentPage == 1) {
-                        self.paginationDefault();
-                    }
+            var url = common.TableService;
+            axios
+                .get(
+                    url +
+                        '?qid=200&draw=' + tableOptions.currentPage +
+                        '&order_column=' + tableOptions.orderField +
+                        '&length=' + tableOptions.perPage +
+                        '&start=' + tableOptions.limitStart +
+                        '&order_dir=' + tableOptions.orderDir
+                )
+                .then(function (response) {
+                    var d = response && response.data;
+                    tableData.value = Array.isArray(d && d.data) ? d.data : [];
+                    tableOptions.total = (d && d.recordsTotal) || 0;
+                    if (tableOptions.currentPage == 1) paginationDefault();
                     overlay.hide();
-
                 })
-                .catch(function(error) {
+                .catch(function (error) {
                     overlay.hide();
-                    alert.Error("ERROR", error);
-
+                    alert.Error('ERROR', safeMessage(error));
                 });
-
-
-        },
-        selectAll() {
-            /*  Manages all check box selection checked */
-            if (this.tableData.length > 0) {
-                for (let i = 0; i < this.tableData.length; i++) {
-                    this.tableData[i].pick = true;
-                }
-            }
-        },
-        uncheckAll() {
-            /*  Manages unchecking of all check box checked */
-            if (this.tableData.length > 0) {
-                for (let i = 0; i < this.tableData.length; i++) {
-                    this.tableData[i].pick = false;
-                }
-            }
-        },
-        selectToggle() {
-            /*  Manages all check box checking and unchecking  */
-            if (this.checkToggle == false) {
-                this.selectAll();
-                this.checkToggle = true;
-            } else {
-                this.uncheckAll();
-                this.checkToggle = false;
-            }
-        },
-        checkedBg(pickOne) {
-            /*  Manages the checking of a checkbox */
-            return pickOne != "" ? "bg-select" : "";
-        },
-        toggleFilter() {
-            /*  Manages the toggling of a filter box */
-            if (this.filterState === false) {
-                this.filters = false;
-            }
-            return this.filterState = !this.filterState;
-        },
-        selectedItems() {
-            /*  Manages the selections of checkedor selected data object */
-            let selectedItems = [];
-            if (this.tableData.length > 0) {
-                for (let i = 0; i < this.tableData.length; i++) {
-                    if (this.tableData[i].pick) {
-                        selectedItems.push(this.tableData[i]);
-                    }
-                }
-            }
-            return selectedItems;
-        },
-        selectedID() {
-            /*  Manages the selections of checkedor selected data object */
-            let selectedIds = [];
-            if (this.tableData.length > 0) {
-                for (let i = 0; i < this.tableData.length; i++) {
-                    if (this.tableData[i].pick) {
-                        selectedIds.push(this.tableData[i].userid);
-                    }
-                }
-            }
-            return selectedIds;
-        },
-        nextPage() {
-            /*  Manages the selections of checked or selected data object */
-            this.tableOptions.currentPage += 1;
-            this.paginationDefault();
-            this.loadTableData();
-        },
-        prevPage() {
-            /*  Manages the selections of checked or selected data object */
-            this.tableOptions.currentPage -= 1;
-            this.paginationDefault();
-            this.loadTableData();
-        },
-        currentPage() {
-            this.paginationDefault();
-            if (this.tableOptions.currentPage < 1) {
-                alert.Error("ERROR", "The Page requested doesn't exist");
-            } else if (this.tableOptions.currentPage > this.tableOptions.pageLength) {
-                alert.Error("ERROR", "The Page requested doesn't exist");
-            } else {
-                this.loadTableData();
-            }
-
-        },
-        paginationDefault() {
-            //  total page
-            this.tableOptions.pageLength = Math.ceil(this.tableOptions.total / this.tableOptions.perPage);
-
-            // Page Limit
-            this.tableOptions.limitStart = Math.ceil((this.tableOptions.currentPage - 1) * this.tableOptions.perPage);
-
-            //  Next
-            if (this.tableOptions.currentPage < this.tableOptions.pageLength &&
-                this.tableOptions.currentPage != this.tableOptions.pageLength) {
-                this.tableOptions.isNext = true;
-            } else {
-                this.tableOptions.isNext = false;
-            }
-
-            // Previous
-            if (this.tableOptions.currentPage > 1) {
-                this.tableOptions.isPrev = true;
-            } else {
-                this.tableOptions.isPrev = false;
-            }
-
-        },
-        changePerPage(val) {
-            let maxPerPage = Math.ceil(this.tableOptions.total / val);
-            if (maxPerPage < this.tableOptions.currentPage) {
-              this.tableOptions.currentPage = maxPerPage;
-            }
-            this.tableOptions.perPage = val;
-            this.paginationDefault();
-            this.loadTableData();
-        },
-        sort(col) {
-
-            if (this.tableOptions.orderField === col) {
-                this.tableOptions.orderDir = this.tableOptions.orderDir === "asc" ? "desc" : "asc";
-            } else {
-                this.tableOptions.orderField = col;
-            }
-
-            this.paginationDefault();
-            this.loadTableData();
-        },
-        applyFilter() {
-            // Check if any filter fields are filled
-            let checkFill = 0;
-            checkFill += (this.tableOptions.filterParameters.firstname != "") ? 1 : 0;
-            checkFill += (this.tableOptions.filterParameters.loginid != "") ? 1 : 0;
-
-            if (checkFill > 0) {
-                this.toggleFilter();
-                this.filters = true;
-                this.loadTableData();
-            } else {
-                alert.Error("ERROR", "Invalid required data");
-                return;
-            }
-
-        },
-        clearAllFilter() {
-            this.filters = false;
-            this.tableOptions.filterParameters.loginid = this.tableOptions.filterParameters.firstname = "";
-        },
-        capitalize(word) {
-            if (word) {
-                const loweredCase = word.toLowerCase();
-                return word[0].toUpperCase() + loweredCase.slice(1);
-            } else {
-                return word;
-            }
         }
 
-    },
-    computed: {
+        function selectAll() {
+            for (var i = 0; i < tableData.value.length; i++) tableData.value[i].pick = true;
+        }
+        function uncheckAll() {
+            for (var i = 0; i < tableData.value.length; i++) tableData.value[i].pick = false;
+        }
+        function selectToggle() {
+            if (checkToggle.value === false) { selectAll(); checkToggle.value = true; }
+            else                              { uncheckAll(); checkToggle.value = false; }
+        }
+        function checkedBg(pickOne) { return pickOne != '' ? 'bg-select' : ''; }
 
+        function toggleFilter() {
+            if (filterState.value === false) filters.value = false;
+            return (filterState.value = !filterState.value);
+        }
+
+        function selectedItems() {
+            return tableData.value.filter(function (r) { return r.pick; });
+        }
+        function selectedID() {
+            return tableData.value.filter(function (r) { return r.pick; }).map(function (r) { return r.userid; });
+        }
+
+        function paginationDefault() {
+            tableOptions.pageLength = Math.ceil(tableOptions.total / tableOptions.perPage);
+            tableOptions.limitStart = Math.ceil((tableOptions.currentPage - 1) * tableOptions.perPage);
+            tableOptions.isNext = (tableOptions.currentPage < tableOptions.pageLength);
+            tableOptions.isPrev = (tableOptions.currentPage > 1);
+        }
+
+        function nextPage() {
+            tableOptions.currentPage += 1;
+            paginationDefault();
+            loadTableData();
+        }
+        function prevPage() {
+            tableOptions.currentPage -= 1;
+            paginationDefault();
+            loadTableData();
+        }
+        function currentPage() {
+            paginationDefault();
+            if (tableOptions.currentPage < 1)                          alert.Error('ERROR', "The Page requested doesn't exist");
+            else if (tableOptions.currentPage > tableOptions.pageLength) alert.Error('ERROR', "The Page requested doesn't exist");
+            else                                                       loadTableData();
+        }
+        function changePerPage(val) {
+            var maxPerPage = Math.ceil(tableOptions.total / val);
+            if (maxPerPage < tableOptions.currentPage) tableOptions.currentPage = maxPerPage;
+            tableOptions.perPage = val;
+            paginationDefault();
+            loadTableData();
+        }
+
+        function sort(col) {
+            if (tableOptions.orderField === col) {
+                tableOptions.orderDir = tableOptions.orderDir === 'asc' ? 'desc' : 'asc';
+            } else {
+                tableOptions.orderField = col;
+            }
+            paginationDefault();
+            loadTableData();
+        }
+
+        function applyFilter() {
+            var checkFill = 0;
+            checkFill += tableOptions.filterParameters.firstname != '' ? 1 : 0;
+            checkFill += tableOptions.filterParameters.loginid   != '' ? 1 : 0;
+            if (checkFill > 0) {
+                toggleFilter();
+                filters.value = true;
+                loadTableData();
+            } else {
+                alert.Error('ERROR', 'Invalid required data');
+            }
+        }
+        function clearAllFilter() {
+            filters.value = false;
+            tableOptions.filterParameters.loginid = '';
+            tableOptions.filterParameters.firstname = '';
+        }
+
+        onMounted(function () {
+            loadTableData();
+        });
+
+        return {
+            // state
+            tableData,
+            checkToggle,
+            filterState,
+            filters,
+            tableOptions,
+            // methods
+            loadTableData,
+            selectAll, uncheckAll, selectToggle, checkedBg,
+            toggleFilter, selectedItems, selectedID,
+            nextPage, prevPage, currentPage, paginationDefault, changePerPage,
+            sort, applyFilter, clearAllFilter,
+            // template helpers (return all so template references survive)
+            capitalize: fmtUtils.capitalize,
+            formatNumber: fmtUtils.formatNumber,
+        };
     },
     template: `
-
     <div class="row" id="basic-table">
 
         <div class="col-8">
@@ -245,15 +185,13 @@ Vue.component('sample_table', {
                 <span class="badge badge-dark filter-box" v-for="(filterParam, i) in tableOptions.filterParameters" v-if="filterParam.length > 0">{{capitalize(i)}}: {{filterParam}} <i class="feather icon-x"></i></span>
             </div>
         </div>
-        
+
         <div class="col-md-4 col-12 text-md-right text-right d-md-block">
             <div class="btn-group">
                 <button type="button" data-toggle="modal" data-target="#addNewUser" class="btn btn-sm btn-outline-primary round"><i data-feather='plus'></i> Add</button>
-                
                 <button type="button" class="btn btn-sm btn-outline-primary round searchBtn" @click="toggleFilter()">
-                    <i class="feather" :class="filterState ? 'icon-x' : 'icon-filter'"></i>               
+                    <i class="feather" :class="filterState ? 'icon-x' : 'icon-filter'"></i>
                 </button>
-                
                 <button class="btn btn-sm btn-outline-primary round dropdown-toggle" type="button" id="dropdownMenuButton" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                     Actions
                 </button>
@@ -288,10 +226,9 @@ Vue.component('sample_table', {
                                 </div>
                             </div>
                             <div class="col-3 col-md-3 text-right">
-                                    <button type="button" class="btn btn-md btn-outline-primary" @click="clearAllFilter()">Clear</button>
-                                    <button type="button" class="btn btn-md btn-primary"  @click="applyFilter()">Apply Filters</button>
+                                <button type="button" class="btn btn-md btn-outline-primary" @click="clearAllFilter()">Clear</button>
+                                <button type="button" class="btn btn-md btn-primary" @click="applyFilter()">Apply Filters</button>
                             </div>
-                            
                         </div>
                     </form>
                 </div>
@@ -301,7 +238,6 @@ Vue.component('sample_table', {
                         <thead>
                             <tr>
                                 <th>
-
                                     <div class="custom-control custom-checkbox checkbox">
                                         <input type="checkbox" class="custom-control-input" @change="selectToggle()" id="all-check" />
                                         <label class="custom-control-label" for="all-check"></label>
@@ -309,60 +245,54 @@ Vue.component('sample_table', {
                                 </th>
                                 <th @click="sort(1)">
                                     Login ID
-                                    <i class="feather icon-chevron-up sort-up" :class="(tableOptions.orderField == 1 && tableOptions.orderDir =='asc')? 'active-sort': ''"></i>
-                                    <i class="feather icon-chevron-down sort-down" :class="(tableOptions.orderField == 1 && tableOptions.orderDir =='desc')? 'active-sort': ''"></i>
+                                    <i class="feather icon-chevron-up sort-up"   :class="(tableOptions.orderField == 1 && tableOptions.orderDir =='asc' )? 'active-sort':''"></i>
+                                    <i class="feather icon-chevron-down sort-down" :class="(tableOptions.orderField == 1 && tableOptions.orderDir =='desc')? 'active-sort':''"></i>
                                 </th>
                                 <th @click="sort(6)">
                                     First Name
-                                    <i class="feather icon-chevron-up sort-up" :class="(tableOptions.orderField == 6 && tableOptions.orderDir =='asc')? 'active-sort': ''"></i>
-                                    <i class="feather icon-chevron-down sort-down" :class="(tableOptions.orderField == 6 && tableOptions.orderDir =='desc')? 'active-sort': ''"></i>
+                                    <i class="feather icon-chevron-up sort-up"   :class="(tableOptions.orderField == 6 && tableOptions.orderDir =='asc' )? 'active-sort':''"></i>
+                                    <i class="feather icon-chevron-down sort-down" :class="(tableOptions.orderField == 6 && tableOptions.orderDir =='desc')? 'active-sort':''"></i>
                                 </th>
                                 <th @click="sort(7)">
                                     Last Name
-                                    <i class="feather icon-chevron-up sort-up" :class="(tableOptions.orderField == 7 && tableOptions.orderDir =='asc')? 'active-sort': ''"></i>
-                                    <i class="feather icon-chevron-down sort-down" :class="(tableOptions.orderField == 7 && tableOptions.orderDir =='desc')? 'active-sort': ''"></i>
+                                    <i class="feather icon-chevron-up sort-up"   :class="(tableOptions.orderField == 7 && tableOptions.orderDir =='asc' )? 'active-sort':''"></i>
+                                    <i class="feather icon-chevron-down sort-down" :class="(tableOptions.orderField == 7 && tableOptions.orderDir =='desc')? 'active-sort':''"></i>
                                 </th>
                                 <th @click="sort(5)">
                                     Role
-                                    <i class="feather icon-chevron-up sort-up" :class="(tableOptions.orderField == 5 && tableOptions.orderDir =='asc')? 'active-sort': ''"></i>
-                                    <i class="feather icon-chevron-down sort-down" :class="(tableOptions.orderField == 5 && tableOptions.orderDir =='desc')? 'active-sort': ''"></i>
+                                    <i class="feather icon-chevron-up sort-up"   :class="(tableOptions.orderField == 5 && tableOptions.orderDir =='asc' )? 'active-sort':''"></i>
+                                    <i class="feather icon-chevron-down sort-down" :class="(tableOptions.orderField == 5 && tableOptions.orderDir =='desc')? 'active-sort':''"></i>
                                 </th>
                                 <th></th>
                             </tr>
                         </thead>
                         <tbody>
-                            <tr v-for="g in tableData" :class="checkedBg(g.pick)">
+                            <tr v-for="g in tableData" :key="g.loginid || g.userid" :class="checkedBg(g.pick)">
                                 <td>
                                     <div class="custom-control custom-checkbox checkbox">
                                         <input type="checkbox" class="custom-control-input" :id="g.loginid" v-model="g.pick" />
                                         <label class="custom-control-label" :for="g.loginid"></label>
                                     </div>
                                 </td>
-                                <td>{{g.loginid}}</td>
-                                <td>{{g.first}}</td>
-                                <td>{{g.last}}</td>
-                                <td>{{g.role}}</td>
+                                <td>{{ g.loginid }}</td>
+                                <td>{{ g.first }}</td>
+                                <td>{{ g.last }}</td>
+                                <td>{{ g.role }}</td>
                                 <td>
                                     <div class="dropdown">
                                         <button type="button" class="btn btn-sm dropdown-toggle hide-arrow" data-toggle="dropdown">
                                             <i class="feather icon-more-vertical"></i>
                                         </button>
                                         <div class="dropdown-menu">
-                                            <a class="dropdown-item" href="javascript:void(0);">
-                                                <i class="feather icon-edit-2 mr-50"></i>
-                                                <span>Edit</span>
-                                            </a>
-                                            <a class="dropdown-item" href="javascript:void(0);">
-                                                <i class="feather icon-trash mr-50"></i>
-                                                <span>Delete</span>
-                                            </a>
+                                            <a class="dropdown-item" href="javascript:void(0);"><i class="feather icon-edit-2 mr-50"></i><span>Edit</span></a>
+                                            <a class="dropdown-item" href="javascript:void(0);"><i class="feather icon-trash mr-50"></i><span>Delete</span></a>
                                         </div>
                                     </div>
                                 </td>
                             </tr>
+                            <tr v-if="tableData.length === 0"><td class="text-center pt-2" colspan="6"><small>No records</small></td></tr>
                         </tbody>
                     </table>
-
                 </div>
 
                 <div class="card-footer">
@@ -371,41 +301,29 @@ Vue.component('sample_table', {
                             <div class="col-12 col-xl-4 col-md-4 col-sm-5">
                                 <div class="dropdown sort-dropdown mb-1 mb-sm-0">
                                     <button class="btn filter-btn btn-primary dropdown-toggle border text-dark" type="button" id="tablePaginationDropdown" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                                        {{tableOptions.limitStart+1}} - {{tableOptions.limitStart+tableData.length}} of {{tableOptions.total}} 
+                                        {{ tableOptions.limitStart + 1 }} - {{ tableOptions.limitStart + tableData.length }} of {{ tableOptions.total }}
                                     </button>
                                     <div class="dropdown-menu dropdown-menu-right" aria-labelledby="tablePaginationDropdown">
-                                        <a @click="changePerPage(g)" v-for="g in tableOptions.aLength" class="dropdown-item" href="javascript:void(0);">{{g}}</a>
+                                        <a @click="changePerPage(g)" v-for="g in tableOptions.aLength" :key="g" class="dropdown-item" href="javascript:void(0);">{{ g }}</a>
                                     </div>
-                                </div>                            
+                                </div>
                             </div>
 
                             <div class="col-12 col-xl-8 col-md-8 col-sm-7 text-right text-pag">
-                                
                                 <div class="btn-group">
-                                    <button type="button" @click="prevPage()" class="btn btn-sm btn-primary round btn-page-block-overlay" :disabled="tableOptions.isPrev? false: true">
+                                    <button type="button" @click="prevPage()" class="btn btn-sm btn-primary round btn-page-block-overlay" :disabled="!tableOptions.isPrev">
                                         <i data-feather='chevron-left'></i> Prev
                                     </button>
-                                    
-                                    <input @keyup.13="currentPage()" class="btn btn-page-block-overlay btn-sm btn-outline-primary pagination-input" type="number" v-model.number="tableOptions.currentPage" :max="tableOptions.pageLength" />
-                                    
+                                    <input @keyup.enter="currentPage()" class="btn btn-page-block-overlay btn-sm btn-outline-primary pagination-input" type="number" v-model.number="tableOptions.currentPage" :max="tableOptions.pageLength" />
                                     <button class="btn btn-outline-primary btn-page-block-overlay border-l-0">
-                                        <small class="form-text text-primary">  of {{this.tableOptions.pageLength}} </small>
+                                        <small class="form-text text-primary">  of {{ tableOptions.pageLength }} </small>
                                     </button>
-                                    
-                                    <button type="button" @click="nextPage()" class="btn btn-sm btn-primary round"  :disabled="tableOptions.isNext? false: true">
+                                    <button type="button" @click="nextPage()" class="btn btn-sm btn-primary round" :disabled="!tableOptions.isNext">
                                         Next <i data-feather='chevron-right'></i>
                                     </button>
-                                    
                                 </div>
-
                             </div>
                         </div>
-                    </div>
-
-
-                    
-                    <div>
-                    
                     </div>
                 </div>
 
@@ -413,7 +331,7 @@ Vue.component('sample_table', {
             </div>
         </div>
 
-        <!-- Modal to add new user starts-->
+        <!-- Modal to add new user -->
         <div class="modal modal-slide-in new-user-modal fade" id="addNewUser">
             <div class="modal-dialog modal-scrollable modal-xl">
                 <form class="add-new-user modal-content pt-0">
@@ -424,16 +342,16 @@ Vue.component('sample_table', {
                     <div class="modal-body flex-grow-1">
                         <div class="form-group">
                             <label class="form-label" for="basic-icon-default-fullname">Full Name</label>
-                            <input type="text" class="form-control dt-full-name" id="basic-icon-default-fullname" placeholder="John Doe" name="user-fullname" aria-label="John Doe" aria-describedby="basic-icon-default-fullname2" />
+                            <input type="text" class="form-control dt-full-name" id="basic-icon-default-fullname" placeholder="John Doe" name="user-fullname" />
                         </div>
                         <div class="form-group">
                             <label class="form-label" for="basic-icon-default-uname">Username</label>
-                            <input type="text" id="basic-icon-default-uname" class="form-control dt-uname" placeholder="Web Developer" aria-label="jdoe1" aria-describedby="basic-icon-default-uname2" name="user-name" />
+                            <input type="text" id="basic-icon-default-uname" class="form-control dt-uname" placeholder="Web Developer" name="user-name" />
                         </div>
                         <div class="form-group">
                             <label class="form-label" for="basic-icon-default-email">Email</label>
-                            <input type="text" id="basic-icon-default-email" class="form-control dt-email" placeholder="john.doe@example.com" aria-label="john.doe@example.com" aria-describedby="basic-icon-default-email2" name="user-email" />
-                            <small class="form-text text-muted"> You can use letters, numbers & periods </small>
+                            <input type="text" id="basic-icon-default-email" class="form-control dt-email" placeholder="john.doe@example.com" name="user-email" />
+                            <small class="form-text text-muted">You can use letters, numbers & periods</small>
                         </div>
                         <div class="form-group">
                             <label class="form-label" for="user-role">User Role</label>
@@ -460,23 +378,11 @@ Vue.component('sample_table', {
                 </form>
             </div>
         </div>
-        <!-- Modal to add new user Ends-->
-
-
     </div>
+    `,
+};
 
-
-    `
-});
-var vm = new Vue({
-    el: "#app",
-    data: {},
-    methods: {
-
-    },
-    template: `
-        <div>
-            <page-body/>
-        </div>
-    `
-});
+useApp({ template: `<div><page-body/></div>` })
+    .component('page-body', PageBody)
+    .component('sample_table', SampleTable)
+    .mount('#app');

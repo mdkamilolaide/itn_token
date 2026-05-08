@@ -1,30 +1,27 @@
+/**
+ * test.js — sample/sample submodule. Vue 3 Composition API.
+ * Tiny smoke test for the toast wrappers (alert.Success / Error / Warning / Info).
+ */
 
-var vm = new Vue({
-    el:"#app",
-    data:{},
-    methods:{
-        clickInfo(){
-            alert.Info('Testa','Testing to know if this will work');
-        },
-        clickError(){
-            alert.Error('Testa','Testing to know if this will work');
-        },
-        clickSuccess(){
-            alert.Success('Testa','Testing to know if this will work');
-        },
-        clickWarning(){
-            alert.Warning('Testa','Testing to know if this will work');
-        },
+const { useApp } = window.utils;
+
+useApp({
+    setup() {
+        function clickInfo()    { alert.Info('Testa', 'Testing to know if this will work'); }
+        function clickError()   { alert.Error('Testa', 'Testing to know if this will work'); }
+        function clickSuccess() { alert.Success('Testa', 'Testing to know if this will work'); }
+        function clickWarning() { alert.Warning('Testa', 'Testing to know if this will work'); }
+        return { clickInfo, clickError, clickSuccess, clickWarning };
     },
-    template:`
+    template: `
         <div>
             <h1>Ipolongo is now Vue compatible</h1>
             <p>
                 <button type="button" class="btn round btn-primary" @click="clickSuccess()">Success</button>
                 <button type="button" class="btn round btn-danger" @click="clickError()">Error</button>
-                <button type="button" class="btn round btn-warning" @click="clickWarning()">Error</button>
-                <button type="button" class="btn round btn-info" @click="clickInfo()">Error</button>
+                <button type="button" class="btn round btn-warning" @click="clickWarning()">Warning</button>
+                <button type="button" class="btn round btn-info" @click="clickInfo()">Info</button>
             </p>
         </div>
-    `
-});
+    `,
+}).mount('#app');
