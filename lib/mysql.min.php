@@ -111,16 +111,19 @@ class MysqlPdo{public $Conn;public $ErrorMessage;public $ConnMsg;public function
             return $data;
         }public function commitTransaction(){return $this->Conn->commit();}}
 function GetMysqlDatabase(){
-        // Prefer explicit DSN from environment (used by phpunit.xml)
-        $dsn = getenv('IPOLONGO_DB_DSN') ?: getenv('DB_DSN');
+        // Prefer ITN_DB_* constants (defined in lib/config.php for the local
+        // deployment). Constants are reliable across mod_php / php-fpm /
+        // CLI; putenv() is not on every Windows configuration.
+        // Fall back to env vars (used by phpunit.xml), then to defaults.
+        $dsn  = (defined('ITN_DB_DSN')  ? ITN_DB_DSN  : null) ?: (getenv('IPOLONGO_DB_DSN') ?: getenv('DB_DSN'));
         if (!$dsn) {
             $db = getenv('DB_DATABASE') ?: 'ipolongo_v5';
             $host = getenv('DB_HOST') ?: 'localhost';
             $charset = getenv('DB_CHARSET') ?: 'utf8';
             $dsn = "mysql:host={$host};dbname={$db};charset={$charset}";
         }
-        $user = getenv('IPOLONGO_DB_USER') ?: getenv('DB_USER') ?: 'root';
-        $pass = getenv('IPOLONGO_DB_PASS') ?: getenv('DB_PASS') ?: '';
+        $user = (defined('ITN_DB_USER') ? ITN_DB_USER : null) ?: (getenv('IPOLONGO_DB_USER') ?: getenv('DB_USER') ?: 'root');
+        $pass = defined('ITN_DB_PASS') ? ITN_DB_PASS : (getenv('IPOLONGO_DB_PASS') ?: getenv('DB_PASS') ?: '');
 
         // Reuse a single MysqlPdo per unique DSN+user in the current process. This
         // avoids exhausting MySQL's connection limit when application code and

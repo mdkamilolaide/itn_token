@@ -354,8 +354,8 @@ Vue.component("user_list", {
             self.tableOptions.filterParam.role_id,
         )
         .then(function (response) {
-          self.tableData = response.data.data; //All Data
-          self.tableOptions.total = response.data.recordsTotal; //Total Records
+          self.tableData = Array.isArray(response.data && response.data.data) ? response.data.data : [];
+          self.tableOptions.total = (response.data && response.data.recordsTotal) || 0;
           if (self.tableOptions.currentPage == 1) {
             self.paginationDefault();
           }
@@ -363,7 +363,7 @@ Vue.component("user_list", {
         })
         .catch(function (error) {
           overlay.hide();
-          alert.Error("ERROR", error);
+          alert.Error("ERROR", (error && error.response && error.response.data && error.response.data.message) || (error && error.message) || String(error));
         });
     },
     selectAll() {
