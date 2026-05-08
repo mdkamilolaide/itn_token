@@ -15,7 +15,7 @@
     "reporting",
     "eolin"
   ],
-  "module_v3": ["monitoring", "sample", "dashboard", "admin", "device", "users", "activity", "mobilization", "reporting", "eolin", "netcard"],
+  "module_v3": ["monitoring", "sample", "dashboard", "admin", "device", "users", "activity", "mobilization", "reporting", "eolin", "netcard", "smc/logistics"],
   "general_css": [
     "app-assets/vendors/css/vendors.min.css",
     "app-assets/vendors/css/extensions/jstree.min.css",

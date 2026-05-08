@@ -9,10 +9,16 @@ $subdomain = CleanData("submodule");
 # axios, toastr, common.js, utils.js, module-specific component files) stays
 # the same. With $config_system_structure['module_v3'] = [] (the default),
 # this is a no-op and behaviour is bit-identical to baseline.
+#
+# Submodule-level entries are also honoured. An entry like "smc/logistics"
+# flips Vue 3 only for that submodule path, leaving the rest of the parent
+# module on Vue 2. Used while a module is mid-conversion (e.g. smc, where
+# logistics is converted but dashboard/period/etc. still run on Vue 2).
 $module_v3 = isset($config_system_structure['module_v3']) && is_array($config_system_structure['module_v3'])
     ? $config_system_structure['module_v3']
     : [];
-$is_v3_module = in_array($module, $module_v3, true);
+$is_v3_module = in_array($module, $module_v3, true)
+    || ($subdomain && in_array($module . '/' . $subdomain, $module_v3, true));
 $vue3_path = "app-assets/vendors/third-parties/vue/vue.global.prod.js";
 
 #
