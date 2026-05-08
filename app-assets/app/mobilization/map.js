@@ -17,29 +17,26 @@ function getUrlVar(name) {
 
 //  initialize and add the map
 async function runMap() {
-    //  the map 
+    //  the map
 
     var action = getUrlVar("action");
     var mob_date = getUrlVar('mob_date') == null ? '' : getUrlVar('mob_date');
     var start_date = mob_date.split(" to ")[0] == undefined ? '' : mob_date.split(" to ")[0];
     var end_date = mob_date.split(" to ")[1] == undefined ? '' : mob_date.split(" to ")[1];
 
-    axios.get(common.DataService + "?qid=gen007")
-        .then(function(response) {
-            if (response.data.data.length > 0) {
-                allData = response.data.data[0]; //All Data
-
-                //Getting Default State ID
-                let stateId = response.data.data[0].stateid;
-                localStorage.setItem("state_id", stateId);
-                document.querySelector('#state_id').value = stateId;
-            }
-
-        })
-        .catch(function(error) {
-            // overlay.hide();
-            alert.Error("ERROR", "Check your Internet, kindly Refresh your browser " + error);
-        });
+    // Await the default state lookup so the qid=606 fallback below has a
+    // valid stateid when this is the first visit (localStorage is empty).
+    try {
+        const sysResp = await axios.get(common.DataService + "?qid=gen007");
+        if (sysResp.data && sysResp.data.data && sysResp.data.data.length > 0) {
+            const stateId = sysResp.data.data[0].stateid;
+            localStorage.setItem("state_id", stateId);
+            const stateEl = document.querySelector('#state_id');
+            if (stateEl) stateEl.value = stateId;
+        }
+    } catch (error) {
+        alert.Error("ERROR", "Check your Internet, kindly Refresh your browser " + error);
+    }
 
     if (action === null) {
         var today = new Date();
@@ -102,26 +99,41 @@ async function runMap() {
 
 
     let mob_result = await mob_geo_data; //  wait till the promise resolves (*)
-    // console.log(mob_result);
-    let lat = parseFloat(mob_result.map.lat);
-    let lng = parseFloat(mob_result.map.lng);
-    let zoom = parseInt(mob_result.map.zoom);
 
-    const map = new google.maps.Map(document.getElementById("map"), {
-        zoom: zoom,
-        center: { lat: lat, lng: lng },
-        mapTypeId: google.maps.MapTypeId.ROADMAP,
-        streetViewControl: false,
-        rotateControl: true,
-        zoomControl: true,
-        //mapTypeId: google.maps.MapTypeId.SATELLITE
-    });
+    // Defensive defaults — if the API didn't return a usable map block
+    // (no data for the selected geo, or no rows at all), centre on Abuja
+    // and let the (empty) marker loop run a no-op so overlay.hide() runs.
+    var mapBlock = (mob_result && mob_result.map) || {};
+    var lat = parseFloat(mapBlock.lat);
+    var lng = parseFloat(mapBlock.lng);
+    var zoom = parseInt(mapBlock.zoom);
+    if (!isFinite(lat) || !isFinite(lng)) { lat = 9.0765; lng = 7.3986; }
+    if (!isFinite(zoom)) zoom = 7;
+
+    var mapEl = document.getElementById("map");
+    if (!mapEl) { overlay.hide(); return; }
+
+    var map;
+    try {
+        map = new google.maps.Map(mapEl, {
+            zoom: zoom,
+            center: { lat: lat, lng: lng },
+            mapTypeId: google.maps.MapTypeId.ROADMAP,
+            streetViewControl: false,
+            rotateControl: true,
+            zoomControl: true,
+        });
+    } catch (e) {
+        console.error('[map] Google Maps construction failed:', e);
+        overlay.hide();
+        return;
+    }
 
     // Add Marker
-    for (var a = 0; a < mob_result.mob_data.length; a++) {
-        addMarker(mob_result.mob_data[a]);
+    var markers = (mob_result && Array.isArray(mob_result.mob_data)) ? mob_result.mob_data : [];
+    for (var a = 0; a < markers.length; a++) {
+        try { addMarker(markers[a]); } catch (e) { console.warn('[map] addMarker failed:', e); }
     }
-    // addMarker({ lat: 9.0754, lng: 7.44333 });
 
     function addMarker(coords) {
         var marker = new google.maps.Marker({
