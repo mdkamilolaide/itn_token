@@ -319,7 +319,10 @@ Vue.component("page-availability-check", {
         })
         .catch(function (error) {
           overlay.hide();
-          alert.Error("ERROR", error);
+          // Server returns 400/401 with a JSON body containing the real message;
+          // axios rejects 4xx by default, so surface response.data.message when present.
+          var serverMsg = error?.response?.data?.message;
+          alert.Error("ERROR", serverMsg || error?.message || String(error));
         });
     },
     resetCheckTable() {
