@@ -251,21 +251,59 @@
      *   "Blocked aria-hidden on an element because its descendant
      *    retained focus."
      * This happens because Bootstrap 4 sets aria-hidden="true" on the
-     * modal wrapper before moving focus out of the close button. The
-     * fix: blur the active element BEFORE the modal hides, so focus
-     * isn't trapped under aria-hidden.
+     * modal wrapper before moving focus out of whatever button is
+     * currently focused. Chrome refuses to hide a subtree that owns
+     * the active element.
      *
-     * Registers once globally — applies to every Bootstrap modal on
-     * every page (v2 and v3 stacks alike). Safe to load before/after
-     * jQuery because the binding is deferred until DOMContentLoaded.
+     * We address this in two layers:
+     *   1. Monkey-patch $.fn.modal so every .modal('hide') call blurs
+     *      the active element BEFORE Bootstrap touches the DOM.
+     *   2. Belt-and-suspenders: bind hide.bs.modal at document level
+     *      to catch hides that come through other paths
+     *      (data-dismiss="modal" buttons, ESC-to-close, etc.).
+     *
+     * Also wires a click delegate on [data-dismiss="modal"] / .close
+     * so the focused dismiss button is blurred on mousedown, before
+     * Bootstrap's own click handler runs.
+     *
+     * Applies to every Bootstrap modal on every page (v2 and v3
+     * stacks alike). Guarded against missing jQuery / Bootstrap.
      * ------------------------------------------------------------------ */
     (function () {
+        function blurActive() {
+            var active = document.activeElement;
+            if (active && active !== document.body && typeof active.blur === 'function') {
+                try { active.blur(); } catch (e) { /* swallow */ }
+            }
+        }
         function bind() {
-            if (!root.jQuery || !root.jQuery.fn || !root.jQuery.fn.modal) return;
-            root.jQuery(document).on('hide.bs.modal', function () {
-                var active = document.activeElement;
-                if (active && typeof active.blur === 'function') active.blur();
-            });
+            var $ = root.jQuery;
+            if (!$ || !$.fn || !$.fn.modal) return;
+
+            // Layer 1: monkey-patch .modal() so every 'hide' call blurs first.
+            if (!$.fn.modal._itnPatched) {
+                var originalModal = $.fn.modal;
+                $.fn.modal = function (action) {
+                    if (action === 'hide') blurActive();
+                    return originalModal.apply(this, arguments);
+                };
+                // Copy static properties (Constructor, NAME, VERSION, etc.)
+                for (var k in originalModal) if (originalModal.hasOwnProperty(k)) $.fn.modal[k] = originalModal[k];
+                $.fn.modal._itnPatched = true;
+            }
+
+            // Layer 2: catch hides triggered through ESC / backdrop click
+            // / programmatic Constructor.hide() that bypass the wrapper above.
+            $(document).on('hide.bs.modal', blurActive);
+
+            // Layer 3: pre-empt — when the user clicks any close button
+            // inside any modal, blur on mousedown so focus is gone before
+            // any synchronous handler runs.
+            $(document).on(
+                'mousedown',
+                '.modal [data-dismiss="modal"], .modal .close, .modal-header .close',
+                blurActive
+            );
         }
         if (document.readyState === 'loading') {
             document.addEventListener('DOMContentLoaded', bind);
