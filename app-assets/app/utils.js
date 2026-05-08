@@ -192,7 +192,33 @@
             checkIfEmpty: utils.checkIfEmpty,
             numbersOnlyWithoutDot: utils.numbersOnlyWithoutDot,
             validatePaste: utils.validatePaste,
+            percentageUsed: utils.percentageUsed,
+            progressBarWidth: utils.progressBarWidth,
+            progressBarStatus: utils.progressBarStatus,
         };
+    };
+
+    /* ------------------------------------------------------------------
+     * Progress bar helpers — used across smc/logistics, eolin, netcard
+     * dashboards. Expressed as a percent-string ("47.50%") + a Bootstrap
+     * status class (bg-danger/warning/primary/success) chosen by band.
+     * ------------------------------------------------------------------ */
+    utils.percentageUsed = function (issue, used) {
+        var p = (parseFloat(used) / parseFloat(issue)) * 100;
+        if (isNaN(p)) return 0;
+        return Number.isInteger(p) ? p : p.toFixed(2);
+    };
+    utils.progressBarWidth = function (issue, used) {
+        return utils.percentageUsed(issue, used) + '%';
+    };
+    utils.progressBarStatus = function (issue, used) {
+        var progress = utils.percentageUsed(issue, used);
+        var state = 'warning';
+        if (progress <= 30)      state = 'danger';
+        else if (progress <= 60) state = 'warning';
+        else if (progress < 90)  state = 'primary';
+        else if (progress > 90)  state = 'success';
+        return 'bg-' + state;
     };
 
     /**
