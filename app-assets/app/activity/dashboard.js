@@ -1,68 +1,73 @@
-Vue.component("page-body", {
-  data: function () {
-    return {
-      page: "dashboard", //  page by name dashbaord | result | ...
-    };
-  },
-  mounted() {
-    /*  Manages events Listening    */
-  },
-  methods: {},
-  template: `
-    <div>
-        <div class="content-body">
-            <dashboard_container/>
-        </div>
-    </div>
-    `,
-});
+/**
+ * Activity / Dashboard submodule — Vue 3 Composition API in place.
+ * Stat cards (total, active/inactive activities, total sessions).
+ * Fires 3 parallel API calls (qid=111..113) at mount via axios.spread.
+ */
 
-Vue.component("dashboard_container", {
-  data: function () {
-    return {
-      totalTraining: "",
-      trainingStatus: {
-        active: "",
-        inactive: "",
-      },
-      totalSessions: "",
-    };
-  },
-  mounted() {
-    /*  Manages events Listening    */
-    this.getAllStat();
-  },
-  methods: {
-    getAllStat() {
-      var url = common.DataService;
-      var self = this;
-      var endpoints = [
-        url + "?qid=111", //Get Total Training [0]
-        url + "?qid=112", //Get Active and Inactive Users [1]
-        url + "?qid=113", //Get Geo Statistics distribution of users [2]
-      ];
+const { ref, reactive, onMounted } = Vue;
+const { useApp, useFormat, fmt: utilsFmt } = window.utils;
 
-      // Return our response in the allData variable as an array
-      Promise.all(endpoints.map((endpoint) => axios.get(endpoint))).then(
-        axios.spread((...allData) => {
-          overlay.show();
-          self.totalTraining = parseInt(
-            allData[0].data.data[0].total
-          ).toLocaleString();
-          self.trainingStatus.active = parseInt(
-            allData[1].data.data[0].active
-          ).toLocaleString();
-          self.trainingStatus.inactive = parseInt(
-            allData[1].data.data[0].inactive
-          ).toLocaleString();
-          self.totalSessions = allData[2].data.data[0].total.toLocaleString();
-          overlay.hide();
-        })
-      );
+/* ------------------------------------------------------------------ */
+const PageBody = {
+    setup() {
+        const page = ref('dashboard');
+        return { page };
     },
-  },
-  computed: {},
-  template: `
+    template: `
+        <div>
+            <div class="content-body">
+                <dashboard_container/>
+            </div>
+        </div>
+    `,
+};
+
+/* ------------------------------------------------------------------ */
+const DashboardContainer = {
+    setup() {
+        const totalTraining = ref('');
+        const trainingStatus = reactive({ active: '', inactive: '' });
+        const totalSessions = ref('');
+
+        const fmt = utilsFmt;
+
+        function getAllStat() {
+            var url = common.DataService;
+            var endpoints = [
+                url + '?qid=111', // Total Training [0]
+                url + '?qid=112', // Active and Inactive Users [1]
+                url + '?qid=113', // Geo Statistics distribution of users [2]
+            ];
+
+            Promise.all(endpoints.map(function (e) { return axios.get(e); })).then(
+                axios.spread(function (...allData) {
+                    overlay.show();
+
+                    var totalRow = allData[0]?.data?.data?.[0];
+                    totalTraining.value = totalRow ? fmt(totalRow.total) : '0';
+
+                    var statusRow = allData[1]?.data?.data?.[0];
+                    trainingStatus.active   = statusRow ? fmt(statusRow.active)   : '0';
+                    trainingStatus.inactive = statusRow ? fmt(statusRow.inactive) : '0';
+
+                    var sessionRow = allData[2]?.data?.data?.[0];
+                    totalSessions.value = sessionRow ? fmt(sessionRow.total) : '0';
+
+                    overlay.hide();
+                })
+            ).catch(function (error) {
+                overlay.hide();
+                console.error('[activity/dashboard] getAllStat error:', error);
+            });
+        }
+
+        onMounted(function () {
+            getAllStat();
+        });
+
+        return { totalTraining, trainingStatus, totalSessions, getAllStat };
+    },
+    template: `
         <div>
             <div class="row">
                 <div class="col-12 mb-2">
@@ -74,9 +79,8 @@ Vue.component("dashboard_container", {
                     </div>
                 </div>
             </div>
-            
+
             <div class="row mb-50">
-                <!-- Stats Horizontal Card -->
                 <div class="col-lg-3 col-sm-6 col-12">
                     <a href="./activity/list" class="card">
                         <div class="card-header d-flex align-items-center justify-content-between">
@@ -137,20 +141,12 @@ Vue.component("dashboard_container", {
                         </div>
                     </a>
                 </div>
-                <!--/ Stats Horizontal Card -->
-
             </div>
- 
         </div>
     `,
-});
-var vm = new Vue({
-  el: "#app",
-  data: {},
-  methods: {},
-  template: `
-        <div>
-            <page-body/>
-        </div>
-    `,
-});
+};
+
+useApp({ template: `<div><page-body/></div>` })
+    .component('page-body', PageBody)
+    .component('dashboard_container', DashboardContainer)
+    .mount('#app');
