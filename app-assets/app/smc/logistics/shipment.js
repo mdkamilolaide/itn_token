@@ -111,7 +111,7 @@ Vue.mixin({
     },
     validatePaste(event) {
       const pasteData = (event.clipboardData || window.clipboardData).getData(
-        "text"
+        "text",
       );
       if (!/^\d+$/.test(pasteData)) {
         event.preventDefault();
@@ -215,7 +215,7 @@ Vue.component("page-shipment-page", {
         overlay.show();
 
         const [transporter, conveyor] = await Promise.all(
-          endpoints.map((endpoint) => axios.get(endpoint))
+          endpoints.map((endpoint) => axios.get(endpoint)),
         );
 
         // Use transporter (qid=gen014) for tableData and pagination
@@ -227,7 +227,7 @@ Vue.component("page-shipment-page", {
         console.error("Error loading data:", error);
         alert.Error(
           "ERROR",
-          error.message || "An error occurred, kindly refresh"
+          error.message || "An error occurred, kindly refresh",
         );
       } finally {
         overlay.hide();
@@ -237,7 +237,7 @@ Vue.component("page-shipment-page", {
       if (this.totalCheckedBox == false) {
         alert.Error(
           "ERROR",
-          "Please select at least one Shipment item to create movement."
+          "Please select at least one Shipment item to create movement.",
         );
         return;
       }
@@ -371,7 +371,7 @@ Vue.component("page-shipment-page", {
       axios
         .get(url + "?qid=gen0013")
         .then(function (response) {
-          appState.receiptHeader = response.data.data[0].logo; //All Data
+          appState.receiptHeader = response.data.data[0]?.logo || null; //All Data
 
           overlay.hide();
         })
@@ -388,7 +388,7 @@ Vue.component("page-shipment-page", {
         .get(url + "?qid=gen011")
         .then(function (response) {
           let data = response.data.data.sort((a, b) =>
-            a.product_code.localeCompare(b.product_code)
+            a.product_code.localeCompare(b.product_code),
           );
 
           appState.productData = data; //All Data
@@ -413,7 +413,7 @@ Vue.component("page-shipment-page", {
       try {
         const { data: res1133 } = await axios.post(
           `${url}?qid=1133`,
-          JSON.stringify(data)
+          JSON.stringify(data),
         );
         if (res1133.result_code !== 200) {
           alert.Error("ERROR", res1133.message);
@@ -422,7 +422,7 @@ Vue.component("page-shipment-page", {
 
         const { data: res1134 } = await axios.post(
           `${url}?qid=1134`,
-          JSON.stringify(data)
+          JSON.stringify(data),
         );
         if (res1134.result_code !== 200) {
           alert.Error("ERROR", res1134.message);
@@ -489,7 +489,7 @@ Vue.component("page-shipment-page", {
       let todayDate = this.displayDate(
         new Date().toLocaleDateString(),
         false,
-        true
+        true,
       );
       const pageWidth = 842;
       const rightMargin = 40;
@@ -541,7 +541,9 @@ Vue.component("page-shipment-page", {
             margin: [0, 0, 0, 20],
           },
 
-          ...(index < data.length - 1 ? [{ text: "", pageBreak: "after" }] : [])
+          ...(index < data.length - 1
+            ? [{ text: "", pageBreak: "after" }]
+            : []),
         );
       });
 
@@ -629,7 +631,7 @@ Vue.component("page-shipment-page", {
       shipmentNo,
       shipmentType,
       status,
-      isOpen
+      isOpen,
     ) {
       const content = [];
       if (!data || data.length === 0) {
@@ -640,10 +642,10 @@ Vue.component("page-shipment-page", {
       let todayDate = this.displayDate(
         new Date().toLocaleDateString(),
         true,
-        true
+        true,
       );
       // Replace this with your actual base64 string (include prefix)
-      (logoDataURL = `data:image/svg+xml;base64,${appState.receiptHeader}`), // or PNG/JPEG
+      ((logoDataURL = `data:image/svg+xml;base64,${appState.receiptHeader}`), // or PNG/JPEG
         content.push(
           {
             text: "FEDERAL MINISTRY OF HEALTH",
@@ -760,8 +762,8 @@ Vue.component("page-shipment-page", {
             },
             layout: "lightHorizontalLines",
             margin: [0, 0, 0, 20],
-          }
-        );
+          },
+        ));
 
       const docDefinition = {
         pageSize: "A4",
@@ -874,7 +876,7 @@ Vue.component("page-shipment-page", {
       shipmentNo,
       shipmentType,
       status,
-      isOpen
+      isOpen,
     ) {
       const url = common.DataService;
       const data = { shipmentId: shipmentId };
@@ -890,7 +892,7 @@ Vue.component("page-shipment-page", {
               shipmentNo,
               shipmentType,
               status,
-              isOpen
+              isOpen,
             );
           } else {
             alert.Error("ERROR", response.data.message);
@@ -932,7 +934,7 @@ Vue.component("page-shipment-page", {
       const status = appState.statusFilter?.toLowerCase().trim();
       if (status) {
         data = data.filter((item) =>
-          item.shipment_status?.toLowerCase().trim().includes(status)
+          item.shipment_status?.toLowerCase().trim().includes(status),
         );
       }
 
@@ -978,9 +980,8 @@ Vue.component("page-shipment-page", {
     totalCheckedBox() {
       let total = this.selectedItems?.length;
       if (total > 0) {
-        document.getElementById(
-          "total-selected"
-        ).innerHTML = `<span id="selected-counter" class="badge badge-primary btn-icon"><span class="badge badge-success">${total}</span> Item Selected</span>`;
+        document.getElementById("total-selected").innerHTML =
+          `<span id="selected-counter" class="badge badge-primary btn-icon"><span class="badge badge-success">${total}</span> Item Selected</span>`;
         return true;
       } else {
         document.getElementById("total-selected").replaceChildren();

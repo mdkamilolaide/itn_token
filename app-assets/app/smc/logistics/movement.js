@@ -111,7 +111,7 @@ Vue.mixin({
     },
     validatePaste(event) {
       const pasteData = (event.clipboardData || window.clipboardData).getData(
-        "text"
+        "text",
       );
       if (!/^\d+$/.test(pasteData)) {
         event.preventDefault();
@@ -209,7 +209,7 @@ Vue.component("page-movement-page", {
         overlay.show();
 
         const [transporter, conveyor] = await Promise.all(
-          endpoints.map((endpoint) => axios.get(endpoint))
+          endpoints.map((endpoint) => axios.get(endpoint)),
         );
 
         // Use transporter (qid=gen014) for tableData and pagination
@@ -221,7 +221,7 @@ Vue.component("page-movement-page", {
         console.error("Error loading data:", error);
         alert.Error(
           "ERROR",
-          error.message || "An error occurred, kindly refresh"
+          error.message || "An error occurred, kindly refresh",
         );
       } finally {
         overlay.hide();
@@ -353,7 +353,7 @@ Vue.component("page-movement-page", {
       axios
         .get(url + "?qid=gen0013")
         .then(function (response) {
-          appState.receiptHeader = response.data.data[0].logo; //All Data
+          appState.receiptHeader = response.data.data[0]?.logo || ""; //All Data
 
           overlay.hide();
         })
@@ -370,7 +370,7 @@ Vue.component("page-movement-page", {
         .get(url + "?qid=gen011")
         .then(function (response) {
           let data = response.data.data.sort((a, b) =>
-            a.product_code.localeCompare(b.product_code)
+            a.product_code.localeCompare(b.product_code),
           );
 
           appState.productData = data; //All Data
@@ -395,7 +395,7 @@ Vue.component("page-movement-page", {
       try {
         const { data: response } = await axios.post(
           `${url}?qid=1137`,
-          JSON.stringify(data)
+          JSON.stringify(data),
         );
         if (response.result_code !== 200) {
           alert.Error("ERROR", response.message);
@@ -462,7 +462,7 @@ Vue.component("page-movement-page", {
       let todayDate = this.displayDate(
         new Date().toLocaleDateString(),
         false,
-        true
+        true,
       );
       const pageWidth = 842;
       const rightMargin = 40;
@@ -514,7 +514,9 @@ Vue.component("page-movement-page", {
             margin: [0, 0, 0, 20],
           },
 
-          ...(index < data.length - 1 ? [{ text: "", pageBreak: "after" }] : [])
+          ...(index < data.length - 1
+            ? [{ text: "", pageBreak: "after" }]
+            : []),
         );
       });
 
@@ -604,7 +606,7 @@ Vue.component("page-movement-page", {
       for (let i = 0; i < parts.length; i++) {
         const label = labels[i] || `LEVEL${i + 1}`; // Fallback label
         formattedParts.push(
-          `${parts[i].replace(/[<>:"/\\|?*]/g, "")}_${label}`
+          `${parts[i].replace(/[<>:"/\\|?*]/g, "")}_${label}`,
         );
       }
 
@@ -737,7 +739,7 @@ Vue.component("page-movement-page", {
           },
           layout: "lightHorizontalLines",
           margin: [0, 0, 0, 30],
-        }
+        },
       );
 
       // Approvals
@@ -757,7 +759,7 @@ Vue.component("page-movement-page", {
         long,
         serial,
         version,
-        base64sig
+        base64sig,
       ) => {
         return {
           stack: [
@@ -833,7 +835,7 @@ Vue.component("page-movement-page", {
             approval?.source_longitude,
             approval?.source_device_serial,
             approval?.source_app_version,
-            approval?.source_signature
+            approval?.source_signature,
           ),
           getSignatureBlock(
             "Conveyor Approval",
@@ -845,7 +847,7 @@ Vue.component("page-movement-page", {
             approval?.conveyor_longitude,
             approval?.conveyor_device_serial,
             approval?.conveyor_app_version,
-            approval?.conveyor_signature
+            approval?.conveyor_signature,
           ),
           getSignatureBlock(
             "Destination Approval",
@@ -857,7 +859,7 @@ Vue.component("page-movement-page", {
             approval?.destination_longitude,
             approval?.destination_device_serial,
             approval?.destination_app_version,
-            approval?.destination_signature
+            approval?.destination_signature,
           ),
         ],
       });
@@ -914,7 +916,7 @@ Vue.component("page-movement-page", {
         const iframe = document.getElementById("pdfPreview");
         if (!iframe) {
           alert(
-            "PDF preview iframe not found. Please add <iframe id='pdfPreview'></iframe> in your HTML."
+            "PDF preview iframe not found. Please add <iframe id='pdfPreview'></iframe> in your HTML.",
           );
           return;
         }
@@ -943,7 +945,7 @@ Vue.component("page-movement-page", {
       const todayDate = this.displayDate(
         new Date().toLocaleDateString(),
         true,
-        false
+        false,
       );
       const logoDataURL = `data:image/svg+xml;base64,${appState.receiptHeader}`;
       const content = [];
@@ -1065,7 +1067,7 @@ Vue.component("page-movement-page", {
             },
             layout: "lightHorizontalLines",
             margin: [0, 0, 0, 20],
-          }
+          },
         );
 
         if (approval) {
@@ -1202,7 +1204,7 @@ Vue.component("page-movement-page", {
 
     renderApproval(
       label,
-      { name, designation, phone, date, lat, long, serial, version, base64sig }
+      { name, designation, phone, date, lat, long, serial, version, base64sig },
     ) {
       return [
         { text: label, bold: true, margin: [0, 0, 0, 10] },
@@ -1324,7 +1326,7 @@ Vue.component("page-movement-page", {
       const status = appState.statusFilter?.toLowerCase().trim();
       if (status) {
         data = data.filter((item) =>
-          item.shipment_status?.toLowerCase().trim().includes(status)
+          item.shipment_status?.toLowerCase().trim().includes(status),
         );
       }
 
@@ -1380,9 +1382,8 @@ Vue.component("page-movement-page", {
     totalCheckedBox() {
       let total = this.selectedItems?.length;
       if (total > 0) {
-        document.getElementById(
-          "total-selected"
-        ).innerHTML = `<span id="selected-counter" class="badge badge-primary btn-icon"><span class="badge badge-success">${total}</span> Item Selected</span>`;
+        document.getElementById("total-selected").innerHTML =
+          `<span id="selected-counter" class="badge badge-primary btn-icon"><span class="badge badge-success">${total}</span> Item Selected</span>`;
         return true;
       } else {
         document.getElementById("total-selected").replaceChildren();
