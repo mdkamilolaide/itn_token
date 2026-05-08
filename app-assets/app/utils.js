@@ -307,7 +307,28 @@
             var $ = root.jQuery;
             if (!$ || !$.fn || !$.fn.modal) return;
 
-            // Layer 2: monkey-patch .modal() so every 'hide' call blurs first.
+            // Layer 2 (the strongest): patch Bootstrap's Constructor.prototype
+            // ._hideModal so the blur happens IN THE SAME SYNCHRONOUS CALL,
+            // immediately before setAttribute('aria-hidden', true). Chrome's
+            // a11y audit runs synchronously with setAttribute, so any
+            // earlier listener can be raced; this one cannot.
+            var Ctor = $.fn.modal && $.fn.modal.Constructor;
+            if (Ctor && Ctor.prototype && Ctor.prototype._hideModal && !Ctor.prototype._hideModal._itnPatched) {
+                var originalHideModal = Ctor.prototype._hideModal;
+                Ctor.prototype._hideModal = function () {
+                    try {
+                        var active = document.activeElement;
+                        if (active && this._element && this._element.contains(active)) {
+                            if (typeof active.blur === 'function') active.blur();
+                            try { document.body.focus(); } catch (e) { /* swallow */ }
+                        }
+                    } catch (e) { /* swallow */ }
+                    return originalHideModal.apply(this, arguments);
+                };
+                Ctor.prototype._hideModal._itnPatched = true;
+            }
+
+            // Layer 3: monkey-patch .modal() so every 'hide' call blurs early.
             if (!$.fn.modal._itnPatched) {
                 var originalModal = $.fn.modal;
                 $.fn.modal = function (action) {
@@ -318,10 +339,10 @@
                 $.fn.modal._itnPatched = true;
             }
 
-            // Layer 3: hide.bs.modal at document level.
+            // Layer 4: hide.bs.modal at document level.
             $(document).on('hide.bs.modal', blurActive);
 
-            // Layer 4: mousedown on dismiss/close buttons.
+            // Layer 5: mousedown on dismiss/close buttons.
             $(document).on(
                 'mousedown',
                 '.modal [data-dismiss="modal"], .modal .close, .modal-header .close',
