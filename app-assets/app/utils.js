@@ -308,24 +308,46 @@
             if (!$ || !$.fn || !$.fn.modal) return;
 
             // Layer 2 (the strongest): patch Bootstrap's Constructor.prototype
-            // ._hideModal so the blur happens IN THE SAME SYNCHRONOUS CALL,
-            // immediately before setAttribute('aria-hidden', true). Chrome's
-            // a11y audit runs synchronously with setAttribute, so any
-            // earlier listener can be raced; this one cannot.
+            // ._hideModal. We do TWO things:
+            //   (a) blur any trapped focus, synchronously
+            //   (b) set the `inert` attribute on the modal element. inert
+            //       is Chrome's recommended replacement for aria-hidden in
+            //       this situation — it makes the subtree unfocusable AND
+            //       hidden from assistive tech. Setting it BEFORE Bootstrap's
+            //       setAttribute('aria-hidden', true) means any focus that
+            //       would land on a modal descendant cannot, which removes
+            //       the precondition for Chrome's warning.
+            //
+            // We pair it with a _showElement patch that removes inert when
+            // the modal is shown again.
             var Ctor = $.fn.modal && $.fn.modal.Constructor;
             if (Ctor && Ctor.prototype && Ctor.prototype._hideModal && !Ctor.prototype._hideModal._itnPatched) {
                 var originalHideModal = Ctor.prototype._hideModal;
                 Ctor.prototype._hideModal = function () {
                     try {
-                        var active = document.activeElement;
-                        if (active && this._element && this._element.contains(active)) {
-                            if (typeof active.blur === 'function') active.blur();
-                            try { document.body.focus(); } catch (e) { /* swallow */ }
+                        var element = this._element;
+                        if (element) {
+                            var active = document.activeElement;
+                            if (active && element.contains(active) && typeof active.blur === 'function') {
+                                active.blur();
+                                try { document.body.focus(); } catch (e) { /* swallow */ }
+                            }
+                            element.setAttribute('inert', '');
                         }
                     } catch (e) { /* swallow */ }
                     return originalHideModal.apply(this, arguments);
                 };
                 Ctor.prototype._hideModal._itnPatched = true;
+            }
+            if (Ctor && Ctor.prototype && Ctor.prototype._showElement && !Ctor.prototype._showElement._itnPatched) {
+                var originalShowElement = Ctor.prototype._showElement;
+                Ctor.prototype._showElement = function () {
+                    try {
+                        if (this._element) this._element.removeAttribute('inert');
+                    } catch (e) { /* swallow */ }
+                    return originalShowElement.apply(this, arguments);
+                };
+                Ctor.prototype._showElement._itnPatched = true;
             }
 
             // Layer 3: monkey-patch .modal() so every 'hide' call blurs early.
