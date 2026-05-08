@@ -227,6 +227,10 @@
      * Installs $bus, $displayDate, $formatNumber, $capitalize on the app's
      * globalProperties so any Options-API stragglers can still use them
      * via `this.$X`. Composition-API code uses `window.utils.X` directly.
+     *
+     * Also auto-registers the <apexchart> component so converted modules
+     * that previously did `Vue.component("apexchart", VueApexCharts)` keep
+     * working without the legacy vue-apexcharts (Vue 2 only) library.
      */
     utils.useApp = function (options) {
         var Vue = root.Vue;
@@ -241,8 +245,84 @@
         g.$formatNumber = utils.formatNumber;
         g.$fmt = utils.fmt;
         g.$checkIfEmpty = utils.checkIfEmpty;
+        if (utils.ApexChart) app.component('apexchart', utils.ApexChart);
         return app;
     };
+
+    /* ------------------------------------------------------------------
+     * <apexchart> — Composition API wrapper around ApexCharts.
+     * Drop-in replacement for the Vue 2 `vue-apexcharts` 1.6.2 component
+     * (which uses beforeDestroy/$listeners/$watch and breaks under Vue 3).
+     *
+     * Same prop surface: options, type, series, width, height.
+     * Re-renders on options/series change; destroys on unmount.
+     * Requires window.ApexCharts (loaded by apexcharts.min.js in the page's
+     * js_structure entry).
+     * ------------------------------------------------------------------ */
+    utils.ApexChart = (function () {
+        return {
+            props: {
+                options: { type: Object, default: function () { return {}; } },
+                type: { type: String, default: '' },
+                series: { type: Array, required: true, default: function () { return []; } },
+                width: { default: '100%' },
+                height: { default: 'auto' },
+            },
+            setup: function (props) {
+                var Vue = root.Vue;
+                var ref = Vue.ref;
+                var onMounted = Vue.onMounted;
+                var onBeforeUnmount = Vue.onBeforeUnmount;
+                var watch = Vue.watch;
+                var nextTick = Vue.nextTick;
+
+                var chartEl = ref(null);
+                var chart = null;
+
+                function buildOptions() {
+                    var o = props.options || {};
+                    var chartCfg = Object.assign({}, o.chart || {}, {
+                        type: props.type || (o.chart && o.chart.type) || 'line',
+                        height: props.height,
+                        width: props.width,
+                    });
+                    return Object.assign({}, o, { chart: chartCfg, series: props.series });
+                }
+
+                function init() {
+                    if (!chartEl.value || !root.ApexCharts) return;
+                    chart = new root.ApexCharts(chartEl.value, buildOptions());
+                    chart.render();
+                }
+
+                function destroy() {
+                    try { if (chart) chart.destroy(); } catch (e) { /* swallow */ }
+                    chart = null;
+                }
+
+                onMounted(function () { init(); });
+                onBeforeUnmount(destroy);
+
+                watch(function () { return props.options; }, function (n) {
+                    if (chart) chart.updateOptions(n);
+                    else nextTick(init);
+                }, { deep: true });
+
+                watch(function () { return props.series; }, function (n) {
+                    if (chart) chart.updateSeries(n);
+                    else nextTick(init);
+                }, { deep: true });
+
+                watch(function () { return [props.type, props.width, props.height]; }, function () {
+                    destroy();
+                    nextTick(init);
+                });
+
+                return { chartEl: chartEl };
+            },
+            template: '<div ref="chartEl"></div>',
+        };
+    })();
 
     /* ------------------------------------------------------------------
      * Bootstrap 4 modal a11y fix — Chrome's "Blocked aria-hidden on an
