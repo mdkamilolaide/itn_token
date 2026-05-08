@@ -245,6 +245,36 @@
     };
 
     /* ------------------------------------------------------------------
+     * Bootstrap 4 modal a11y fix
+     * ------------------------------------------------------------------
+     * Chrome warns:
+     *   "Blocked aria-hidden on an element because its descendant
+     *    retained focus."
+     * This happens because Bootstrap 4 sets aria-hidden="true" on the
+     * modal wrapper before moving focus out of the close button. The
+     * fix: blur the active element BEFORE the modal hides, so focus
+     * isn't trapped under aria-hidden.
+     *
+     * Registers once globally — applies to every Bootstrap modal on
+     * every page (v2 and v3 stacks alike). Safe to load before/after
+     * jQuery because the binding is deferred until DOMContentLoaded.
+     * ------------------------------------------------------------------ */
+    (function () {
+        function bind() {
+            if (!root.jQuery || !root.jQuery.fn || !root.jQuery.fn.modal) return;
+            root.jQuery(document).on('hide.bs.modal', function () {
+                var active = document.activeElement;
+                if (active && typeof active.blur === 'function') active.blur();
+            });
+        }
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', bind);
+        } else {
+            bind();
+        }
+    })();
+
+    /* ------------------------------------------------------------------
      * Backwards-compat: leave window.common / window.alert / window.overlay
      * alone. They are loaded by common.js and remain the canonical legacy
      * API. Components are encouraged but not required to migrate to the
