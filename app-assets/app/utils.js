@@ -245,29 +245,24 @@
     };
 
     /* ------------------------------------------------------------------
-     * Bootstrap 4 modal a11y fix
-     * ------------------------------------------------------------------
-     * Chrome warns:
-     *   "Blocked aria-hidden on an element because its descendant
-     *    retained focus."
-     * This happens because Bootstrap 4 sets aria-hidden="true" on the
-     * modal wrapper before moving focus out of whatever button is
-     * currently focused. Chrome refuses to hide a subtree that owns
-     * the active element.
+     * Bootstrap 4 modal a11y fix — Chrome's "Blocked aria-hidden on an
+     * element because its descendant retained focus" warning.
      *
-     * We address this in two layers:
-     *   1. Monkey-patch $.fn.modal so every .modal('hide') call blurs
-     *      the active element BEFORE Bootstrap touches the DOM.
-     *   2. Belt-and-suspenders: bind hide.bs.modal at document level
-     *      to catch hides that come through other paths
-     *      (data-dismiss="modal" buttons, ESC-to-close, etc.).
+     * Multi-layer defense:
+     *   1. MutationObserver — watches every aria-hidden="true" mutation
+     *      anywhere in the document. If a descendant has focus when
+     *      aria-hidden is applied, blur it synchronously. This is the
+     *      guaranteed catch-all; it cannot be raced.
+     *   2. $.fn.modal monkey-patch — every .modal('hide') blurs first.
+     *   3. hide.bs.modal document listener — backstop for ESC /
+     *      backdrop click / programmatic hide.
+     *   4. Mousedown delegate on close buttons — blur before any
+     *      click handler runs.
      *
-     * Also wires a click delegate on [data-dismiss="modal"] / .close
-     * so the focused dismiss button is blurred on mousedown, before
-     * Bootstrap's own click handler runs.
+     * Layer 1 is the only one Chrome itself can't beat. The others
+     * are pre-emptive (they make the focus shift happen earlier).
      *
-     * Applies to every Bootstrap modal on every page (v2 and v3
-     * stacks alike). Guarded against missing jQuery / Bootstrap.
+     * Applies to every Bootstrap modal (v2 and v3 stacks alike).
      * ------------------------------------------------------------------ */
     (function () {
         function blurActive() {
@@ -276,29 +271,57 @@
                 try { active.blur(); } catch (e) { /* swallow */ }
             }
         }
+
+        // Layer 1: MutationObserver. Runs immediately when aria-hidden is
+        // set anywhere; if focus is trapped under it, blur synchronously.
+        if (typeof MutationObserver !== 'undefined') {
+            var observer = new MutationObserver(function (mutations) {
+                for (var i = 0; i < mutations.length; i++) {
+                    var m = mutations[i];
+                    if (m.type !== 'attributes' || m.attributeName !== 'aria-hidden') continue;
+                    var t = m.target;
+                    if (!t || t.getAttribute('aria-hidden') !== 'true') continue;
+                    var active = document.activeElement;
+                    if (active && active !== document.body && t.contains(active)) {
+                        try { active.blur(); } catch (e) { /* swallow */ }
+                        try { document.body.focus(); } catch (e) { /* swallow */ }
+                    }
+                }
+            });
+            // Wait for body to exist before observing.
+            function startObserver() {
+                if (!document.body) {
+                    document.addEventListener('DOMContentLoaded', startObserver);
+                    return;
+                }
+                observer.observe(document.body, {
+                    attributes: true,
+                    subtree: true,
+                    attributeFilter: ['aria-hidden'],
+                });
+            }
+            startObserver();
+        }
+
         function bind() {
             var $ = root.jQuery;
             if (!$ || !$.fn || !$.fn.modal) return;
 
-            // Layer 1: monkey-patch .modal() so every 'hide' call blurs first.
+            // Layer 2: monkey-patch .modal() so every 'hide' call blurs first.
             if (!$.fn.modal._itnPatched) {
                 var originalModal = $.fn.modal;
                 $.fn.modal = function (action) {
                     if (action === 'hide') blurActive();
                     return originalModal.apply(this, arguments);
                 };
-                // Copy static properties (Constructor, NAME, VERSION, etc.)
                 for (var k in originalModal) if (originalModal.hasOwnProperty(k)) $.fn.modal[k] = originalModal[k];
                 $.fn.modal._itnPatched = true;
             }
 
-            // Layer 2: catch hides triggered through ESC / backdrop click
-            // / programmatic Constructor.hide() that bypass the wrapper above.
+            // Layer 3: hide.bs.modal at document level.
             $(document).on('hide.bs.modal', blurActive);
 
-            // Layer 3: pre-empt — when the user clicks any close button
-            // inside any modal, blur on mousedown so focus is gone before
-            // any synchronous handler runs.
+            // Layer 4: mousedown on dismiss/close buttons.
             $(document).on(
                 'mousedown',
                 '.modal [data-dismiss="modal"], .modal .close, .modal-header .close',
