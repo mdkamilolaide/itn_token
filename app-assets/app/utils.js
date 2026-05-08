@@ -342,7 +342,10 @@
                     destroy();
                     try {
                         chart = new root.ApexCharts(chartEl.value, buildOptions());
-                        chart.render();
+                        var p = chart.render();
+                        if (p && typeof p.catch === 'function') {
+                            p.catch(function (e) { console.error('[utils.ApexChart] async render failed:', e); });
+                        }
                     } catch (e) {
                         console.error('[utils.ApexChart] render failed:', e);
                     }

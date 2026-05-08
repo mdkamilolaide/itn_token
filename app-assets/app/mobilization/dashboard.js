@@ -86,39 +86,40 @@ const MobilizationDashboard = {
         }
 
         async function getTopListStatistics() {
+            overlay.show();
             try {
-                overlay.show();
                 var response = await axios.get(common.DataService + '?qid=750');
                 var allData = (response.data && response.data.data && response.data.data[0]) || {};
                 topMobilizationStat.eNetcard = convertStringNumberToFigures(allData.netcards);
                 topMobilizationStat.hhMobilized = convertStringNumberToFigures(allData.households);
                 topMobilizationStat.familySize = convertStringNumberToFigures(allData.family_size);
-                overlay.hide();
             } catch (error) {
-                overlay.hide();
                 alert.Error('ERROR', safeMessage(error));
+            } finally {
+                overlay.hide();
             }
         }
 
         async function getDailyTopSummary() {
+            overlay.show();
             try {
-                overlay.show();
                 var response = await axios.get(common.DataService + '?qid=751');
                 var allData = response.data || {};
-                statData.tableData = allData.table || [];
-                statData.chartData = allData.chart || [];
+                var chartArr = Array.isArray(allData.chart) ? allData.chart : [[], []];
+                statData.tableData = Array.isArray(allData.table) ? allData.table : [];
+                statData.chartData = chartArr;
                 statData.chartData.xAxisLabel = 'Days';
-                chartFilter.chartLevel = allData.level;
+                chartFilter.chartLevel = allData.level || 0;
                 if (Array.isArray(statData.chartData[1])) {
                     statData.chartData[1] = statData.chartData[1].map(function (item) {
                         return convertToDateMonthDay(item);
                     });
                 }
-                plotChart();
-                overlay.hide();
+                try { plotChart(); } catch (e) { console.error('plotChart failed:', e); }
             } catch (error) {
-                overlay.hide();
                 alert.Error('ERROR', safeMessage(error));
+            } finally {
+                overlay.hide();
             }
         }
 
@@ -228,19 +229,20 @@ const MobilizationDashboard = {
         }
 
         async function fetchData(queryId, params) {
+            overlay.show();
             try {
-                overlay.show();
                 var response = await axios.get(common.DataService + '?qid=' + queryId, { params: params });
                 var allData = response.data || {};
-                statData.tableData = allData.table || [];
-                statData.chartData = allData.chart || [];
+                var chartArr = Array.isArray(allData.chart) ? allData.chart : [[], []];
+                statData.tableData = Array.isArray(allData.table) ? allData.table : [];
+                statData.chartData = chartArr;
                 statData.chartData.xAxisLabel = params.xAxisLabel;
-                chartFilter.chartLevel = allData.level;
-                plotChart();
-                overlay.hide();
+                chartFilter.chartLevel = allData.level || 0;
+                try { plotChart(); } catch (e) { console.error('plotChart failed:', e); }
             } catch (error) {
-                overlay.hide();
                 alert.Error('ERROR', safeMessage(error));
+            } finally {
+                overlay.hide();
             }
         }
 
@@ -418,19 +420,20 @@ const LgaAggregateMobilizationDashboard = {
         }
 
         async function getAggregateByLocation() {
+            overlay.show();
             try {
-                overlay.show();
                 var response = await axios.get(common.DataService + '?qid=752');
                 var allData = response.data || {};
-                statData.tableData = allData.table || [];
-                statData.chartData = allData.chart || [];
+                var chartArr = Array.isArray(allData.chart) ? allData.chart : [[], []];
+                statData.tableData = Array.isArray(allData.table) ? allData.table : [];
+                statData.chartData = chartArr;
                 statData.chartData.xAxisLabel = 'LGAs';
-                chartFilter.chartLevel = allData.level;
-                plotAggregateChart();
-                overlay.hide();
+                chartFilter.chartLevel = allData.level || 0;
+                try { plotAggregateChart(); } catch (e) { console.error('plotAggregateChart failed:', e); }
             } catch (error) {
-                overlay.hide();
                 alert.Error('ERROR', safeMessage(error));
+            } finally {
+                overlay.hide();
             }
         }
 
@@ -527,23 +530,25 @@ const LgaAggregateMobilizationDashboard = {
         }
 
         async function fetchData(queryId, params) {
+            overlay.show();
             try {
-                overlay.show();
                 var response = await axios.get(common.DataService + '?qid=' + queryId, { params: params });
                 var allData = response.data || {};
-                statData.tableData = allData.table || [];
-                statData.chartData = allData.chart || [];
+                var chartArr = Array.isArray(allData.chart) ? allData.chart : [[], []];
+                statData.tableData = Array.isArray(allData.table) ? allData.table : [];
+                statData.chartData = chartArr;
                 statData.chartData.xAxisLabel = params.xAxisLabel;
-                chartFilter.chartLevel = allData.level;
-                plotAggregateChart();
-                overlay.hide();
+                chartFilter.chartLevel = allData.level || 0;
+                try { plotAggregateChart(); } catch (e) { console.error('plotAggregateChart failed:', e); }
             } catch (error) {
-                overlay.hide();
                 alert.Error('ERROR', safeMessage(error));
+            } finally {
+                overlay.hide();
             }
         }
 
-        onBeforeMount(function () { getAggregateByLocation(); });
+        // Single mount call — the legacy v2 code fired both beforeMount AND
+        // mounted, which double-counted overlay.show(); collapsed to one.
         onMounted(function () { getAggregateByLocation(); });
 
         return {
