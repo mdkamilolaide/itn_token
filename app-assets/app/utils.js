@@ -255,10 +255,48 @@
      * (which uses beforeDestroy/$listeners/$watch and breaks under Vue 3).
      *
      * Same prop surface: options, type, series, width, height.
-     * Re-renders on options/series change; destroys on unmount.
-     * Requires window.ApexCharts (loaded by apexcharts.min.js in the page's
-     * js_structure entry).
+     * Strategy:
+     *   - On mount: defer init by one nextTick so Bootstrap tab-pane /
+     *     flex layout has settled (ApexCharts measures the container).
+     *   - On options change: full destroy + re-init. updateOptions does
+     *     not reliably handle schema changes (initial empty → populated
+     *     bar with categories), so we trade a tiny render flash for
+     *     correctness.
+     *   - On series-only change: chart.updateSeries (cheap, animated).
+     *   - All props are unwrapped from Vue's reactive Proxy via cloneDeep
+     *     before being handed to ApexCharts (some chart internals choke
+     *     on Proxy traps). Functions in formatters/etc are preserved.
+     *   - Re-init is debounced to one nextTick so simultaneous options +
+     *     series writes coalesce into a single render.
+     *
+     * Requires window.ApexCharts (loaded by apexcharts.min.js in the
+     * page's js_structure entry).
      * ------------------------------------------------------------------ */
+    function cloneDeepPreserveFns(value, seen) {
+        if (value === null || typeof value !== 'object') return value;
+        seen = seen || new WeakMap();
+        if (seen.has(value)) return seen.get(value);
+
+        var out;
+        if (Array.isArray(value)) {
+            out = [];
+            seen.set(value, out);
+            for (var i = 0; i < value.length; i++) out.push(cloneDeepPreserveFns(value[i], seen));
+            return out;
+        }
+        // Plain object — copy own enumerable keys, recursively clone values.
+        // Functions are passed through by reference (formatters etc).
+        out = {};
+        seen.set(value, out);
+        var keys = Object.keys(value);
+        for (var j = 0; j < keys.length; j++) {
+            var k = keys[j];
+            var v = value[k];
+            out[k] = (typeof v === 'function') ? v : cloneDeepPreserveFns(v, seen);
+        }
+        return out;
+    }
+
     utils.ApexChart = (function () {
         return {
             props: {
@@ -278,21 +316,19 @@
 
                 var chartEl = ref(null);
                 var chart = null;
+                var initScheduled = false;
 
                 function buildOptions() {
-                    var o = props.options || {};
+                    var o = cloneDeepPreserveFns(props.options || {});
                     var chartCfg = Object.assign({}, o.chart || {}, {
                         type: props.type || (o.chart && o.chart.type) || 'line',
                         height: props.height,
                         width: props.width,
                     });
-                    return Object.assign({}, o, { chart: chartCfg, series: props.series });
-                }
-
-                function init() {
-                    if (!chartEl.value || !root.ApexCharts) return;
-                    chart = new root.ApexCharts(chartEl.value, buildOptions());
-                    chart.render();
+                    return Object.assign({}, o, {
+                        chart: chartCfg,
+                        series: cloneDeepPreserveFns(props.series || []),
+                    });
                 }
 
                 function destroy() {
@@ -300,23 +336,42 @@
                     chart = null;
                 }
 
-                onMounted(function () { init(); });
+                function init() {
+                    initScheduled = false;
+                    if (!chartEl.value || !root.ApexCharts) return;
+                    destroy();
+                    try {
+                        chart = new root.ApexCharts(chartEl.value, buildOptions());
+                        chart.render();
+                    } catch (e) {
+                        console.error('[utils.ApexChart] render failed:', e);
+                    }
+                }
+
+                function scheduleInit() {
+                    if (initScheduled) return;
+                    initScheduled = true;
+                    nextTick(init);
+                }
+
+                onMounted(scheduleInit);
                 onBeforeUnmount(destroy);
 
-                watch(function () { return props.options; }, function (n) {
-                    if (chart) chart.updateOptions(n);
-                    else nextTick(init);
-                }, { deep: true });
+                // Options change → full re-init (handles schema/type changes
+                // and initial-empty → populated transitions reliably).
+                watch(function () { return props.options; }, scheduleInit, { deep: true });
 
+                // Series-only change → cheap updateSeries when the chart is
+                // already alive; falls through to scheduleInit if not.
                 watch(function () { return props.series; }, function (n) {
-                    if (chart) chart.updateSeries(n);
-                    else nextTick(init);
+                    if (chart && typeof chart.updateSeries === 'function') {
+                        try { chart.updateSeries(cloneDeepPreserveFns(n || [])); return; }
+                        catch (e) { /* fall through to re-init */ }
+                    }
+                    scheduleInit();
                 }, { deep: true });
 
-                watch(function () { return [props.type, props.width, props.height]; }, function () {
-                    destroy();
-                    nextTick(init);
-                });
+                watch(function () { return [props.type, props.width, props.height]; }, scheduleInit);
 
                 return { chartEl: chartEl };
             },
