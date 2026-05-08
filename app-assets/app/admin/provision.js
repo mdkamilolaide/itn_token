@@ -1,68 +1,77 @@
-Vue.component('page-body', {
-    data: function() {
-        return {
-            page: 'home', //  page by name home | result | ...
-        }
-    },
-    mounted() {
-        /*  Manages events Listening    */
+/**
+ * Admin / Provision submodule — Vue 3 Composition API in place.
+ * Single-card form: pick Never Expire / Expire, optional date, then download badge.
+ * Uses Flatpickr (loaded via system_structure.json's submodule.provision deps).
+ */
 
-    },
-    methods: {
+const { ref, onMounted, onBeforeUnmount } = Vue;
+const { useApp, useFormat } = window.utils;
 
+/* ------------------------------------------------------------------ */
+const PageBody = {
+    setup() {
+        const page = ref('home');
+        return { page };
     },
     template: `
-    <div>
-
-        <div class="content-body">
-            <sample_table/>
+        <div>
+            <div class="content-body">
+                <sample_table/>
+            </div>
         </div>
-    </div>
-    `
-});
+    `,
+};
 
+/* ------------------------------------------------------------------ */
+const SampleTable = {
+    setup() {
+        const filterState = ref(0);
+        const expiringDate = ref('');
 
-Vue.component('sample_table', {
-    data: function() {
-        return {
-            "filterState": 0,
-            "expiringDate": "",
-        }
-    },
-    mounted() {
-        /*  Manages events Listening    */
-        $('.date').flatpickr({
-            altInput: true,
-            altFormat: "F j, Y",
-            dateFormat: "Y-m-d",
-            minDate: "today"
-        });
-    },
-    methods: {
-        resetDate() {
-            if (this.filterState == 0) {
-                this.expiringDate = "";
-                $('#date').flatpickr({
-                    altInput: true,
-                    altFormat: "F j, Y",
-                    dateFormat: "Y-m-d"
-                }).clear();
+        let flatpickrInstance = null;
+
+        function resetDate() {
+            if (filterState.value == 0) {
+                expiringDate.value = '';
+                if (flatpickrInstance && typeof flatpickrInstance.clear === 'function') {
+                    flatpickrInstance.clear();
+                }
             }
-        },
-        downloadBadge(date) {
-            console.log(date);
+        }
 
+        function downloadBadge(date) {
             overlay.show();
             var url = common.DpBadgeService;
-            window.open(url + "?qid=003&date=" + date, '_parent');
+            window.open(url + '?qid=003&date=' + date, '_parent');
             overlay.hide();
-        },
-    },
-    computed: {
+        }
 
+        onMounted(function () {
+            // flatpickr is loaded via the submodule.provision deps; guard anyway.
+            var $el = $('#date');
+            if ($el.length && typeof $el.flatpickr === 'function') {
+                flatpickrInstance = $el.flatpickr({
+                    altInput: true,
+                    altFormat: 'F j, Y',
+                    dateFormat: 'Y-m-d',
+                    minDate: 'today',
+                    onChange: function (selectedDates, dateStr) {
+                        expiringDate.value = dateStr;
+                    },
+                });
+            }
+        });
+
+        onBeforeUnmount(function () {
+            if (flatpickrInstance && typeof flatpickrInstance.destroy === 'function') {
+                try { flatpickrInstance.destroy(); } catch (e) { /* swallow */ }
+                flatpickrInstance = null;
+            }
+        });
+
+        return { filterState, expiringDate, resetDate, downloadBadge };
     },
     template: `
-
         <div class="row" id="basic-table">
 
             <div class="col-md-12 col-sm-12 col-12 mb-0">
@@ -92,12 +101,12 @@ Vue.component('sample_table', {
                                         </select>
                                     </div>
                                 </div>
-                                <div class="col-12" v-show="filterState==1">
+                                <div class="col-12" v-show="filterState == 1">
                                     <div class="form-group mb-2">
                                         <label for="dater">Select Expiring Date</label>
                                         <input type="text" v-model="expiringDate" id="date" class="form-control date" placeholder="Expiring Date">
                                     </div>
-                                </div> 
+                                </div>
                                 <div class="col-12 mt-2">
                                     <button type="button" class="btn btn-primary btn-block waves-effect waves-float waves-light" @click="downloadBadge(expiringDate)" href="javascript:void(0)">Download Badge</button>
                                 </div>
@@ -107,20 +116,11 @@ Vue.component('sample_table', {
                 </div>
             </div>
 
-
         </div>
+    `,
+};
 
-    `
-});
-var vm = new Vue({
-    el: "#app",
-    data: {},
-    methods: {
-
-    },
-    template: `
-        <div>
-            <page-body/>
-        </div>
-    `
-});
+useApp({ template: `<div><page-body/></div>` })
+    .component('page-body', PageBody)
+    .component('sample_table', SampleTable)
+    .mount('#app');
