@@ -15,7 +15,7 @@
     "reporting",
     "eolin"
   ],
-  "module_v3": ["monitoring", "sample", "dashboard", "admin", "device", "users", "activity"],
+  "module_v3": ["monitoring", "sample", "dashboard", "admin", "device", "users", "activity", "mobilization"],
   "general_css": [
     "app-assets/vendors/css/vendors.min.css",
     "app-assets/vendors/css/extensions/jstree.min.css",
