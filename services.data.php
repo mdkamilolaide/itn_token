@@ -4050,9 +4050,15 @@ elseif (CleanData('qid') == '1132') {
             logUserActivity($userid = $current_userid, $platform, $module = "smc", $description = " Batch Stock Generation for Period ID " . $inputData['periodid'] . " failed by Userd ID: " . $current_userid, $result);
             #On user creation failed
             http_response_code(400);
+            // $checkData may be [], null, false, or an error string; coerce to a
+            // safe scalar before concatenation so PHP doesn't warn "Array to
+            // string conversion" and the client gets a useful message.
+            $errDetail = is_array($checkData)
+                ? (empty($checkData) ? 'no allocations available' : json_encode($checkData))
+                : (string) $checkData;
             echo json_encode(array(
                 'result_code' => 400,
-                'message' =>  $inputData['periodid'] . ' Product Validity Check failed. Error: ' . $checkData
+                'message' =>  $inputData['periodid'] . ' Product Validity Check failed. Error: ' . $errDetail
             ));
         }
     } else {
