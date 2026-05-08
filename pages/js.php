@@ -3,11 +3,28 @@
 #   JS loader
 $module = CleanData('module');
 $subdomain = CleanData("submodule");
+
+# Dual-mode loader: when the current module is in module_v3, swap the Vue 2
+# global build for the Vue 3 global build. Everything else (vendors.min.js,
+# axios, toastr, common.js, utils.js, module-specific component files) stays
+# the same. With $config_system_structure['module_v3'] = [] (the default),
+# this is a no-op and behaviour is bit-identical to baseline.
+$module_v3 = isset($config_system_structure['module_v3']) && is_array($config_system_structure['module_v3'])
+    ? $config_system_structure['module_v3']
+    : [];
+$is_v3_module = in_array($module, $module_v3, true);
+$vue3_path = "app-assets/vendors/third-parties/vue/vue.global.prod.js";
+
 #
 if (in_array($module, $config_modules)) {
     //  Load default js
     if (count($config_js_general)) {
         foreach ($config_js_general as $item) {
+            // For v3 modules, swap Vue 2 (vue.js) for Vue 3 global build.
+            if ($is_v3_module && strpos($item, '/vue/vue.js') !== false) {
+                echo "<script src=" . $config_pre_append_link . $vue3_path . "></script>\r\n";
+                continue;
+            }
             echo "<script src=" . $config_pre_append_link . $item . "></script>\r\n";
         }
     }
@@ -38,6 +55,10 @@ if (in_array($module, $config_modules)) {
     #   load default  only
     if (count($config_js_general)) {
         foreach ($config_js_general as $item) {
+            if ($is_v3_module && strpos($item, '/vue/vue.js') !== false) {
+                echo "<script src=" . $config_pre_append_link . $vue3_path . "></script>\r\n";
+                continue;
+            }
             echo "<script src=" . $config_pre_append_link . $item . "></script>\r\n";
         }
     }
