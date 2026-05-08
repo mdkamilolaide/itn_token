@@ -1,114 +1,105 @@
-Vue.component("page-body", {
-    data: function () {
-        return {
-            page: "dashboard", //  page by name dashbaord | result | ...
-        };
-    },
-    mounted() {
-        /*  Manages events Listening    */
-    },
-    methods: {},
-    template: `
-    <div>
-    <div class="content-body">
-        <dashboard_container/>
-    </div>
-    </div>
-    `,
-});
+/**
+ * Users / Dashboard submodule — Vue 3 Composition API in place.
+ * Stat cards (totals, active/inactive, geo distribution) + group list.
+ * Fires 7 parallel API calls (qid=020..025, 010) at mount via axios.spread.
+ * Each is null-guarded so an empty endpoint renders 0 instead of crashing.
+ */
 
-Vue.component("dashboard_container", {
-    data: function () {
-        return {
-            totalUser: "",
-            userStatus: {
-                totalActiveUser: "",
-                totalInactiveUser: "",
-            },
-            totalGroup: "",
-            groupData: [],
-            userGroupData: [],
-            gender: {
-                male: 0,
-                female: 0,
-                others: 0,
-            },
-            geoUserDistribution: {
-                state: 0,
-                lga: 0,
-                cluster: 0,
-                ward: 0,
-                dp: 0,
-            },
-        };
+const { ref, reactive, onMounted } = Vue;
+const { useApp, useFormat, fmt: utilsFmt } = window.utils;
+
+/* ------------------------------------------------------------------ */
+const PageBody = {
+    setup() {
+        const page = ref('dashboard');
+        return { page };
     },
-    mounted() {
-        /*  Manages events Listening    */
-        this.getAllStat();
-    },
-    methods: {
-        getAllStat() {
+    template: `
+        <div>
+            <div class="content-body">
+                <dashboard_container/>
+            </div>
+        </div>
+    `,
+};
+
+/* ------------------------------------------------------------------ */
+const DashboardContainer = {
+    setup() {
+        const totalUser = ref('');
+        const userStatus = reactive({ totalActiveUser: '', totalInactiveUser: '' });
+        const totalGroup = ref('');
+        const groupData = ref([]);
+        const userGroupData = ref([]);
+        const gender = reactive({ male: 0, female: 0, others: 0 });
+        const geoUserDistribution = reactive({
+            state: 0, lga: 0, cluster: 0, ward: 0, dp: 0,
+        });
+
+        const fmt = utilsFmt;
+
+        function getAllStat() {
             var url = common.DataService;
-            var self = this;
             var endpoints = [
-                url + "?qid=020", //Get Total Users [0]
-                url + "?qid=021", //Get Active and Inactive Users [1]
-                url + "?qid=022", //Get Geo Statistics distribution of users [2]
-                url + "?qid=023", //Get User Counts by Group [3]
-                url + "?qid=024", //Get Total User Group [4]
-                url + "?qid=025", //Get Gender Count [5]
-                url + "?qid=010", //Get User Group Data [6]
+                url + '?qid=020', // Total Users [0]
+                url + '?qid=021', // Active and Inactive Users [1]
+                url + '?qid=022', // Geo Statistics distribution of users [2]
+                url + '?qid=023', // User Counts by Group [3]
+                url + '?qid=024', // Total User Group [4]
+                url + '?qid=025', // Gender Count [5]
+                url + '?qid=010', // User Group Data [6]
             ];
 
-            // Return our response in the allData variable as an array.
-            // Each endpoint is null-guarded — an empty result set should
-            // render zeros, not crash the whole dashboard.
-            const fmt = (v) => parseInt(v || 0).toLocaleString();
-
-            Promise.all(endpoints.map((endpoint) => axios.get(endpoint))).then(
-                axios.spread((...allData) => {
+            Promise.all(endpoints.map(function (e) { return axios.get(e); })).then(
+                axios.spread(function (...allData) {
                     overlay.show();
 
-                    // Total Users
                     var totalUserRow = allData[0]?.data?.total_user?.[0];
-                    self.totalUser = totalUserRow ? fmt(totalUserRow.total) : "0";
+                    totalUser.value = totalUserRow ? fmt(totalUserRow.total) : '0';
 
-                    // User Active Status
                     var statusRow = allData[1]?.data?.data?.[0];
-                    self.userStatus.totalActiveUser = statusRow ? fmt(statusRow.active) : "0";
-                    self.userStatus.totalInactiveUser = statusRow ? fmt(statusRow.inactive) : "0";
+                    userStatus.totalActiveUser   = statusRow ? fmt(statusRow.active)   : '0';
+                    userStatus.totalInactiveUser = statusRow ? fmt(statusRow.inactive) : '0';
 
-                    // Geo Distribution
                     var geoRows = allData[2]?.data?.data || [];
-                    geoRows.forEach((stat) => {
-                        self.geoUserDistribution.state = stat["geo_level"] == "state" ? fmt(stat["total"]) : self.geoUserDistribution.state;
-                        self.geoUserDistribution.lga = stat["geo_level"] == "lga" ? fmt(stat["total"]) : self.geoUserDistribution.lga;
-                        self.geoUserDistribution.cluster = stat["geo_level"] == "cluster" ? fmt(stat["total"]) : self.geoUserDistribution.cluster;
-                        self.geoUserDistribution.ward = stat["geo_level"] == "ward" ? fmt(stat["total"]) : self.geoUserDistribution.ward;
-                        self.geoUserDistribution.dp = stat["geo_level"] == "dp" ? fmt(stat["total"]) : self.geoUserDistribution.dp;
+                    geoRows.forEach(function (stat) {
+                        if (stat['geo_level'] === 'state')   geoUserDistribution.state   = fmt(stat['total']);
+                        if (stat['geo_level'] === 'lga')     geoUserDistribution.lga     = fmt(stat['total']);
+                        if (stat['geo_level'] === 'cluster') geoUserDistribution.cluster = fmt(stat['total']);
+                        if (stat['geo_level'] === 'ward')    geoUserDistribution.ward    = fmt(stat['total']);
+                        if (stat['geo_level'] === 'dp')      geoUserDistribution.dp      = fmt(stat['total']);
                     });
 
-                    //Group Data
                     var groupRow = allData[4]?.data?.data?.[0];
-                    self.totalGroup = groupRow && groupRow.total ? fmt(groupRow.total) : 0;
+                    totalGroup.value = groupRow && groupRow.total ? fmt(groupRow.total) : 0;
 
-                    // Gender
                     var genderRows = allData[5]?.data?.data || [];
-                    genderRows.forEach((stat) => {
-                        self.gender.others = stat["gender"] == null ? fmt(stat["total"]) : self.gender.others;
-                        self.gender.male = stat["gender"] == "Male" ? fmt(stat["total"]) : self.gender.male;
-                        self.gender.female = stat["gender"] == "Female" ? fmt(stat["total"]) : self.gender.female;
+                    genderRows.forEach(function (stat) {
+                        if (stat['gender'] == null)         gender.others = fmt(stat['total']);
+                        if (stat['gender'] === 'Male')      gender.male   = fmt(stat['total']);
+                        if (stat['gender'] === 'Female')    gender.female = fmt(stat['total']);
                     });
 
-                    // User Group List
-                    self.userGroupData = allData[6]?.data?.data || [];
+                    userGroupData.value = allData[6]?.data?.data || [];
 
                     overlay.hide();
                 })
-            );
-        },
+            ).catch(function (error) {
+                overlay.hide();
+                console.error('[users/dashboard] getAllStat error:', error);
+            });
+        }
+
+        onMounted(function () {
+            getAllStat();
+        });
+
+        return {
+            totalUser, userStatus, totalGroup, groupData, userGroupData,
+            gender, geoUserDistribution,
+            getAllStat,
+        };
     },
-    computed: {},
     template: `
         <div>
             <div class="row">
@@ -121,13 +112,10 @@ Vue.component("dashboard_container", {
                     </div>
                 </div>
             </div>
-            
-            <div class="row">
-                <!-- Split Screen into 2: Begin -->
 
+            <div class="row">
                 <div class="col-sm-12 col-md-12 col-lg-12 col-12">
                     <div class="row">
-
                         <div class="col-sm-6 col-md-3 col-lg-3 col-12">
                             <div onClick="location.href='./users/list'" class="card">
                                 <div class="card-header d-flex align-items-center justify-content-between">
@@ -191,9 +179,7 @@ Vue.component("dashboard_container", {
                                 </div>
                             </div>
                         </div>
-
                     </div>
-                    
 
                     <div class="card col-12 geo-level-stat">
                         <ul class="row list-unstyled mb-0">
@@ -212,7 +198,6 @@ Vue.component("dashboard_container", {
                                     </div>
                                 </div>
                             </li>
-
                             <li class="col-lg-3 col-sm-6 col-12">
                                 <div class="card mb-0">
                                     <div class="card-header d-flex align-items-center justify-content-between">
@@ -228,7 +213,6 @@ Vue.component("dashboard_container", {
                                     </div>
                                 </div>
                             </li>
-
                             <li class="col-lg-3 col-sm-6 col-12">
                                 <div class="card mb-0">
                                     <div class="card-header d-flex align-items-center justify-content-between">
@@ -244,8 +228,6 @@ Vue.component("dashboard_container", {
                                     </div>
                                 </div>
                             </li>
-
-                            
                             <li class="col-lg-3 col-sm-6 col-12">
                                 <div class="card mb-0">
                                     <div class="card-header d-flex align-items-center justify-content-between">
@@ -261,51 +243,33 @@ Vue.component("dashboard_container", {
                                     </div>
                                 </div>
                             </li>
-                            
-
                         </ul>
                     </div>
-
-
                 </div>
 
                 <div class="col-sm-12 col-md-6 col-lg-6 col-12">
-
-                    <div class="card" v-if="userGroupData.length >0">
+                    <div class="card" v-if="userGroupData.length > 0">
                         <div class="table table-borderless table-hover table-nowrap table-centered m-0" style="height: calc(100% - 20px) !important">
                             <table class="table">
                                 <thead class="table-light">
-                                    <th width="50px">#</th>
-                                    <th>Group Name</th>
+                                    <tr><th width="50px">#</th><th>Group Name</th></tr>
                                 </thead>
                                 <tbody>
-                                    <tr v-for="(g, i) in userGroupData">
-                                        <td>{{i+1}}</td>
-                                        <td>{{g.user_group}}</td>
+                                    <tr v-for="(g, i) in userGroupData" :key="g.user_group || i">
+                                        <td>{{ i + 1 }}</td>
+                                        <td>{{ g.user_group }}</td>
                                     </tr>
                                 </tbody>
                             </table>
                         </div>
                     </div>
-
                 </div>
-
-                <!-- Split Screen into 2: End -->
-
             </div>
- 
-
-
         </div>
     `,
-});
-var vm = new Vue({
-    el: "#app",
-    data: {},
-    methods: {},
-    template: `
-        <div>
-            <page-body/>
-        </div>
-    `,
-});
+};
+
+useApp({ template: `<div><page-body/></div>` })
+    .component('page-body', PageBody)
+    .component('dashboard_container', DashboardContainer)
+    .mount('#app');
