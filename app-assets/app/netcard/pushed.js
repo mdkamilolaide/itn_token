@@ -11,14 +11,20 @@ const { ref, reactive, onMounted, onBeforeUnmount } = Vue;
 const { useApp, useFormat, bus, safeMessage } = window.utils;
 
 const PageBody = {
-    setup() {
-        const page = ref('list');
-        function gotoPageHandler(data) { page.value = data && data.page; }
-        onMounted(function () { bus.on('g-event-goto-page', gotoPageHandler); });
-        onBeforeUnmount(function () { bus.off('g-event-goto-page', gotoPageHandler); });
-        return { page };
-    },
-    template: `
+  setup() {
+    const page = ref("list");
+    function gotoPageHandler(data) {
+      page.value = data && data.page;
+    }
+    onMounted(function () {
+      bus.on("g-event-goto-page", gotoPageHandler);
+    });
+    onBeforeUnmount(function () {
+      bus.off("g-event-goto-page", gotoPageHandler);
+    });
+    return { page };
+  },
+  template: `
         <div>
             <div class="content-body">
                 <div v-show="page == 'list'"><wallet_list/></div>
@@ -29,257 +35,398 @@ const PageBody = {
 };
 
 const WalletList = {
-    setup() {
-        const fmtUtils = useFormat();
+  setup() {
+    const fmtUtils = useFormat();
 
-        const url = ref(window.common && window.common.BadgeService);
-        const permission = ref(
-            (typeof getPermission === 'function')
-                ? (getPermission(typeof per !== 'undefined' ? per : null, 'enetcard') || { permission_value: 0 })
-                : { permission_value: 0 }
+    const url = ref(window.common && window.common.BadgeService);
+    const permission = ref(
+      typeof getPermission === "function"
+        ? getPermission(
+            typeof per !== "undefined" ? per : null,
+            "enetcard",
+          ) || { permission_value: 0 }
+        : { permission_value: 0 },
+    );
+    const tableData = ref([]);
+    const geoData = ref([]);
+    const userRole = reactive({ currentUserRole: "", currentUserid: "" });
+    const checkToggle = ref(false);
+    const filterState = ref(false);
+    const filters = ref(false);
+    const tableOptions = reactive({
+      total: 1,
+      pageLength: 1,
+      perPage: 10,
+      currentPage: 1,
+      orderDir: "desc",
+      orderField: 0,
+      limitStart: 0,
+      isNext: false,
+      isPrev: false,
+      aLength: [10, 20, 50, 100, 150, 200],
+      filterParam: {
+        loginid: "",
+        mobilization_date: "",
+        geo_level: "",
+        geo_level_id: "",
+        geo_string: "",
+      },
+    });
+    const sysDefaultData = ref([]);
+    const userPass = reactive({ pass: "", loginid: "", name: "" });
+
+    function reloadUserListOnUpdate() {
+      paginationDefault();
+      loadTableData();
+    }
+
+    function loadTableData() {
+      overlay.show();
+      axios
+        .get(
+          common.TableService +
+            "?qid=205&draw=" +
+            tableOptions.currentPage +
+            "&order_column=" +
+            tableOptions.orderField +
+            "&length=" +
+            tableOptions.perPage +
+            "&start=" +
+            tableOptions.limitStart +
+            "&order_dir=" +
+            tableOptions.orderDir +
+            "&gl=" +
+            tableOptions.filterParam.geo_level +
+            "&lgid=" +
+            tableOptions.filterParam.loginid +
+            "&glid=" +
+            tableOptions.filterParam.geo_level_id +
+            "&mdt=" +
+            tableOptions.filterParam.mobilization_date,
+        )
+        .then(function (response) {
+          var d = response && response.data;
+          tableData.value = Array.isArray(d && d.data) ? d.data : [];
+          tableOptions.total = (d && d.recordsTotal) || 0;
+          if (tableOptions.currentPage == 1) paginationDefault();
+          overlay.hide();
+        })
+        .catch(function (error) {
+          overlay.hide();
+          alert.Error("ERROR", safeMessage(error));
+        });
+    }
+
+    function selectAll() {
+      for (var i = 0; i < tableData.value.length; i++)
+        tableData.value[i].pick = true;
+    }
+    function uncheckAll() {
+      for (var i = 0; i < tableData.value.length; i++)
+        tableData.value[i].pick = false;
+    }
+    function selectToggle() {
+      if (checkToggle.value === false) {
+        selectAll();
+        checkToggle.value = true;
+      } else {
+        uncheckAll();
+        checkToggle.value = false;
+      }
+    }
+    function checkedBg(pickOne) {
+      return pickOne != "" ? "bg-select" : "";
+    }
+    function toggleFilter() {
+      if (filterState.value === false) filters.value = false;
+      return (filterState.value = !filterState.value);
+    }
+    function selectedItems() {
+      return tableData.value.filter(function (r) {
+        return r.pick;
+      });
+    }
+    function selectedID() {
+      return tableData.value
+        .filter(function (r) {
+          return r.pick;
+        })
+        .map(function (r) {
+          return r.userid;
+        });
+    }
+
+    function paginationDefault() {
+      tableOptions.pageLength = Math.ceil(
+        tableOptions.total / tableOptions.perPage,
+      );
+      tableOptions.limitStart = Math.ceil(
+        (tableOptions.currentPage - 1) * tableOptions.perPage,
+      );
+      tableOptions.isNext = tableOptions.currentPage < tableOptions.pageLength;
+      tableOptions.isPrev = tableOptions.currentPage > 1;
+    }
+    function nextPage() {
+      tableOptions.currentPage += 1;
+      paginationDefault();
+      loadTableData();
+    }
+    function prevPage() {
+      tableOptions.currentPage -= 1;
+      paginationDefault();
+      loadTableData();
+    }
+    function currentPage() {
+      paginationDefault();
+      if (tableOptions.currentPage < 1)
+        alert.Error("ERROR", "The Page requested doesn't exist");
+      else if (tableOptions.currentPage > tableOptions.pageLength)
+        alert.Error("ERROR", "The Page requested doesn't exist");
+      else loadTableData();
+    }
+    function changePerPage(val) {
+      var maxPerPage = Math.ceil(tableOptions.total / val);
+      if (maxPerPage < tableOptions.currentPage)
+        tableOptions.currentPage = maxPerPage;
+      tableOptions.perPage = val;
+      paginationDefault();
+      loadTableData();
+    }
+    function sort(col) {
+      if (tableOptions.orderField === col)
+        tableOptions.orderDir =
+          tableOptions.orderDir === "asc" ? "desc" : "asc";
+      else tableOptions.orderField = col;
+      paginationDefault();
+      loadTableData();
+    }
+    function applyFilter() {
+      var checkFill = 0;
+      checkFill += tableOptions.filterParam.loginid != "" ? 1 : 0;
+      checkFill += tableOptions.filterParam.mobilization_date != "" ? 1 : 0;
+      checkFill += tableOptions.filterParam.geo_level != "" ? 1 : 0;
+      checkFill += tableOptions.filterParam.geo_level_id != "" ? 1 : 0;
+      if (checkFill > 0) {
+        toggleFilter();
+        filters.value = true;
+        paginationDefault();
+        loadTableData();
+      } else {
+        alert.Error("ERROR", "Invalid required data");
+      }
+    }
+    function removeSingleFilter(column_name) {
+      tableOptions.filterParam[column_name] = "";
+      if (column_name == "geo_level" || column_name == "geo_level_id") {
+        tableOptions.filterParam.geo_level = "";
+        tableOptions.filterParam.geo_level_id = "";
+      }
+      var g = 0;
+      for (var k in tableOptions.filterParam) {
+        if (tableOptions.filterParam[k] != "") g++;
+      }
+      if (g == 0) filters.value = false;
+      paginationDefault();
+      loadTableData();
+    }
+    function clearAllFilter() {
+      try {
+        $("#mobilization_date")
+          .flatpickr({
+            altInput: true,
+            altFormat: "F j, Y",
+            dateFormat: "Y-m-d",
+          })
+          .clear();
+      } catch (e) {}
+      filters.value = false;
+      tableOptions.filterParam.mobilization_date = "";
+      tableOptions.filterParam.loginid = "";
+      tableOptions.filterParam.geo_level = "";
+      tableOptions.filterParam.geo_level_id = "";
+      paginationDefault();
+      loadTableData();
+    }
+    function goToDetail(userid, user_status) {
+      bus.emit("g-event-goto-page", {
+        userid: userid,
+        page: "detail",
+        user_status: user_status,
+      });
+    }
+    function refreshData() {
+      paginationDefault();
+      loadTableData();
+    }
+    function getGeoLocation() {
+      overlay.show();
+      axios
+        .get(common.DataService + "?qid=gen009")
+        .then(function (response) {
+          geoData.value = (response.data && response.data.data) || [];
+          overlay.hide();
+        })
+        .catch(function (error) {
+          overlay.hide();
+          alert.Error("ERROR", safeMessage(error));
+        });
+    }
+    function setLocation(select_index) {
+      var i = select_index || 0;
+      var row = geoData.value[i];
+      if (!row) return;
+      tableOptions.filterParam.geo_level = row.geo_level;
+      tableOptions.filterParam.geo_level_id = row.geo_level_id;
+      tableOptions.filterParam.geo_string = row.title;
+    }
+
+    async function exportMobilization() {
+      var qs =
+        "qid=301&draw=" +
+        tableOptions.currentPage +
+        "&order_column=" +
+        tableOptions.orderField +
+        "&length=" +
+        tableOptions.perPage +
+        "&start=" +
+        tableOptions.limitStart +
+        "&order_dir=" +
+        tableOptions.orderDir +
+        "&gl=" +
+        tableOptions.filterParam.geo_level +
+        "&lgid=" +
+        tableOptions.filterParam.loginid +
+        "&glid=" +
+        tableOptions.filterParam.geo_level_id +
+        "&mdt=" +
+        tableOptions.filterParam.mobilization_date;
+      var filename =
+        (tableOptions.filterParam.geo_string
+          ? tableOptions.filterParam.geo_string
+          : "Recent ") +
+        " " +
+        (tableOptions.filterParam.loginid
+          ? tableOptions.filterParam.loginid
+          : "Recent ") +
+        " Mobilization List";
+      overlay.show();
+
+      var count = await new Promise(function (resolve) {
+        $.ajax({
+          url: common.DataService,
+          type: "POST",
+          data: qs,
+          dataType: "json",
+          success: function (data) {
+            resolve(data.total);
+          },
+        });
+      });
+      var downloadMax =
+        (window.common && window.common.ExportDownloadLimit) || 25000;
+      if (parseInt(count) > downloadMax) {
+        alert.Error(
+          "Download Error",
+          "Unable to download data because it has exceeded download limit, download limit is " +
+            downloadMax,
         );
-        const tableData = ref([]);
-        const geoData = ref([]);
-        const userRole = reactive({ currentUserRole: '', currentUserid: '' });
-        const checkToggle = ref(false);
-        const filterState = ref(false);
-        const filters = ref(false);
-        const tableOptions = reactive({
-            total: 1, pageLength: 1, perPage: 10, currentPage: 1,
-            orderDir: 'desc', orderField: 0, limitStart: 0,
-            isNext: false, isPrev: false,
-            aLength: [10, 20, 50, 100, 150, 200],
-            filterParam: {
-                loginid: '', mobilization_date: '',
-                geo_level: '', geo_level_id: '', geo_string: '',
+      } else if (parseInt(count) == 0) {
+        alert.Error("Download Error", "No data found");
+      } else {
+        alert.Info("DOWNLOADING...", "Downloading " + count + " record(s)");
+        var outcome = await new Promise(function (resolve) {
+          $.ajax({
+            url: common.ExportService,
+            type: "POST",
+            data: qs,
+            success: function (data) {
+              resolve(data);
             },
+          });
         });
-        const sysDefaultData = ref([]);
-        const userPass = reactive({ pass: '', loginid: '', name: '' });
+        var exportData = JSON.parse(outcome);
+        if (window.Jhxlsx && typeof window.Jhxlsx.export === "function") {
+          window.Jhxlsx.export(exportData, { fileName: filename });
+        }
+      }
+      overlay.hide();
+    }
 
-        function reloadUserListOnUpdate() {
-            paginationDefault();
-            loadTableData();
-        }
+    onMounted(function () {
+      getGeoLocation();
+      loadTableData();
+      bus.on("g-event-update-user", reloadUserListOnUpdate);
 
-        function loadTableData() {
-            overlay.show();
-            axios.get(
-                common.TableService +
-                '?qid=205&draw=' + tableOptions.currentPage +
-                '&order_column=' + tableOptions.orderField +
-                '&length=' + tableOptions.perPage +
-                '&start=' + tableOptions.limitStart +
-                '&order_dir=' + tableOptions.orderDir +
-                '&gl=' + tableOptions.filterParam.geo_level +
-                '&lgid=' + tableOptions.filterParam.loginid +
-                '&glid=' + tableOptions.filterParam.geo_level_id +
-                '&mdt=' + tableOptions.filterParam.mobilization_date
-            )
-                .then(function (response) {
-                    var d = response && response.data;
-                    tableData.value = Array.isArray(d && d.data) ? d.data : [];
-                    tableOptions.total = (d && d.recordsTotal) || 0;
-                    if (tableOptions.currentPage == 1) paginationDefault();
-                    overlay.hide();
-                })
-                .catch(function (error) {
-                    overlay.hide();
-                    alert.Error('ERROR', safeMessage(error));
-                });
-        }
-
-        function selectAll()    { for (var i = 0; i < tableData.value.length; i++) tableData.value[i].pick = true; }
-        function uncheckAll()   { for (var i = 0; i < tableData.value.length; i++) tableData.value[i].pick = false; }
-        function selectToggle() {
-            if (checkToggle.value === false) { selectAll(); checkToggle.value = true; }
-            else                              { uncheckAll(); checkToggle.value = false; }
-        }
-        function checkedBg(pickOne) { return pickOne != '' ? 'bg-select' : ''; }
-        function toggleFilter() {
-            if (filterState.value === false) filters.value = false;
-            return (filterState.value = !filterState.value);
-        }
-        function selectedItems() { return tableData.value.filter(function (r) { return r.pick; }); }
-        function selectedID()    { return tableData.value.filter(function (r) { return r.pick; }).map(function (r) { return r.userid; }); }
-
-        function paginationDefault() {
-            tableOptions.pageLength = Math.ceil(tableOptions.total / tableOptions.perPage);
-            tableOptions.limitStart = Math.ceil((tableOptions.currentPage - 1) * tableOptions.perPage);
-            tableOptions.isNext = tableOptions.currentPage < tableOptions.pageLength;
-            tableOptions.isPrev = tableOptions.currentPage > 1;
-        }
-        function nextPage() { tableOptions.currentPage += 1; paginationDefault(); loadTableData(); }
-        function prevPage() { tableOptions.currentPage -= 1; paginationDefault(); loadTableData(); }
-        function currentPage() {
-            paginationDefault();
-            if (tableOptions.currentPage < 1)                            alert.Error('ERROR', "The Page requested doesn't exist");
-            else if (tableOptions.currentPage > tableOptions.pageLength) alert.Error('ERROR', "The Page requested doesn't exist");
-            else                                                         loadTableData();
-        }
-        function changePerPage(val) {
-            var maxPerPage = Math.ceil(tableOptions.total / val);
-            if (maxPerPage < tableOptions.currentPage) tableOptions.currentPage = maxPerPage;
-            tableOptions.perPage = val;
-            paginationDefault();
-            loadTableData();
-        }
-        function sort(col) {
-            if (tableOptions.orderField === col) tableOptions.orderDir = tableOptions.orderDir === 'asc' ? 'desc' : 'asc';
-            else                                  tableOptions.orderField = col;
-            paginationDefault();
-            loadTableData();
-        }
-        function applyFilter() {
-            var checkFill = 0;
-            checkFill += tableOptions.filterParam.loginid != '' ? 1 : 0;
-            checkFill += tableOptions.filterParam.mobilization_date != '' ? 1 : 0;
-            checkFill += tableOptions.filterParam.geo_level != '' ? 1 : 0;
-            checkFill += tableOptions.filterParam.geo_level_id != '' ? 1 : 0;
-            if (checkFill > 0) {
-                toggleFilter();
-                filters.value = true;
-                paginationDefault();
-                loadTableData();
-            } else {
-                alert.Error('ERROR', 'Invalid required data');
-            }
-        }
-        function removeSingleFilter(column_name) {
-            tableOptions.filterParam[column_name] = '';
-            if (column_name == 'geo_level' || column_name == 'geo_level_id') {
-                tableOptions.filterParam.geo_level = '';
-                tableOptions.filterParam.geo_level_id = '';
-            }
-            var g = 0;
-            for (var k in tableOptions.filterParam) {
-                if (tableOptions.filterParam[k] != '') g++;
-            }
-            if (g == 0) filters.value = false;
-            paginationDefault();
-            loadTableData();
-        }
-        function clearAllFilter() {
-            try {
-                $('#mobilization_date').flatpickr({ altInput: true, altFormat: 'F j, Y', dateFormat: 'Y-m-d' }).clear();
-            } catch (e) {}
-            filters.value = false;
-            tableOptions.filterParam.mobilization_date = '';
-            tableOptions.filterParam.loginid = '';
-            tableOptions.filterParam.geo_level = '';
-            tableOptions.filterParam.geo_level_id = '';
-            paginationDefault();
-            loadTableData();
-        }
-        function goToDetail(userid, user_status) {
-            bus.emit('g-event-goto-page', { userid: userid, page: 'detail', user_status: user_status });
-        }
-        function refreshData() { paginationDefault(); loadTableData(); }
-        function getGeoLocation() {
-            overlay.show();
-            axios.get(common.DataService + '?qid=gen009')
-                .then(function (response) {
-                    geoData.value = (response.data && response.data.data) || [];
-                    overlay.hide();
-                })
-                .catch(function (error) {
-                    overlay.hide();
-                    alert.Error('ERROR', safeMessage(error));
-                });
-        }
-        function setLocation(select_index) {
-            var i = select_index || 0;
-            var row = geoData.value[i];
-            if (!row) return;
-            tableOptions.filterParam.geo_level = row.geo_level;
-            tableOptions.filterParam.geo_level_id = row.geo_level_id;
-            tableOptions.filterParam.geo_string = row.title;
-        }
-
-        async function exportMobilization() {
-            var qs =
-                'qid=301&draw=' + tableOptions.currentPage +
-                '&order_column=' + tableOptions.orderField +
-                '&length=' + tableOptions.perPage +
-                '&start=' + tableOptions.limitStart +
-                '&order_dir=' + tableOptions.orderDir +
-                '&gl=' + tableOptions.filterParam.geo_level +
-                '&lgid=' + tableOptions.filterParam.loginid +
-                '&glid=' + tableOptions.filterParam.geo_level_id +
-                '&mdt=' + tableOptions.filterParam.mobilization_date;
-            var filename =
-                (tableOptions.filterParam.geo_string ? tableOptions.filterParam.geo_string : 'Recent ') + ' ' +
-                (tableOptions.filterParam.loginid ? tableOptions.filterParam.loginid : 'Recent ') +
-                ' Mobilization List';
-            overlay.show();
-
-            var count = await new Promise(function (resolve) {
-                $.ajax({
-                    url: common.DataService, type: 'POST', data: qs, dataType: 'json',
-                    success: function (data) { resolve(data.total); },
-                });
+      try {
+        var select = $(".select2");
+        select.each(function () {
+          var $this = $(this);
+          $this.wrap('<div class="position-relative"></div>');
+          $this
+            .select2({
+              dropdownAutoWidth: true,
+              width: "100%",
+              dropdownParent: $this.parent(),
+            })
+            .on("change", function () {
+              setLocation(this.value);
             });
-            var downloadMax = (window.common && window.common.ExportDownloadLimit) || 25000;
-            if (parseInt(count) > downloadMax) {
-                alert.Error('Download Error', 'Unable to download data because it has exceeded download limit, download limit is ' + downloadMax);
-            } else if (parseInt(count) == 0) {
-                alert.Error('Download Error', 'No data found');
-            } else {
-                alert.Info('DOWNLOADING...', 'Downloading ' + count + ' record(s)');
-                var outcome = await new Promise(function (resolve) {
-                    $.ajax({
-                        url: common.ExportService, type: 'POST', data: qs,
-                        success: function (data) { resolve(data); },
-                    });
-                });
-                var exportData = JSON.parse(outcome);
-                if (window.Jhxlsx && typeof window.Jhxlsx.export === 'function') {
-                    window.Jhxlsx.export(exportData, { fileName: filename });
-                }
-            }
-            overlay.hide();
-        }
-
-        onMounted(function () {
-            getGeoLocation();
-            loadTableData();
-            bus.on('g-event-update-user', reloadUserListOnUpdate);
-
-            try {
-                var select = $('.select2');
-                select.each(function () {
-                    var $this = $(this);
-                    $this.wrap('<div class="position-relative"></div>');
-                    $this.select2({
-                        dropdownAutoWidth: true,
-                        width: '100%',
-                        dropdownParent: $this.parent(),
-                    }).on('change', function () { setLocation(this.value); });
-                });
-                $('.select2-selection__arrow').html('<i class="feather icon-chevron-down"></i>');
-                $('.date').flatpickr({ altInput: true, altFormat: 'F j, Y', dateFormat: 'Y-m-d' });
-            } catch (e) {}
         });
-        onBeforeUnmount(function () {
-            bus.off('g-event-update-user', reloadUserListOnUpdate);
+        $(".select2-selection__arrow").html(
+          '<i class="feather icon-chevron-down"></i>',
+        );
+        $(".date").flatpickr({
+          altInput: true,
+          altFormat: "F j, Y",
+          dateFormat: "Y-m-d",
         });
+      } catch (e) {}
+    });
+    onBeforeUnmount(function () {
+      bus.off("g-event-update-user", reloadUserListOnUpdate);
+    });
 
-        return {
-            url, permission, tableData, geoData, userRole, checkToggle,
-            filterState, filters, tableOptions, sysDefaultData, userPass,
-            reloadUserListOnUpdate, loadTableData,
-            selectAll, uncheckAll, selectToggle, checkedBg, toggleFilter,
-            selectedItems, selectedID,
-            nextPage, prevPage, currentPage, paginationDefault, changePerPage,
-            sort, applyFilter, removeSingleFilter, clearAllFilter,
-            goToDetail, refreshData, getGeoLocation, setLocation,
-            exportMobilization,
-            capitalize: fmtUtils.capitalize,
-            displayDate: fmtUtils.displayDate,
-            formatNumber: fmtUtils.formatNumber,
-        };
-    },
-    template: `
+    return {
+      url,
+      permission,
+      tableData,
+      geoData,
+      userRole,
+      checkToggle,
+      filterState,
+      filters,
+      tableOptions,
+      sysDefaultData,
+      userPass,
+      reloadUserListOnUpdate,
+      loadTableData,
+      selectAll,
+      uncheckAll,
+      selectToggle,
+      checkedBg,
+      toggleFilter,
+      selectedItems,
+      selectedID,
+      nextPage,
+      prevPage,
+      currentPage,
+      paginationDefault,
+      changePerPage,
+      sort,
+      applyFilter,
+      removeSingleFilter,
+      clearAllFilter,
+      goToDetail,
+      refreshData,
+      getGeoLocation,
+      setLocation,
+      exportMobilization,
+      capitalize: fmtUtils.capitalize,
+      displayDate: fmtUtils.displayDate,
+      formatNumber: fmtUtils.formatNumber,
+    };
+  },
+  template: `
         <div class="row" id="basic-table">
             <div class="col-md-8 col-sm-12 col-12 mb-0">
                 <h2 class="content-header-title header-txt float-left mb-0">e-Netcard</h2>
@@ -442,171 +589,229 @@ const WalletList = {
 };
 
 const MobilizationDetails = {
-    setup() {
-        const fmtUtils = useFormat();
+  setup() {
+    const fmtUtils = useFormat();
 
-        const userid = ref('');
-        const userDetails = ref(true);
-        const user_status = ref('');
-        const bankListData = ref([]);
-        const roleListData = ref([]);
-        const userData = reactive({ baseData: [], financeData: [], identityData: [], roleData: [] });
+    const userid = ref("");
+    const userDetails = ref(true);
+    const user_status = ref("");
+    const bankListData = ref([]);
+    const roleListData = ref([]);
+    const userData = reactive({
+      baseData: [],
+      financeData: [],
+      identityData: [],
+      roleData: [],
+    });
 
-        function gotoPageHandler(data) {
-            userDetails.value = true;
-            userid.value = data.userid;
-            user_status.value = data.user_status;
-            getUserDetails();
-        }
-        function goToList() {
-            bus.emit('g-event-goto-page', { page: 'list', userid: userid.value });
-        }
-        function discardUpdate() {
-            $.confirm({
-                title: 'WARNING!',
-                content: '<p>Are you sure you want to discard the changes? </p><br>Discarding the changes means you will loss all changes made',
-                buttons: {
-                    delete: {
-                        text: 'Discard Changes', btnClass: 'btn btn-warning mr-1',
-                        action: function () {
-                            getUserDetails();
-                            userDetails.value = true;
-                            overlay.hide();
-                        },
-                    },
-                    close: { text: 'Cancel', btnClass: 'btn btn-outline-secondary', action: function () { overlay.hide(); } },
-                },
-            });
-        }
-        function getUserDetails() {
-            overlay.show();
-            axios.get(common.DataService + '?qid=005&e=' + userid.value)
+    function gotoPageHandler(data) {
+      userDetails.value = true;
+      userid.value = data.userid;
+      user_status.value = data.user_status;
+      getUserDetails();
+    }
+    function goToList() {
+      bus.emit("g-event-goto-page", { page: "list", userid: userid.value });
+    }
+    function discardUpdate() {
+      $.confirm({
+        title: "WARNING!",
+        content:
+          "<p>Are you sure you want to discard the changes? </p><br>Discarding the changes means you will loss all changes made",
+        buttons: {
+          delete: {
+            text: "Discard Changes",
+            btnClass: "btn btn-warning mr-1",
+            action: function () {
+              getUserDetails();
+              userDetails.value = true;
+              overlay.hide();
+            },
+          },
+          close: {
+            text: "Cancel",
+            btnClass: "btn btn-outline-secondary",
+            action: function () {
+              overlay.hide();
+            },
+          },
+        },
+      });
+    }
+    function getUserDetails() {
+      overlay.show();
+      axios
+        .get(common.DataService + "?qid=005&e=" + userid.value)
+        .then(function (response) {
+          userData.baseData =
+            (response.data.base && response.data.base[0]) || {};
+          userData.financeData =
+            (response.data.finance && response.data.finance[0]) || {};
+          userData.identityData =
+            (response.data.identity && response.data.identity[0]) || {};
+          userData.roleData =
+            (response.data.role && response.data.role[0]) || {};
+          overlay.hide();
+        })
+        .catch(function (error) {
+          overlay.hide();
+          alert.Error("ERROR", safeMessage(error));
+        });
+    }
+    function getBankLists() {
+      overlay.show();
+      axios
+        .get(common.DataService + "?qid=gen008")
+        .then(function (response) {
+          bankListData.value = (response.data && response.data.data) || [];
+          overlay.hide();
+        })
+        .catch(function (error) {
+          overlay.hide();
+          alert.Error("ERROR", safeMessage(error));
+        });
+    }
+    function updateUserProfile() {
+      var updateFormData = {
+        userid: userid.value,
+        roleid: userData.baseData.roleid,
+        first: userData.identityData.first,
+        middle: userData.identityData.middle,
+        last: userData.identityData.last,
+        gender: userData.identityData.gender,
+        email: userData.identityData.email,
+        phone: userData.identityData.phone,
+        bank_name: userData.financeData.bank_name,
+        account_name: userData.financeData.account_name,
+        account_no: userData.financeData.account_no,
+        bank_code: userData.financeData.bank_code,
+        bio_feature: "",
+      };
+      overlay.show();
+      $.confirm({
+        title: "WARNING!",
+        content:
+          "<p>Are you sure you want to Update the User? </p><br>Updating the User profile means you are changing the user permissions and details",
+        buttons: {
+          delete: {
+            text: "Update Details",
+            btnClass: "btn btn-warning mr-1",
+            action: function () {
+              axios
+                .post(
+                  common.DataService + "?qid=006",
+                  JSON.stringify(updateFormData),
+                )
                 .then(function (response) {
-                    userData.baseData = (response.data.base && response.data.base[0]) || {};
-                    userData.financeData = (response.data.finance && response.data.finance[0]) || {};
-                    userData.identityData = (response.data.identity && response.data.identity[0]) || {};
-                    userData.roleData = (response.data.role && response.data.role[0]) || {};
+                  if (response.data.result_code == "200") {
                     overlay.hide();
+                    bus.emit("g-event-update-user", {});
+                    userDetails.value = true;
+                    alert.Success(
+                      "SUCCESS",
+                      response.data.total + " User Updated",
+                    );
+                  } else {
+                    overlay.hide();
+                    alert.Error("ERROR", "User De/Activation failed");
+                  }
                 })
                 .catch(function (error) {
-                    overlay.hide();
-                    alert.Error('ERROR', safeMessage(error));
+                  overlay.hide();
+                  alert.Error("ERROR", safeMessage(error));
                 });
-        }
-        function getBankLists() {
-            overlay.show();
-            axios.get(common.DataService + '?qid=gen008')
-                .then(function (response) {
-                    bankListData.value = (response.data && response.data.data) || [];
-                    overlay.hide();
-                })
-                .catch(function (error) {
-                    overlay.hide();
-                    alert.Error('ERROR', safeMessage(error));
-                });
-        }
-        function updateUserProfile() {
-            var updateFormData = {
-                userid: userid.value,
-                roleid: userData.baseData.roleid,
-                first: userData.identityData.first,
-                middle: userData.identityData.middle,
-                last: userData.identityData.last,
-                gender: userData.identityData.gender,
-                email: userData.identityData.email,
-                phone: userData.identityData.phone,
-                bank_name: userData.financeData.bank_name,
-                account_name: userData.financeData.account_name,
-                account_no: userData.financeData.account_no,
-                bank_code: userData.financeData.bank_code,
-                bio_feature: '',
-            };
-            overlay.show();
-            $.confirm({
-                title: 'WARNING!',
-                content: '<p>Are you sure you want to Update the User? </p><br>Updating the User profile means you are changing the user permissions and details',
-                buttons: {
-                    delete: {
-                        text: 'Update Details', btnClass: 'btn btn-warning mr-1',
-                        action: function () {
-                            axios.post(common.DataService + '?qid=006', JSON.stringify(updateFormData))
-                                .then(function (response) {
-                                    if (response.data.result_code == '200') {
-                                        overlay.hide();
-                                        bus.emit('g-event-update-user', {});
-                                        userDetails.value = true;
-                                        alert.Success('SUCCESS', response.data.total + ' User Updated');
-                                    } else {
-                                        overlay.hide();
-                                        alert.Error('ERROR', 'User De/Activation failed');
-                                    }
-                                })
-                                .catch(function (error) {
-                                    overlay.hide();
-                                    alert.Error('ERROR', safeMessage(error));
-                                });
-                        },
-                    },
-                    close: { text: 'Cancel', btnClass: 'btn btn-outline-secondary', action: function () { overlay.hide(); } },
-                },
-            });
-        }
-        function getRoleList() {
-            overlay.show();
-            axios.get(common.DataService + '?qid=007')
-                .then(function (response) {
-                    roleListData.value = (response.data && response.data.data) || [];
-                    overlay.hide();
-                })
-                .catch(function (error) {
-                    overlay.hide();
-                    alert.Error('ERROR', safeMessage(error));
-                });
-        }
-        function checkIfEmpty(data) { return data === null || data === '' ? 'Nil' : data; }
-        function userActivationDeactivation(actionid) {
-            overlay.show();
-            axios.post(common.DataService + '?qid=001', JSON.stringify([actionid]))
-                .then(function (response) {
-                    overlay.hide();
-                    if (response.data.result_code == '200') {
-                        bus.emit('g-event-update-user', {});
-                        user_status.value = user_status.value == '1' ? 0 : 1;
-                        alert.Success('SUCCESS', 'User De/Activation Successful');
-                    } else {
-                        alert.Error('ERROR', 'User De/Activation failed');
-                    }
-                })
-                .catch(function (error) {
-                    overlay.hide();
-                    alert.Error('ERROR', safeMessage(error));
-                });
-        }
-        function changeRole(event) {
-            userData.baseData.role = event.target.options[event.target.options.selectedIndex].text;
-        }
-        function changeBank(event) {
-            userData.financeData.bank_name = event.target.options[event.target.options.selectedIndex].text;
-        }
-        function downloadBadge(uid) {
-            overlay.show();
-            window.open(common.BadgeService + '?qid=002&e=' + uid, '_parent');
-            overlay.hide();
-        }
+            },
+          },
+          close: {
+            text: "Cancel",
+            btnClass: "btn btn-outline-secondary",
+            action: function () {
+              overlay.hide();
+            },
+          },
+        },
+      });
+    }
+    function getRoleList() {
+      overlay.show();
+      axios
+        .get(common.DataService + "?qid=007")
+        .then(function (response) {
+          roleListData.value = (response.data && response.data.data) || [];
+          overlay.hide();
+        })
+        .catch(function (error) {
+          overlay.hide();
+          alert.Error("ERROR", safeMessage(error));
+        });
+    }
+    function checkIfEmpty(data) {
+      return data === null || data === "" ? "Nil" : data;
+    }
+    function userActivationDeactivation(actionid) {
+      overlay.show();
+      axios
+        .post(common.DataService + "?qid=001", JSON.stringify([actionid]))
+        .then(function (response) {
+          overlay.hide();
+          if (response.data.result_code == "200") {
+            bus.emit("g-event-update-user", {});
+            user_status.value = user_status.value == "1" ? 0 : 1;
+            alert.Success("SUCCESS", "User De/Activation Successful");
+          } else {
+            alert.Error("ERROR", "User De/Activation failed");
+          }
+        })
+        .catch(function (error) {
+          overlay.hide();
+          alert.Error("ERROR", safeMessage(error));
+        });
+    }
+    function changeRole(event) {
+      userData.baseData.role =
+        event.target.options[event.target.options.selectedIndex].text;
+    }
+    function changeBank(event) {
+      userData.financeData.bank_name =
+        event.target.options[event.target.options.selectedIndex].text;
+    }
+    function downloadBadge(uid) {
+      overlay.show();
+      window.open(common.BadgeService + "?qid=002&e=" + uid, "_parent");
+      overlay.hide();
+    }
 
-        onMounted(function () { bus.on('g-event-goto-page', gotoPageHandler); });
-        onBeforeUnmount(function () { bus.off('g-event-goto-page', gotoPageHandler); });
+    onMounted(function () {
+      bus.on("g-event-goto-page", gotoPageHandler);
+    });
+    onBeforeUnmount(function () {
+      bus.off("g-event-goto-page", gotoPageHandler);
+    });
 
-        return {
-            userid, userDetails, user_status, bankListData, roleListData, userData,
-            gotoPageHandler, goToList, discardUpdate, getUserDetails, getBankLists,
-            updateUserProfile, getRoleList, checkIfEmpty,
-            userActivationDeactivation, changeRole, changeBank, downloadBadge,
-            capitalize: fmtUtils.capitalize,
-            displayDate: fmtUtils.displayDate,
-        };
-    },
-    template: `
+    return {
+      userid,
+      userDetails,
+      user_status,
+      bankListData,
+      roleListData,
+      userData,
+      gotoPageHandler,
+      goToList,
+      discardUpdate,
+      getUserDetails,
+      getBankLists,
+      updateUserProfile,
+      getRoleList,
+      checkIfEmpty,
+      userActivationDeactivation,
+      changeRole,
+      changeBank,
+      downloadBadge,
+      capitalize: fmtUtils.capitalize,
+      displayDate: fmtUtils.displayDate,
+    };
+  },
+  template: `
         <div class="row">
             <div class="col-md-12 col-sm-12 col-12 mb-1">
                 <h2 class="content-header-title header-txt float-left mb-0">Users</h2>
@@ -757,7 +962,7 @@ const MobilizationDetails = {
 };
 
 useApp({ template: `<div><page-body/></div>` })
-    .component('page-body', PageBody)
-    .component('wallet_list', WalletList)
-    .component('mobilization_details', MobilizationDetails)
-    .mount('#app');
+  .component("page-body", PageBody)
+  .component("wallet_list", WalletList)
+  .component("mobilization_details", MobilizationDetails)
+  .mount("#app");
