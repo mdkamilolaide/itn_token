@@ -3,7 +3,6 @@
  * Converted in place from Vue 2 Options API. Same template, same DOM,
  * same API endpoints (qid=700 list, qid=701..707 per-tool downloads).
  *
- * Loaded by pages/js.php when "monitoring" is in module_v3.
  */
 
 const { ref, reactive, computed, onMounted } = Vue;

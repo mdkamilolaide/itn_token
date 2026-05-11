@@ -15,7 +15,6 @@
     "reporting",
     "eolin"
   ],
-  "module_v3": ["monitoring", "sample", "dashboard", "admin", "device", "users", "activity", "mobilization", "reporting", "eolin", "netcard", "smc", "distribution"],
   "general_css": [
     "app-assets/vendors/css/vendors.min.css",
     "app-assets/vendors/css/extensions/jstree.min.css",
@@ -44,7 +43,7 @@
   ],
   "general_js": [
     "app-assets/vendors/js/vendors.min.js",
-    "app-assets/vendors/third-parties/vue/vue.js",
+    "app-assets/vendors/third-parties/vue/vue.global.prod.js",
     "app-assets/vendors/third-parties/axios/axios.min.js",
     "app-assets/vendors/third-parties/toastr/toastr.min.js",
     "app-assets/vendors/js/confirm/jquery-confirm.js",
@@ -119,13 +118,7 @@
   },
   "js_structure": {
     "admin": {
-      "module": [
-        "app-assets/vendors/js/tables/datatable/jquery.dataTables.min.js",
-        "app-assets/vendors/js/tables/datatable/datatables.bootstrap4.min.js",
-        "app-assets/vendors/js/tables/datatable/dataTables.responsive.min.js",
-        "app-assets/vendors/js/tables/datatable/responsive.bootstrap4.js",
-        "app-assets/app/admin/dashboard.js"
-      ],
+      "module": [],
       "submodule": {
         "log": ["app-assets/app/admin/log.js"],
         "provision": [

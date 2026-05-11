@@ -87,11 +87,11 @@ Geographic hierarchy: **State → LGA → Cluster → Ward → Distribution Poin
 - `IsPrivilegeInArray()` and `IsPlatformInArray()` are the authorization guards — call these before any sensitive operation
 - Privilege model is granular: each user has a JSON array of module-level access rights
 
-### Frontend — Vue 2 Modules
+### Frontend — Vue 3 Modules
 
-All interactive UI is written in **Vue 2** and lives under `app-assets/app/`. There is **no build step** — files are plain JS served directly to the browser. Vue is loaded from `app-assets/vendors/third-parties/vue/vue.js`.
+All interactive UI is written in **Vue 3 (Composition API)** and lives under `app-assets/app/`. There is **no build step** — files are plain JS served directly to the browser. Vue is loaded from `app-assets/vendors/third-parties/vue/vue.global.prod.js`.
 
-**Component pattern:** inline components registered via `Vue.component()` with backtick-string templates. No `.vue` single-file components.
+**Component pattern:** each module bootstraps a single app via `utils.useApp({...})` (see `app-assets/app/utils.js`), then registers components with `app.component(name, { setup() {...}, template: \`...\` })`. No `.vue` single-file components.
 
 ```
 app-assets/app/
@@ -111,7 +111,7 @@ app-assets/app/
 
 **Module loading:** `pages/js.php` reads `?module=` and `?submodule=` from the query string, looks up the corresponding JS files in `lib/data/system_structure.json`, and emits `<script>` tags. To add a new module's JS, register it in `system_structure.json`.
 
-**Inter-component communication:** a global `EventBus = new Vue()` defined in each module file. Common events: `g-event-goto-page`, `g-event-refresh-page`, `g-event-reset-form`. Newer files (e.g. `smc/logistics/`) use `Vue.observable()` for shared state and `Vue.mixin()` for shared methods.
+**Inter-component communication:** a shared event bus exposed as `window.utils.bus` (mini-mitt: `bus.on/off/emit`), drop-in for the old `EventBus = new Vue()`. Common events: `g-event-goto-page`, `g-event-refresh-page`, `g-event-reset-form`. Shared reactive state uses `Vue.reactive()` / `Vue.ref()`; shared methods are exposed via `app.config.globalProperties` inside `utils.useApp()`.
 
 **Backend API:** three PHP service endpoints consumed via Axios:
 - `services.data.php` — general data reads/writes, addressed by `?qid=NNN`

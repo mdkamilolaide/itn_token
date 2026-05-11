@@ -261,7 +261,7 @@
     utils.useApp = function (options) {
         var Vue = root.Vue;
         if (!Vue || typeof Vue.createApp !== 'function') {
-            throw new Error('[utils.useApp] Vue 3 not loaded. Add this module to module_v3 in system_structure.json.');
+            throw new Error('[utils.useApp] Vue 3 not loaded.');
         }
         var app = Vue.createApp(options || {});
         var g = app.config.globalProperties;
