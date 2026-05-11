@@ -290,9 +290,16 @@ const UnredeemedSearch = {
         }
         function checkIfEmpty(data) { return data === null || data === '' ? 'Nil' : data; }
 
+        // Kick off data fetches in setup rather than onMounted — the
+        // <unredeemed_search v-if="permission.permission_value > 1"> wrap
+        // (combined with the parent's v-show) made onMounted fire too late
+        // for the initial render to pick up the response. Setup-level calls
+        // are independent of mount lifecycle and reliably populate tableData
+        // on first paint.
+        getGeoLocation();
+        loadTableData();
+
         onMounted(function () {
-            getGeoLocation();
-            loadTableData();
             bus.on('g-event-update-user', reloadUserListOnUpdate);
             try {
                 var select = $('.select2');
