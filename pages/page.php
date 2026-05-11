@@ -7,10 +7,10 @@
      */
 $module = CleanData('module');
 $submodule = CleanData('submodule');
-$module_list = $config_modules;
+$module_master_list = $config_modules;
 $extra_script = "";
 
-if (in_array($module, $module_list)) {
+if (in_array($module, $module_master_list)) {
     //  you can chose to reject here
     //  by telling the users the page does not exist
     //  or presenting something diferrent

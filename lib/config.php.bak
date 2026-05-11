@@ -11,7 +11,7 @@
     $config_json_data = file_get_contents("lib/data/system_structure.json");
     $config_system_structure = json_decode($config_json_data,true);
     $config_page_structure = $config_system_structure["page_structure"];
-    $config_modules = $config_system_structure["module_list"];
+    $config_modules = $config_system_structure["module_master_list"];
     $config_css_general = $config_system_structure["general_css"];
     $config_css_structure = $config_system_structure["css_structure"];
     $config_js_general = $config_system_structure["general_js"];
