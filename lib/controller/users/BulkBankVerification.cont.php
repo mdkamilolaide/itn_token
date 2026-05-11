@@ -52,14 +52,14 @@ class BankVerify
     public function Run()
     {
         if ($this->CheckError()) return;
-        global $config_paystack_secret_key;
-        if (empty($config_paystack_secret_key)) {
-            $this->ResponseMessage = "Paystack API key not configured (\$config_paystack_secret_key in lib/config.php).";
+        global $config_paystack_secret_key, $config_paystack_resolve_url;
+        if (empty($config_paystack_secret_key) || empty($config_paystack_resolve_url)) {
+            $this->ResponseMessage = "Paystack API not configured (\$config_paystack_secret_key / \$config_paystack_resolve_url in lib/config.php).";
             return;
         }
         #
         $curl = curl_init();
-        $params = "https://api.paystack.co/bank/resolve?account_number=" . $this->ac_no . "&bank_code=" . $this->bk_code;
+        $params = $config_paystack_resolve_url . "?account_number=" . $this->ac_no . "&bank_code=" . $this->bk_code;
         curl_setopt_array($curl, array(
             CURLOPT_URL => $params,
             CURLOPT_RETURNTRANSFER => true,
