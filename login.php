@@ -204,7 +204,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                                     ?>
                                     <div class="form-group">
                                         <label for="login_id" class="form-label">Login ID</label>
-                                        <input type="text" class="form-control" id="login_id" name="login_id" placeholder="Login ID" aria-describedby="login_id" tabindex="1" autofocus />
+                                        <input type="text" class="form-control" id="login_id" name="login_id" placeholder="Login ID" aria-describedby="login_id" tabindex="1" autocomplete="username" autofocus />
                                     </div>
 
                                     <div class="form-group mt-2">
@@ -217,7 +217,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                                             -->
                                         </div>
                                         <div class="input-group input-group-merge form-password-toggle">
-                                            <input type="password" class="form-control form-control-merge" id="login_password" name="login_password" tabindex="2" placeholder="&#xb7;&#xb7;&#xb7;&#xb7;&#xb7;&#xb7;&#xb7;&#xb7;&#xb7;&#xb7;&#xb7;&#xb7;" aria-describedby="login-password" />
+                                            <input type="password" class="form-control form-control-merge" id="login_password" name="login_password" tabindex="2" placeholder="&#xb7;&#xb7;&#xb7;&#xb7;&#xb7;&#xb7;&#xb7;&#xb7;&#xb7;&#xb7;&#xb7;&#xb7;" aria-describedby="login-password" autocomplete="current-password" />
                                             <div class="input-group-append">
                                                 <span class="input-group-text cursor-pointer"><i data-feather="eye"></i></span>
                                             </div>
