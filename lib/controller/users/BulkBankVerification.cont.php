@@ -52,6 +52,11 @@ class BankVerify
     public function Run()
     {
         if ($this->CheckError()) return;
+        global $config_paystack_secret_key;
+        if (empty($config_paystack_secret_key)) {
+            $this->ResponseMessage = "Paystack API key not configured (\$config_paystack_secret_key in lib/config.php).";
+            return;
+        }
         #
         $curl = curl_init();
         $params = "https://api.paystack.co/bank/resolve?account_number=" . $this->ac_no . "&bank_code=" . $this->bk_code;
@@ -64,7 +69,7 @@ class BankVerify
             CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
             CURLOPT_CUSTOMREQUEST => "GET",
             CURLOPT_HTTPHEADER => array(
-                "Authorization: Bearer sk_live_dcee3f82d392905283f52ddc26ede8bcf409f76a",
+                "Authorization: Bearer " . $config_paystack_secret_key,
                 "Cache-Control: no-cache",
             ),
         ));
