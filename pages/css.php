@@ -3,7 +3,7 @@
 #   Css loader
 $module = CleanData('module');
 
-$rand = "?" . rand(0, 1000);
+$rand = ($server_type === "Demo") ? "?" . rand(0, 1000) : "";
 #
 if (in_array($module, $config_modules)) {
     //  Load default css

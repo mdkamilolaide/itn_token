@@ -3,6 +3,7 @@
 #   JS loader
 $module = CleanData('module');
 $subdomain = CleanData("submodule");
+$js_cache_buster = ($server_type === "Demo") ? $js_cache_buster : '';
 
 if (in_array($module, $config_modules)) {
     //  Load default js
@@ -20,14 +21,14 @@ if (in_array($module, $config_modules)) {
                 //Check if Subdomain exists before rendering
                 if (array_key_exists($subdomain, $config_js_structure[$module]["submodule"])) {
                     foreach ($config_js_structure[$module]["submodule"][$submodule] as $item) {
-                        echo "<script src=" . $config_pre_append_link . $item . '?' . ttCoder(12) . "></script>\r\n";
+                        echo "<script src=" . $config_pre_append_link . $item . $js_cache_buster . "></script>\r\n";
                     }
                 }
             }
         } else {
             //  main domain
             foreach ($config_js_structure[$module]["module"] as $item) {
-                echo "<script src=" . $config_pre_append_link . $item . '?' . ttCoder(12) . "></script>\r\n";
+                echo "<script src=" . $config_pre_append_link . $item . $js_cache_buster . "></script>\r\n";
             }
         }
         //  load domain
