@@ -923,7 +923,7 @@
       }
     },
     "users": {
-      "css": ["app-assets/app/common.js"],
+      "css": [],
       "js": [],
       "nav": {
         "Users": "./users"
@@ -958,56 +958,56 @@
       }
     },
     "netcard": {
-      "css": ["app-assets/app/common.js"],
+      "css": [],
       "js": [],
       "nav": {
         "Netcard": "./netcard"
       }
     },
     "eolin": {
-      "css": ["app-assets/app/common.js"],
+      "css": [],
       "js": [],
       "nav": {
         "Netcard": "./eolin"
       }
     },
     "activity": {
-      "css": ["app-assets/app/common.js"],
+      "css": [],
       "js": [],
       "nav": {
         "Activity": "./activity"
       }
     },
     "reporting": {
-      "css": ["app-assets/app/common.js"],
+      "css": [],
       "js": [],
       "nav": {
         "Reporting": "./reporting"
       }
     },
     "monitoring": {
-      "css": ["app-assets/app/common.js"],
+      "css": [],
       "js": [],
       "nav": {
         "Monitoring": "./monitoring"
       }
     },
     "sample": {
-      "css": ["app-assets/app/common.js", "app-assets/app/test.js"],
-      "js": [],
+      "css": [],
+      "js": ["app-assets/app/test.js"],
       "nav": {
         "Sample": "./sample"
       }
     },
     "device": {
-      "css": ["app-assets/app/common.js"],
+      "css": [],
       "js": [],
       "nav": {
         "Device": "./device"
       }
     },
     "smc": {
-      "css": ["app-assets/app/common.js"],
+      "css": [],
       "js": [],
       "nav": {
         "Activity": "./smc"
