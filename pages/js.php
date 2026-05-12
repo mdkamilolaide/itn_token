@@ -3,7 +3,7 @@
 #   JS loader
 $module = CleanData('module');
 $subdomain = CleanData("submodule");
-$js_cache_buster = ($server_type === "Demo") ? $js_cache_buster : '';
+$js_cache_buster = ($server_type === "Demo") ? '?' . ttCoder(12) : '';
 
 if (in_array($module, $config_modules)) {
     //  Load default js
