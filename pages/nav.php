@@ -128,8 +128,9 @@
 
             <li class=' admin-sec navigation-header'><span data-i18n='app version'>Version - <span class="badge badge-light-success badge-pill"><?php echo $app_version; ?></span></span><i data-feather='more-horizontal'></i>
                 <?php
-                $priv_arr = json_decode($token->system_privilege, true) ?? [];
-                $plat_arr = json_decode($token->platform_priv,    true) ?? [];
+                $privilege = $token->system_privilege;
+                $priv_arr  = json_decode($privilege, true) ?? [];
+                $plat_arr  = json_decode($token->platform_priv, true) ?? [];
 
                 function renderNavItem(array $nav, array $priv_arr, array $plat_arr, string $pre_link): string
                 {
