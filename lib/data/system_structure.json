@@ -510,6 +510,7 @@
       "data-i18n": "Home",
       "group": "",
       "privilege": "public",
+      "platform": "any",
       "submenu": [
         {
           "name": "Home",
@@ -526,6 +527,7 @@
       "data-i18n": "System Admin",
       "group": "Admin Section",
       "privilege": "system",
+      "platform": "web",
       "submenu": [
         {
           "name": "Activity Log",
@@ -548,6 +550,7 @@
       "data-i18n": "Device Management",
       "group": "Admin Section",
       "privilege": "system",
+      "platform": "web",
       "submenu": [
         {
           "name": "Login Logs",
@@ -576,6 +579,7 @@
       "data-i18n": "Users",
       "group": "Admin Section",
       "privilege": "users",
+      "platform": "web",
       "submenu": [
         {
           "name": "Home",
@@ -604,6 +608,7 @@
       "data-i18n": "e-Netcard",
       "group": "Admin Section",
       "privilege": "enetcard",
+      "platform": "web",
       "submenu": [
         {
           "name": "Dashboard",
@@ -644,6 +649,7 @@
       "data-i18n": "Activity Mgmt.",
       "group": "Operational Section",
       "privilege": "activity",
+      "platform": "web",
       "submenu": [
         {
           "name": "Home",
@@ -672,6 +678,7 @@
       "data-i18n": "System Admin",
       "group": "Operational Section",
       "privilege": "monitoring",
+      "platform": "web",
       "submenu": [
         {
           "name": "Home",
@@ -688,6 +695,7 @@
       "data-i18n": "Mobilization ",
       "group": "Operational Section",
       "privilege": "mobilization",
+      "platform": "web",
       "submenu": [
         {
           "name": "Dashboard",
@@ -728,6 +736,7 @@
       "data-i18n": "Distribution ",
       "group": "Operational Section",
       "privilege": "distribution",
+      "platform": "web",
       "submenu": [
         {
           "name": "Dashboard",
@@ -768,6 +777,7 @@
       "data-i18n": "EOLIN",
       "group": "Operational Section",
       "privilege": "enetcard",
+      "platform": "web",
       "submenu": [
         {
           "name": "Dashboard",
@@ -784,6 +794,7 @@
       "data-i18n": "Visit Mgmt.",
       "group": "Operational Section",
       "privilege": "smc",
+      "platform": "web",
       "submenu": [
         {
           "name": "Dashboard",
@@ -842,6 +853,7 @@
       "data-i18n": "Logistics",
       "group": "Operational Section",
       "privilege": "smc",
+      "platform": "web",
       "submenu": [
         {
           "name": "Inbound Warehouse",
@@ -888,6 +900,7 @@
       "data-i18n": "Beneficiary",
       "group": "Operational Section",
       "privilege": "beneficiary",
+      "platform": "web",
       "submenu": []
     },
     {
@@ -897,6 +910,7 @@
       "data-i18n": "Beneficiary",
       "group": "Operational Section",
       "privilege": "public",
+      "platform": "any",
       "submenu": [
         {
           "name": "Download SOP",

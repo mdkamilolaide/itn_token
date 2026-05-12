@@ -128,91 +128,49 @@
 
             <li class=' admin-sec navigation-header'><span data-i18n='app version'>Version - <span class="badge badge-light-success badge-pill"><?php echo $app_version; ?></span></span><i data-feather='more-horizontal'></i>
                 <?php
-                $privilege = $token->system_privilege;
+                $priv_arr = json_decode($token->system_privilege, true) ?? [];
+                $plat_arr = json_decode($token->platform_priv,    true) ?? [];
+
+                function renderNavItem(array $nav, array $priv_arr, array $plat_arr, string $pre_link): string
+                {
+                    $show = (IsPrivilegeInArray($priv_arr, $nav['privilege']) || $nav['privilege'] === 'public')
+                         && (IsPlatformInArray($plat_arr,  $nav['platform'])  || $nav['platform']  === 'any');
+                    if (!$show) return '';
+
+                    $out  = "<li class=' nav-item " . preg_replace("/\s+/", "", $nav["name"]) . "'>"
+                          . "<a class='d-flex align-items-center' href='" . $nav["href"] . "'>"
+                          . "<i data-feather='" . $nav["icon"] . "'></i>"
+                          . "<span class='menu-title text-truncate' data-i18n='" . $nav["data-i18n"] . "'>" . $nav["name"] . "</span>"
+                          . "</a><ul class='menu-content'>";
+
+                    foreach ($nav["submenu"] as $sub) {
+                        $active = ($_SERVER['REQUEST_URI'] === '/' . $sub['href']) ? "class='active'" : '';
+                        $out .= "<li $active><a class='d-flex align-items-center' href='" . $pre_link . $sub["href"] . "'>"
+                              . "<i data-feather='" . $sub["icon"] . "'></i>"
+                              . "<span class='menu-item text-truncate' data-i18n='" . $sub["data-i18n"] . "'>" . $sub["name"] . "</span>"
+                              . "</a></li>";
+                    }
+                    return $out . "</ul>\r\n</li>";
+                }
 
                 if (count($config_nav_structure)) {
                     foreach ($config_nav_structure as $nav) {
-                        if ($nav["group"] == "") {
-                            $top_str = "";
-                            #   Privilege
-                            // $privilege = $token->system_privilege;
-                            if (IsPrivilegeInArray(json_decode($privilege, true), $nav['privilege']) || $nav['privilege'] == 'public') {
-                                $top_str .= "<li class=' nav-item " . preg_replace("/\s+/", "", $nav["name"]) . "'><a class='d-flex align-items-center' href='" . $nav["href"] . "'><i data-feather='" . $nav["icon"] . "'></i><span class='menu-title text-truncate' data-i18n='" . $nav["data-i18n"] . "'>" . $nav["name"] . "</span></a>
-                                    <ul class='menu-content'>";
-                                #sub-menu
-                                if (count($nav["submenu"])) {
-                                    foreach ($nav["submenu"] as $sub) {
-                                        $diff = $_SERVER['REQUEST_URI'];
-                                        #
-                                        $active_span = '';
-                                        if ($diff == "/" . $sub['href']) {
-                                            $active_span = "class='active'";
-                                        }
-                                        #
-                                        $top_str .= "<li $active_span><a class='d-flex align-items-center' href='" . $config_pre_append_link . $sub["href"] . "'><i data-feather='" . $sub["icon"] . "'></i><span class='menu-item text-truncate' data-i18n='" . $sub["data-i18n"] . "'>" . $sub["name"] . "</span></a></li>";
-                                    }
-                                }
-                                $top_str .= "</ul>\r\n</li>";
-                            }
-                            #
-                            echo $top_str;
+                        if ($nav["group"] === "") {
+                            echo renderNavItem($nav, $priv_arr, $plat_arr, $config_pre_append_link);
                         }
                     }
-                    #   Set this by grouping
+
                     echo "<li class=' admin-sec navigation-header'><span data-i18n='Apps &amp; Pages'>Admin Section</span><i data-feather='more-horizontal'></i>";
                     foreach ($config_nav_structure as $nav) {
-                        if ($nav["group"] == "Admin Section") {
-                            $admin_str = "";
-                            #   Privilege
-                            // $privilege = $_SESSION[$instance_token . 'privileges'];
-                            if (IsPrivilegeInArray(json_decode($privilege, true), $nav['privilege']) || $nav['privilege'] == 'public') {
-                                $admin_str .= "<li class=' nav-item " . preg_replace("/\s+/", "", $nav["name"]) . "'><a class='d-flex align-items-center' href='" . $nav["href"] . "'><i data-feather='" . $nav["icon"] . "'></i><span class='menu-title text-truncate' data-i18n='" . $nav["data-i18n"] . "'>" . $nav["name"] . "</span></a>
-                                    <ul class='menu-content'>";
-                                #sub-menu
-                                if (count($nav["submenu"])) {
-                                    foreach ($nav["submenu"] as $sub) {
-                                        // $diff = str_replace($config_pre_append_path,'',$_SERVER['REQUEST_URI']);
-                                        $diff = $_SERVER['REQUEST_URI'];
-                                        #
-                                        $active_span = '';
-                                        if ($diff == "/" . $sub['href']) {
-                                            $active_span = "class='active'";
-                                        }
-                                        $admin_str .= "<li $active_span><a class='d-flex align-items-center' href='" . $config_pre_append_link . $sub["href"] . "'><i data-feather='" . $sub["icon"] . "'></i><span class='menu-item text-truncate' data-i18n='" . $sub["data-i18n"] . "'>" . $sub['name'] . "</span></a></li>";
-                                    }
-                                }
-                                $admin_str .= "</ul>\r\n</li>";
-                            }
-                            #
-                            echo $admin_str;
+                        if ($nav["group"] === "Admin Section") {
+                            echo renderNavItem($nav, $priv_arr, $plat_arr, $config_pre_append_link);
                         }
                     }
-                    #   Set this by grouping
+
                     echo "<li class=' navigation-header'><span data-i18n='Apps &amp; Pages'>Operational Section</span><i data-feather='more-horizontal'></i>";
                     foreach ($config_nav_structure as $nav) {
-                        if ($nav["group"] == "Operational Section") {
-                            $ops_str = "";
-                            #   Privilege
-                            // $privilege = $_SESSION[$instance_token . 'privileges'];
-                            if (IsPrivilegeInArray(json_decode($privilege, true), $nav['privilege']) || $nav['privilege'] == 'public') {
-                                $ops_str .= "<li class=' nav-item " . preg_replace("/\s+/", "", $nav["name"]) . "'><a class='d-flex align-items-center' href='" . $nav["href"] . "'><i data-feather='" . $nav["icon"] . "'></i><span class='menu-title text-truncate' data-i18n='" . $nav["data-i18n"] . "'>" . $nav["name"] . "</span></a>
-                                    <ul class='menu-content'>";
-                                #sub-menu
-                                if (count($nav["submenu"])) {
-                                    foreach ($nav["submenu"] as $sub) {
-                                        $diff = $_SERVER['REQUEST_URI'];
-                                        #
-                                        $active_span = '';
-                                        if ($diff == "/" . $sub['href']) {
-                                            $active_span = "class='active'";
-                                        }
-                                        $ops_str .= "<li $active_span><a class='d-flex align-items-center' href='" . $config_pre_append_link . $sub["href"] . "'><i data-feather='" . $sub["icon"] . "'></i><span class='menu-item text-truncate' data-i18n='" . $sub["data-i18n"] . "'>" . $sub["name"] . "</span></a></li>";
-                                    }
-                                }
-                                $ops_str .= "</ul>\r\n</li>";
-                            }
-                            #
-                            echo $ops_str;
+                        if ($nav["group"] === "Operational Section") {
+                            echo renderNavItem($nav, $priv_arr, $plat_arr, $config_pre_append_link);
                         }
                     }
                 }
