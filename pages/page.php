@@ -1,240 +1,145 @@
 <?php
 
 /*
-     *
-     *  Page Loader
-     * 
-     */
-$module = CleanData('module');
+ *  Page Loader
+ *
+ *  Routes ?module=…&submodule=… to the matching template under pages/.
+ *  Dispatch is a static array literal so opcache compiles it once and each
+ *  request resolves the include path with two O(1) hash lookups.
+ */
+
+$module    = CleanData('module');
 $submodule = CleanData('submodule');
-$module_master_list = $config_modules;
-$extra_script = "";
 
-if (in_array($module, $module_master_list)) {
-    //  you can chose to reject here
-    //  by telling the users the page does not exist
-    //  or presenting something diferrent
-    //  return;
-}
+$routes = [
+    'sample' => [
+        'submodules' => [
+            'sample'    => 'pages/sample.php',
+            'table'     => 'pages/sample/table.php',
+            'datatable' => 'pages/sample/datatable.php',
+        ],
+        // Unknown sample submodule renders nothing (legacy behavior).
+        'default' => null,
+    ],
+    'dashboard' => [
+        'submodules' => [
+            'home' => 'pages/dashboard/home.php',
+        ],
+        'default' => 'pages/home/pagenotfound.php',
+    ],
+    'admin' => [
+        'submodules' => [
+            'log'       => 'pages/admin/log.php',
+            'provision' => 'pages/admin/provision.php',
+        ],
+        'default' => 'pages/home/pagenotfound.php',
+    ],
+    'device' => [
+        'submodules' => [
+            'registry'   => 'pages/device/registry.php',
+            'loginlog'   => 'pages/device/loginlog.php',
+            'allocation' => 'pages/device/deviceallocation.php',
+        ],
+        'default' => 'pages/home/pagenotfound.php',
+    ],
+    'users' => [
+        'submodules' => [
+            ''      => 'pages/users/dashboard.php',
+            'list'  => 'pages/users/list.php',
+            'group' => 'pages/users/group.php',
+        ],
+        'default' => 'pages/home/pagenotfound.php',
+    ],
+    'activity' => [
+        'submodules' => [
+            ''          => 'pages/activity/dashboard.php',
+            'reporting' => 'pages/activity/dashboard.php',
+            'list'      => 'pages/activity/list.php',
+        ],
+        'default' => 'pages/home/pagenotfound.php',
+    ],
+    'monitoring' => [
+        'submodules' => [
+            '' => 'pages/monitoring/home.php',
+        ],
+        'default' => 'pages/home/pagenotfound.php',
+    ],
+    'reporting' => [
+        'submodules' => [
+            '' => 'pages/reporting/home.php',
+        ],
+        'default' => 'pages/home/pagenotfound.php',
+    ],
+    'netcard' => [
+        'submodules' => [
+            ''           => 'pages/netcard/dashboard.php',
+            'movement'   => 'pages/netcard/movement.php',
+            'allocation' => 'pages/netcard/allocation.php',
+            'unlock'     => 'pages/netcard/unlock.php',
+            'pushed'     => 'pages/netcard/pushed.php',
+        ],
+        'default' => 'pages/home/pagenotfound.php',
+    ],
+    'eolin' => [
+        'submodules' => [
+            '' => 'pages/netcard/dashboard.php',
+        ],
+        'default' => 'pages/home/pagenotfound.php',
+    ],
+    'mobilization' => [
+        'submodules' => [
+            ''          => 'pages/mobilization/dashboard.php',
+            'dashboard' => 'pages/mobilization/dashboard.php',
+            'list'      => 'pages/mobilization/dashboard.php',
+            'reporting' => 'pages/mobilization/dashboard.php',
+            'map'       => 'pages/mobilization/map.php',
+            'microlist' => 'pages/mobilization/microlist.php',
+        ],
+        'default' => 'pages/home/pagenotfound.php',
+    ],
+    'distribution' => [
+        'submodules' => [
+            ''            => 'pages/distribution/dashboard.php',
+            'reporting'   => 'pages/distribution/dashboard.php',
+            'dplist'      => 'pages/distribution/dplist.php',
+            'list'        => 'pages/distribution/list.php',
+            'unredeemnet' => 'pages/distribution/unredeemnet.php',
+        ],
+        'default' => 'pages/home/pagenotfound.php',
+    ],
+    'smc' => [
+        'submodules' => [
+            'visit'                         => 'pages/smc/visit.php',
+            'drugadministration'            => 'pages/smc/visit.php',
+            'cohorttracking'                => 'pages/smc/visit.php',
+            'balance'                       => 'pages/smc/visit.php',
+            'logisticsallocation'           => 'pages/smc/logistics/allocation.php',
+            'logisticsavailabilitycheck'    => 'pages/smc/logistics/availabilitycheck.php',
+            'logisticsinboundwarehouse'     => 'pages/smc/logistics/inboundwarehouse.php',
+            'logisticsstockbatchmanagement' => 'pages/smc/logistics/stockbatchmanagement.php',
+            'logisticsshipment'             => 'pages/smc/logistics/shipment.php',
+            'logisticsmovement'             => 'pages/smc/logistics/movement.php',
+        ],
+        // smc falls back to its own dashboard, not pagenotfound.
+        'default' => 'pages/smc/dashboard.php',
+    ],
+];
 
-/*
-*      Process the pages presentation
-*/
-if ($module == 'sample') {
-    #   Sample module
-    if ($submodule == "sample") {
-        #load sample/sample
-        include('pages/sample.php');
-    } elseif ($submodule == 'table') {
-        include('pages/sample/table.php');
-    } elseif ($submodule == 'datatable') {
-        include('pages/sample/datatable.php');
-    } else {
-        #   Default
-    }
-} elseif ($module == 'dashboard')
-#   Home module
-{
-    #   Home module
-    if ($submodule == 'home') {
-        #load Home Dashboard
-        include('pages/dashboard/home.php');
-    } else {
-        #   Default
-        include('pages/home/pagenotfound.php');
-    }
-} elseif ($module == 'admin')
-#   Admin module
-{
-    #   Users module
-    if ($submodule == 'log') {
-        #load users/Users list
-        include('pages/admin/log.php');
-    } elseif ($submodule == 'provision') {
-        #load users/Users list
-        include('pages/admin/provision.php');
-    } else {
-        #   Default
-        include('pages/home/pagenotfound.php');
-    }
-} elseif ($module == 'device')
-#   Device module
-{
-    #   Device module
-    if ($submodule == 'registry') {
-        include('pages/device/registry.php');
-        #load Device Registry
-    }
-    #   Device Login Log
-    elseif ($submodule == 'loginlog') {
-        include('pages/device/loginlog.php');
-        #load Device Registry
-    } elseif ($submodule == 'allocation') {
-        #load users/Users list
-        include('pages/device/deviceallocation.php');
-    } else {
-        #   Default
-        include('pages/home/pagenotfound.php');
-    }
-} elseif ($module == 'users')
-#   Users module
-{
-    #   Users module
-    if ($submodule == 'list') {
-        #load users/Users list
-        include('pages/users/list.php');
-    } elseif (
-        $submodule == 'group'
-    ) {
-        #load users/Users list
-        include('pages/users/group.php');
-    } elseif ($submodule == '') {
-        #load users/Users list
-        include('pages/users/dashboard.php');
-    } else {
-        #   Load Default if not Found
-        include('pages/home/pagenotfound.php');
-    }
-} elseif ($module == 'activity')
-#   Trainners module converted to activity
-{
-    #   Trainners module
-    if ($submodule == 'list') {
-        #load Trainings/list
-        include('pages/activity/list.php');
-    } elseif ($submodule == '' || $submodule == 'reporting') {
-        #load users/Users list
-        include('pages/activity/dashboard.php');
-    } else {
-        #   Load Default if not Found
-        include('pages/home/pagenotfound.php');
-    }
-} elseif ($module == 'monitoring')
-#   Monitoring module converted to activity
-{
-
-    if ($submodule == '') {
-        #load Monitoring/list
-        include('pages/monitoring/home.php');
-    } else {
-        #   Default
-        include('pages/home/pagenotfound.php');
-    }
-} elseif ($module == 'reporting')
-#   Reporting module converted to activity
-{
-
-    if ($submodule == '') {
-        #load Reptoring/list
-        include('pages/reporting/home.php');
-    } else {
-        #   Default
-        include('pages/home/pagenotfound.php');
-    }
-} elseif ($module == 'netcard')
-#   Netcard module
-{
-    #   Netcard module
-    if ($submodule == 'movement') {
-        #Netcard Movement
-        include('pages/netcard/movement.php');
-    } elseif ($submodule == 'allocation') {
-        #Netcard Allocation
-        include('pages/netcard/allocation.php');
-    } elseif ($submodule == 'unlock') {
-        #Netcard Usage
-        include('pages/netcard/unlock.php');
-    } elseif ($submodule == 'pushed') {
-        #Netcard Usage
-        include('pages/netcard/pushed.php');
-    } elseif ($submodule == '') {
-        #Netcard Usage
-        include('pages/netcard/dashboard.php');
-    } else {
-        include('pages/home/pagenotfound.php');
-    }
-} elseif ($module == 'eolin')
-#   Netcard module
-{
-    #   Netcard module
-    if ($submodule == '') {
-        #Netcard Usage
-        include('pages/netcard/dashboard.php');
-    } else {
-        include('pages/home/pagenotfound.php');
-    }
-} elseif ($module == 'mobilization')
-#   Mobilization module
-{
-    #   Mobilization module
-    if ($submodule == 'map') {
-        #Map View
-        include('pages/mobilization/map.php');
-    } elseif ($submodule == 'microlist') {
-        #Micro List
-        include('pages/mobilization/microlist.php');
-    } elseif ($submodule == 'dashboard' || $submodule == 'list' || $submodule == 'reporting' || $submodule == '') {
-        #Dashboard
-        include('pages/mobilization/dashboard.php');
-    } else {
-        include('pages/home/pagenotfound.php');
-    }
-} elseif ($module == 'distribution')
-#   Users module
-{
-    #   Users module
-    if ($submodule == 'dplist') {
-        #load dp/Dp list
-        include('pages/distribution/dplist.php');
-    } elseif ($submodule == 'list') {
-        #load users/Users list
-        include('pages/distribution/list.php');
-    } elseif ($submodule == 'unredeemnet') {
-        #load users/Users list
-        include('pages/distribution/unredeemnet.php');
-    } elseif ($submodule == '' || $submodule == 'reporting') {
-        #   Default
-        include('pages/distribution/dashboard.php');
-    } else {
-        #   Default
-        include('pages/home/pagenotfound.php');
-    }
-} elseif ($module == 'smc')
-#   SMC Module
-{
-    #   Trainners module
-    if ($submodule == 'visit' || $submodule == 'drugadministration' || $submodule == 'cohorttracking' || $submodule == 'balance') {
-        #load Trainings/list
-        include('pages/smc/visit.php');
-    } elseif ($submodule == 'logisticsallocation') {
-        #Allocation
-        include('pages/smc/logistics/allocation.php');
-    } elseif ($submodule == 'logisticsavailabilitycheck') {
-        #AvailaBILITY Check
-        include('pages/smc/logistics/availabilitycheck.php');
-    } elseif ($submodule == 'logisticsinboundwarehouse') {
-        #Warehouse Inbound
-        include('pages/smc/logistics/inboundwarehouse.php');
-    } elseif ($submodule == 'logisticsstockbatchmanagement') {
-        #Stock Batch Management
-        include('pages/smc/logistics/stockbatchmanagement.php');
-    } elseif ($submodule == 'logisticsshipment') {
-        #Shipment Management
-        include('pages/smc/logistics/shipment.php');
-    } elseif ($submodule == 'logisticsmovement') {
-        #Movement Management
-        include('pages/smc/logistics/movement.php');
-    } else {
-        #   Default
-        include('pages/smc/dashboard.php');
-    }
-}
-#
-elseif ($module != '' && strlen($module) >= 1) {
-    include('pages/home/pagenotfound.php');
+if (array_key_exists($module, $routes)) {
+    $route = $routes[$module];
+    $file  = array_key_exists($submodule, $route['submodules'])
+        ? $route['submodules'][$submodule]
+        : $route['default'];
+} elseif ($module !== '') {
+    $file = 'pages/home/pagenotfound.php';
 } else {
-    //  Load default
-    include('pages/home/home.php');
-    // include('pages/dashboard/home.php');
+    $file = 'pages/home/home.php';
 }
-// echo $module;
+
+if ($file !== null) {
+    if (file_exists($file)) {
+        include $file;
+    } else {
+        include 'pages/home/pagenotfound.php';
+    }
+}
