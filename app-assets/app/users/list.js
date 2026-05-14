@@ -17,9 +17,9 @@ const { useApp, useFormat, bus, safeMessage } = window.utils;
 const PageBody = {
     setup() {
         const page = ref('list');
-        function gotoPageHandler(data) { page.value = data.page; }
-        onMounted(function () { bus.on('g-event-goto-page', gotoPageHandler); });
-        onBeforeUnmount(function () { bus.off('g-event-goto-page', gotoPageHandler); });
+        const gotoPageHandler = (data) => { page.value = data.page; };
+        onMounted(() => { bus.on('g-event-goto-page', gotoPageHandler); });
+        onBeforeUnmount(() => { bus.off('g-event-goto-page', gotoPageHandler); });
         return { page };
     },
     template: `
@@ -90,9 +90,9 @@ const UserList = {
             authorizationUserId: '', affectedUserIds: [], isBulk: false,
         });
 
-        function reloadUserListOnUpdate() { paginationDefault(); loadTableData(); }
+        const reloadUserListOnUpdate = () => { paginationDefault(); loadTableData(); };
 
-        function loadTableData() {
+        const loadTableData = () => {
             overlay.show();
             var u = common.TableService;
             axios.get(
@@ -112,64 +112,64 @@ const UserList = {
                 '&bv=' + tableOptions.filterParam.bank_status +
                 '&ri=' + tableOptions.filterParam.role_id
             )
-                .then(function (response) {
+                .then(response => {
                     var d = response && response.data;
                     tableData.value = Array.isArray(d && d.data) ? d.data : [];
                     tableOptions.total = (d && d.recordsTotal) || 0;
                     if (tableOptions.currentPage == 1) paginationDefault();
                     overlay.hide();
                 })
-                .catch(function (error) {
+                .catch(error => {
                     overlay.hide();
                     alert.Error('ERROR', safeMessage(error));
                 });
         }
 
-        function selectAll()    { for (var i = 0; i < tableData.value.length; i++) tableData.value[i].pick = true; }
-        function uncheckAll()   { for (var i = 0; i < tableData.value.length; i++) tableData.value[i].pick = false; }
-        function selectToggle() {
+        const selectAll = () => { for (var i = 0; i < tableData.value.length; i++) tableData.value[i].pick = true; };
+        const uncheckAll = () => { for (var i = 0; i < tableData.value.length; i++) tableData.value[i].pick = false; };
+        const selectToggle = () => {
             if (checkToggle.value === false) { selectAll(); checkToggle.value = true; }
             else                              { uncheckAll(); checkToggle.value = false; }
         }
-        function checkedBg(pickOne) { return pickOne != '' ? 'bg-select' : ''; }
+        const checkedBg = (pickOne) => { return pickOne != '' ? 'bg-select' : ''; };
 
-        function toggleFilter() {
+        const toggleFilter = () => {
             if (filterState.value === false) filters.value = false;
             return (filterState.value = !filterState.value);
         }
-        function selectedItems() { return tableData.value.filter(function (r) { return r.pick; }); }
-        function selectedID()    { return tableData.value.filter(function (r) { return r.pick; }).map(function (r) { return r.userid; }); }
+        const selectedItems = () => { return tableData.value.filter(r => r.pick); };
+        const selectedID = () => { return tableData.value.filter(r => r.pick).map(r => r.userid); };
 
-        function paginationDefault() {
+        const paginationDefault = () => {
             tableOptions.pageLength = Math.ceil(tableOptions.total / tableOptions.perPage);
             tableOptions.limitStart = Math.ceil((tableOptions.currentPage - 1) * tableOptions.perPage);
             tableOptions.isNext = tableOptions.currentPage < tableOptions.pageLength;
             tableOptions.isPrev = tableOptions.currentPage > 1;
         }
-        function nextPage() { resetSelected(); tableOptions.currentPage += 1; paginationDefault(); loadTableData(); }
-        function prevPage() { resetSelected(); tableOptions.currentPage -= 1; paginationDefault(); loadTableData(); }
-        function resetSelected() { uncheckAll(); checkToggle.value = false; totalCheckedBox(); }
-        function currentPage() {
+        const nextPage = () => { resetSelected(); tableOptions.currentPage += 1; paginationDefault(); loadTableData(); };
+        const prevPage = () => { resetSelected(); tableOptions.currentPage -= 1; paginationDefault(); loadTableData(); };
+        const resetSelected = () => { uncheckAll(); checkToggle.value = false; totalCheckedBox(); };
+        const currentPage = () => {
             paginationDefault();
             if (tableOptions.currentPage < 1)                            alert.Error('ERROR', "The Page requested doesn't exist");
             else if (tableOptions.currentPage > tableOptions.pageLength) alert.Error('ERROR', "The Page requested doesn't exist");
             else                                                         loadTableData();
         }
-        function changePerPage(val) {
+        const changePerPage = (val) => {
             resetSelected();
             tableOptions.currentPage = 1;
             tableOptions.perPage = val;
             paginationDefault();
             loadTableData();
         }
-        function sort(col) {
+        const sort = (col) => {
             if (tableOptions.orderField === col) tableOptions.orderDir = tableOptions.orderDir === 'asc' ? 'desc' : 'asc';
             else                                  tableOptions.orderField = col;
             paginationDefault();
             loadTableData();
         }
 
-        function applyFilter() {
+        const applyFilter = () => {
             var checkFill = 0;
             checkFill += tableOptions.filterParam.user_status != '' ? 1 : 0;
             checkFill += tableOptions.filterParam.loginid    != '' ? 1 : 0;
@@ -188,7 +188,7 @@ const UserList = {
                 alert.Error('ERROR', 'Invalid required data');
             }
         }
-        function removeSingleFilter(column_name) {
+        const removeSingleFilter = (column_name) => {
             tableOptions.filterParam[column_name] = '';
             if (column_name == 'geo_string') {
                 tableOptions.filterParam.geo_level = '';
@@ -207,7 +207,7 @@ const UserList = {
             paginationDefault();
             loadTableData();
         }
-        function clearAllFilter() {
+        const clearAllFilter = () => {
             filters.value = false;
             $('.select2').val('').trigger('change');
             tableOptions.filterParam.user_status = '';
@@ -225,7 +225,7 @@ const UserList = {
             loadTableData();
         }
 
-        function userActivationDeactivation(actionid) {
+        const userActivationDeactivation = (actionid) => {
             var ids = actionid === 'all' ? selectedID() : [actionid];
             if (ids.length < 1) {
                 alert.Error('ERROR', 'No User selected');
@@ -238,9 +238,9 @@ const UserList = {
                 buttons: {
                     delete: {
                         text: 'De/Activate', btnClass: 'btn btn-danger mr-1',
-                        action: function () {
+                        action: () => {
                             axios.post(u + '?qid=001', JSON.stringify(ids))
-                                .then(function (response) {
+                                .then(response => {
                                     overlay.hide();
                                     if (response.data.result_code == '200') {
                                         loadTableData();
@@ -249,49 +249,49 @@ const UserList = {
                                         alert.Error('ERROR', 'User De/Activation failed');
                                     }
                                 })
-                                .catch(function (error) {
+                                .catch(error => {
                                     overlay.hide();
                                     alert.Error('ERROR', safeMessage(error));
                                 });
                         },
                     },
-                    cancel: function () { overlay.hide(); },
+                    cancel: () => { overlay.hide(); },
                 },
             });
         }
 
-        function goToDetail(userid, user_status) {
+        const goToDetail = (userid, user_status) => {
             bus.emit('g-event-goto-page', {
                 userid: userid, page: 'detail', user_status: user_status, role: roleListData.value,
             });
         }
 
-        function getRoleList() {
+        const getRoleList = () => {
             overlay.show();
             axios.get(common.DataService + '?qid=007')
-                .then(function (response) {
+                .then(response => {
                     roleListData.value = (response.data && response.data.data) || [];
                     overlay.hide();
                 })
-                .catch(function (error) {
+                .catch(error => {
                     overlay.hide();
                     alert.Error('ERROR', safeMessage(error));
                 });
         }
 
-        function getGeoLocation() {
+        const getGeoLocation = () => {
             overlay.show();
             axios.get(common.DataService + '?qid=gen009')
-                .then(function (response) {
+                .then(response => {
                     geoData.value = (response.data && response.data.data) || [];
                     overlay.hide();
                 })
-                .catch(function (error) {
+                .catch(error => {
                     overlay.hide();
                     alert.Error('ERROR', safeMessage(error));
                 });
         }
-        function setLocation(select_index) {
+        const setLocation = (select_index) => {
             var i = select_index ? select_index : 0;
             var row = geoData.value[i];
             if (!row) return;
@@ -299,11 +299,11 @@ const UserList = {
             tableOptions.filterParam.geo_level_id = row.geo_level_id;
             tableOptions.filterParam.geo_string = row.geo_string;
         }
-        function setRole(event) {
+        const setRole = (event) => {
             tableOptions.filterParam.role = event.target.options[event.target.options.selectedIndex].text;
         }
 
-        function changeUserGeoLevelModal(userid, loginid, geo_level, geolevelid, isBulk) {
+        const changeUserGeoLevelModal = (userid, loginid, geo_level, geolevelid, isBulk) => {
             isBulk = !!isBulk;
             if (isBulk && selectedID().length < 1) {
                 alert.Error('ERROR', 'No User selected');
@@ -322,7 +322,7 @@ const UserList = {
             $('#geoLevelModal').modal('show');
         }
 
-        function updateRole() {
+        const updateRole = () => {
             var u = common.DataService;
             if (isBulkRole.value === true) { submitBulkRole(); return; }
             $.confirm({
@@ -331,9 +331,9 @@ const UserList = {
                 buttons: {
                     delete: {
                         text: 'Change Role', btnClass: 'btn btn-danger mr-1',
-                        action: function () {
+                        action: () => {
                             axios.post(u + '?qid=008&r=' + userRole.currentUserRole + '&u=' + userRole.currentUserid)
-                                .then(function (response) {
+                                .then(response => {
                                     if (response.data.result_code == '200') {
                                         loadTableData();
                                         overlay.hide();
@@ -344,24 +344,24 @@ const UserList = {
                                         alert.Error('ERROR', 'User Role not Updated');
                                     }
                                 })
-                                .catch(function (error) {
+                                .catch(error => {
                                     overlay.hide();
                                     alert.Error('ERROR', safeMessage(error));
                                 });
                         },
                     },
-                    cancel: function () { overlay.hide(); },
+                    cancel: () => { overlay.hide(); },
                 },
             });
         }
 
-        function refreshData() { paginationDefault(); getAllUserGroup(); loadTableData(); }
-        function downloadBadge(userid) {
+        const refreshData = () => { paginationDefault(); getAllUserGroup(); loadTableData(); };
+        const downloadBadge = (userid) => {
             overlay.show();
             window.open(url.value + '?qid=002&e=' + userid, '_parent');
             overlay.hide();
         }
-        function downloadBadges() {
+        const downloadBadges = () => {
             overlay.show();
             if (parseInt(selectedID().length) > 0) {
                 window.open(url.value + '?qid=003&e=' + selectedID(), '_parent');
@@ -370,7 +370,7 @@ const UserList = {
             }
             overlay.hide();
         }
-        function hideGeoModal() {
+        const hideGeoModal = () => {
             geoLevelForm.currentUserLoginid = '';
             geoLevelForm.geoLevel = '';
             geoLevelForm.geoLevelId = '';
@@ -378,7 +378,7 @@ const UserList = {
             geoLevelForm.isBulk = false;
             $('#geoLevelModal').modal('hide');
         }
-        function showPassResetModal(loginid, name, isBulk) {
+        const showPassResetModal = (loginid, name, isBulk) => {
             isBulk = !!isBulk;
             if (isBulk && (selectedID() || []).length < 1) {
                 alert.Error('ERROR', 'No User selected');
@@ -390,14 +390,14 @@ const UserList = {
             userPass.isBulk = isBulk;
             $('#resetPassword').modal('show');
         }
-        function hidePassResetModal() {
+        const hidePassResetModal = () => {
             userPass.pass = '';
             userPass.loginid = '';
             userPass.name = '';
             userPass.isBulk = false;
             $('#resetPassword').modal('hide');
         }
-        function resetPassword() {
+        const resetPassword = () => {
             var u = common.DataService;
             var isBulk = userPass.isBulk;
             var loginid = userPass.loginid;
@@ -421,10 +421,10 @@ const UserList = {
                     delete: {
                         text: 'Reset Password',
                         btnClass: 'btn btn-danger btn-sm mr-1',
-                        action: function () {
+                        action: () => {
                             overlay.show();
                             axios.post(u + '?qid=' + qid, { loginid: selectedId, new: pass })
-                                .then(function (res) {
+                                .then(res => {
                                     overlay.hide();
                                     if (res.data.result_code === 200) {
                                         alert.Success('SUCCESS', successMessage);
@@ -434,18 +434,18 @@ const UserList = {
                                         alert.Error('ERROR', 'User Role not Updated');
                                     }
                                 })
-                                .catch(function (error) {
+                                .catch(error => {
                                     overlay.hide();
                                     alert.Error('ERROR', safeMessage(error));
                                 });
                         },
                     },
-                    cancel: function () { overlay.hide(); },
+                    cancel: () => { overlay.hide(); },
                 },
             });
         }
 
-        function showWorkExtensionModal(isBulk, userId) {
+        const showWorkExtensionModal = (isBulk, userId) => {
             isBulk = !!isBulk;
             userId = userId || '';
             var selectedUsers = selectedID() || [];
@@ -459,7 +459,7 @@ const UserList = {
             $('#workHourModal').modal('show');
         }
 
-        function showRoleModal() {
+        const showRoleModal = () => {
             var selectedUsers = selectedID() || [];
             isBulkRole.value = true;
             if (selectedUsers.length < 1) {
@@ -468,7 +468,7 @@ const UserList = {
             }
             $('#roleForm').modal('show');
         }
-        function submitBulkRole() {
+        const submitBulkRole = () => {
             var ids = selectedID() || [];
             var u = common.DataService;
             var len = ids.length;
@@ -478,9 +478,9 @@ const UserList = {
                 buttons: {
                     delete: {
                         text: 'Change Role', btnClass: 'btn btn-danger mr-1',
-                        action: function () {
+                        action: () => {
                             axios.post(u + '?qid=008a&r=' + userRole.currentUserRole, JSON.stringify(ids))
-                                .then(function (response) {
+                                .then(response => {
                                     if (response.data.result_code === 200) {
                                         isBulkRole.value = false;
                                         userRole.currentUserRole = '';
@@ -496,18 +496,18 @@ const UserList = {
                                         alert.Error('ERROR', 'User Role not Updated');
                                     }
                                 })
-                                .catch(function (error) {
+                                .catch(error => {
                                     overlay.hide();
                                     alert.Error('ERROR', safeMessage(error));
                                 });
                         },
                     },
-                    cancel: function () { overlay.hide(); },
+                    cancel: () => { overlay.hide(); },
                 },
             });
         }
-        function hideRoleModal() { $('#roleForm').modal('hide'); }
-        function hideWorkHourExtensionModal() {
+        const hideRoleModal = () => { $('#roleForm').modal('hide'); };
+        const hideWorkHourExtensionModal = () => {
             workHourExtensionForm.extensionHour = '';
             workHourExtensionForm.extensionDate = '';
             workHourExtensionForm.isBulk = false;
@@ -519,7 +519,7 @@ const UserList = {
             } catch (e) { /* swallow */ }
             $('#workHourModal').modal('hide');
         }
-        function onSubmitAddWorkingHour() {
+        const onSubmitAddWorkingHour = () => {
             var extensionHour = workHourExtensionForm.extensionHour;
             var extensionDate = workHourExtensionForm.extensionDate;
             var affectedUserIds = workHourExtensionForm.affectedUserIds;
@@ -546,7 +546,7 @@ const UserList = {
                 buttons: {
                     confirm: {
                         text: 'Extend Work Hour', btnClass: 'btn btn-danger mr-1',
-                        action: function () {
+                        action: () => {
                             var u = common.DataService + '?qid=015';
                             var currentUserId = (document.getElementById('v_g_id') && document.getElementById('v_g_id').value) || '';
                             axios.post(u, {
@@ -555,7 +555,7 @@ const UserList = {
                                 extensionHour: extensionHour,
                                 extensionDate: extensionDate,
                             })
-                                .then(function (res) {
+                                .then(res => {
                                     overlay.hide();
                                     if (res.data.result_code === 200) {
                                         hideWorkHourExtensionModal();
@@ -565,21 +565,21 @@ const UserList = {
                                         alert.Error('ERROR', 'Unable to update the geo level. Please try again later.');
                                     }
                                 })
-                                .catch(function (error) {
+                                .catch(error => {
                                     overlay.hide();
                                     alert.Error('ERROR', safeMessage(error));
                                 });
                         },
                     },
-                    cancel: function () { overlay.hide(); },
+                    cancel: () => { overlay.hide(); },
                 },
             });
         }
 
-        function getsysDefaultDataSettings() {
+        const getsysDefaultDataSettings = () => {
             overlay.show();
             axios.get(common.DataService + '?qid=gen007')
-                .then(function (response) {
+                .then(response => {
                     if (response.data.data && response.data.data.length > 0) {
                         sysDefaultData.value = response.data.data[0];
                         getLgasLevel(response.data.data[0].stateid);
@@ -589,72 +589,72 @@ const UserList = {
                     }
                     overlay.hide();
                 })
-                .catch(function (error) {
+                .catch(error => {
                     overlay.hide();
                     alert.Error('ERROR', safeMessage(error));
                 });
         }
-        function getGeoLevel() {
+        const getGeoLevel = () => {
             overlay.show();
             axios.get(common.DataService + '?qid=gen001')
-                .then(function (response) {
+                .then(response => {
                     geoLevelData.value = (response.data && response.data.data) || [];
                     overlay.hide();
                 })
-                .catch(function (error) {
+                .catch(error => {
                     overlay.hide();
                     alert.Error('ERROR', safeMessage(error));
                 });
         }
-        function getLgasLevel(stateid) {
+        const getLgasLevel = (stateid) => {
             overlay.show();
             axios.post(common.DataService + '?qid=gen003', JSON.stringify(stateid))
-                .then(function (response) {
+                .then(response => {
                     lgaLevelData.value = (response.data && response.data.data) || [];
                     overlay.hide();
                 })
-                .catch(function (error) {
+                .catch(error => {
                     overlay.hide();
                     alert.Error('ERROR', safeMessage(error));
                 });
         }
-        function getClusterLevel() {
+        const getClusterLevel = () => {
             overlay.show();
             axios.get(common.DataService + '?qid=gen004&e=' + geoIndicator.cluster)
-                .then(function (response) {
+                .then(response => {
                     clusterLevelData.value = (response.data && response.data.data) || [];
                     overlay.hide();
                 })
-                .catch(function (error) {
+                .catch(error => {
                     overlay.hide();
                     alert.Error('ERROR', safeMessage(error));
                 });
         }
-        function getWardLevel() {
+        const getWardLevel = () => {
             overlay.show();
             axios.get(common.DataService + '?qid=gen005&e=' + geoIndicator.lga)
-                .then(function (response) {
+                .then(response => {
                     wardLevelData.value = (response.data && response.data.data) || [];
                     overlay.hide();
                 })
-                .catch(function (error) {
+                .catch(error => {
                     overlay.hide();
                     alert.Error('ERROR', safeMessage(error));
                 });
         }
-        function getDpLevel() {
+        const getDpLevel = () => {
             overlay.show();
             axios.get(common.DataService + '?qid=gen006&wardid=' + geoIndicator.ward)
-                .then(function (response) {
+                .then(response => {
                     dpLevelData.value = (response.data && response.data.data) || [];
                     overlay.hide();
                 })
-                .catch(function (error) {
+                .catch(error => {
                     overlay.hide();
                     alert.Error('ERROR', safeMessage(error));
                 });
         }
-        function changeGeoLevel() {
+        const changeGeoLevel = () => {
             if (geoLevelForm.geoLevel == 'country') {
                 alert.Error('ERROR', 'Invalid Geo-Level selected, please select a valid Geo-Level');
             } else if (geoLevelForm.geoLevel == 'state') {
@@ -666,11 +666,11 @@ const UserList = {
                 geoIndicator.cluster = '';
             }
         }
-        function changeUserRoleModal(userid, roleid) {
+        const changeUserRoleModal = (userid, roleid) => {
             userRole.currentUserRole = roleid;
             userRole.currentUserid = userid;
         }
-        function onSubmitUpdateGeoLevel() {
+        const onSubmitUpdateGeoLevel = () => {
             var userid = geoLevelForm.userid;
             var geoLevel = geoLevelForm.geoLevel;
             var geoLevelId = geoLevelForm.geoLevelId;
@@ -691,9 +691,9 @@ const UserList = {
                 buttons: {
                     confirm: {
                         text: 'Update Geo Level', btnClass: 'btn btn-danger mr-1',
-                        action: function () {
+                        action: () => {
                             axios.post(u, { u: userIdentifier, l: geoLevel, id: geoLevelId })
-                                .then(function (res) {
+                                .then(res => {
                                     overlay.hide();
                                     if (res.data.result_code === 200) {
                                         loadTableData();
@@ -704,27 +704,27 @@ const UserList = {
                                         alert.Error('ERROR', 'Unable to update the geo level. Please try again later.');
                                     }
                                 })
-                                .catch(function (error) {
+                                .catch(error => {
                                     overlay.hide();
                                     alert.Error('ERROR', safeMessage(error));
                                 });
                         },
                     },
-                    cancel: function () { overlay.hide(); },
+                    cancel: () => { overlay.hide(); },
                 },
             });
         }
-        function getAllUserGroup() {
+        const getAllUserGroup = () => {
             overlay.show();
             axios.get(common.DataService + '?qid=026')
-                .then(function (response) {
+                .then(response => {
                     var rows = (response.data && response.data.data) || [];
                     var group = [];
                     for (var i = 0; i < rows.length; i++) group.push(rows[i]['user_group']);
                     userGroup.value = group;
                     overlay.hide();
                 })
-                .catch(function (error) {
+                .catch(error => {
                     overlay.hide();
                     alert.Error('ERROR', safeMessage(error));
                 });
@@ -732,7 +732,7 @@ const UserList = {
 
         // Lightweight autocomplete (preserved from v2). Wires DOM events
         // onto an input by id and fills tableOptions.filterParam.user_group.
-        function autocomplete(inp, arr) {
+        const autocomplete = (inp, arr) => {
             if (!inp) return;
             var currentFocus;
             inp.addEventListener('input', function () {
@@ -767,15 +767,15 @@ const UserList = {
                     if (currentFocus > -1 && x) x[currentFocus].click();
                 }
             });
-            function addActive(x) {
+            const addActive = (x) => {
                 if (!x) return false;
                 removeActive(x);
                 if (currentFocus >= x.length) currentFocus = 0;
                 if (currentFocus < 0) currentFocus = x.length - 1;
                 x[currentFocus].classList.add('autocomplete-active');
             }
-            function removeActive(x) { for (var i = 0; i < x.length; i++) x[i].classList.remove('autocomplete-active'); }
-            function closeAllLists(elmnt) {
+            const removeActive = (x) => { for (var i = 0; i < x.length; i++) x[i].classList.remove('autocomplete-active'); };
+            const closeAllLists = (elmnt) => {
                 var x = document.getElementsByClassName('autocomplete-items');
                 for (var i = 0; i < x.length; i++) {
                     if (elmnt != x[i] && elmnt != inp) {
@@ -784,16 +784,16 @@ const UserList = {
                     }
                 }
             }
-            document.addEventListener('click', function (e) { closeAllLists(e.target); });
+            document.addEventListener('click', e => { closeAllLists(e.target); });
         }
-        function loadAuto() { autocomplete(document.getElementById('user_group'), userGroup.value); }
+        const loadAuto = () => { autocomplete(document.getElementById('user_group'), userGroup.value); };
 
-        function verifyAccount(userid, index, first_name, middle_name, last_name) {
+        const verifyAccount = (userid, index, first_name, middle_name, last_name) => {
             overlay.show();
             var f_name = first_name == null ? '' : first_name;
             var l_name = last_name == null ? '' : last_name;
             axios.post(common.DataService + '?qid=013&userid=' + userid)
-                .then(function (response) {
+                .then(response => {
                     if (response.data.result_code == '200') {
                         if (response.data.data.result == 'success') {
                             index.is_verified = 1;
@@ -818,18 +818,18 @@ const UserList = {
                         alert.Error('ERROR', 'Invalid Account Details');
                     }
                 })
-                .catch(function (error) {
+                .catch(error => {
                     overlay.hide();
                     alert.Error('ERROR', safeMessage(error));
                 });
         }
-        function accountVerificationStatus(status) {
+        const accountVerificationStatus = (status) => {
             if (status == 'success') return ['txt-success', 'bg-status-success icon-check-circle'];
             if (status == 'failed')  return ['txt-failed',  'bg-status-failed icon-x-circle'];
             if (status == 'warning') return ['txt-warning', 'bg-status-warning icon-circle'];
             return ['', 'icon-circle'];
         }
-        function totalCheckedBox() {
+        const totalCheckedBox = () => {
             var total = selectedID().length;
             var el = document.getElementById('total-selected');
             if (!el) return;
@@ -839,7 +839,7 @@ const UserList = {
                 el.replaceChildren();
             }
         }
-        async function exportUserData() {
+        const exportUserData = async () => {
             var common_url =
                 '&draw=' + tableOptions.currentPage +
                 '&order_column=' + tableOptions.orderField +
@@ -862,10 +862,10 @@ const UserList = {
                 (tableOptions.filterParam.loginid    ? tableOptions.filterParam.loginid    : 'Recent ') + ' User List';
 
             overlay.show();
-            var count = await new Promise(function (resolve) {
+            var count = await new Promise(resolve => {
                 $.ajax({
                     url: common.DataService, type: 'POST', data: veriUrl, dataType: 'json',
-                    success: function (data) { resolve(data.total); },
+                    success: (data) => { resolve(data.total); },
                 });
             });
             var downloadMax = (window.common && window.common.ExportDownloadLimit) || 25000;
@@ -875,10 +875,10 @@ const UserList = {
                 alert.Error('Download Error', 'No data found');
             } else {
                 alert.Info('DOWNLOADING...', 'Downloading ' + count + ' record(s)');
-                var outcome = await new Promise(function (resolve) {
+                var outcome = await new Promise(resolve => {
                     $.ajax({
                         url: common.ExportService, type: 'POST', data: dlString,
-                        success: function (data) { resolve(data); },
+                        success: (data) => { resolve(data); },
                     });
                 });
                 var exportData = JSON.parse(outcome);
@@ -890,15 +890,15 @@ const UserList = {
             overlay.hide();
         }
 
-        function checkIfAndReturnEmpty(data) { return data === null || data === '' ? '' : data; }
-        function numbersOnlyWithoutDot(evt) {
+        const checkIfAndReturnEmpty = (data) => { return data === null || data === '' ? '' : data; };
+        const numbersOnlyWithoutDot = (evt) => {
             var e = evt || window.event;
             var charCode = e.which || e.keyCode;
             if (charCode > 31 && (charCode < 48 || charCode > 57)) e.preventDefault();
             return true;
         }
 
-        onMounted(function () {
+        onMounted(() => {
             getGeoLocation();
 
             // jQuery select2 init for the geo dropdown — preserved as-is.
@@ -956,7 +956,7 @@ const UserList = {
             }
         });
 
-        onBeforeUnmount(function () {
+        onBeforeUnmount(() => {
             bus.off('g-event-update-user', reloadUserListOnUpdate);
         });
 
@@ -1455,7 +1455,7 @@ const UserDetails = {
             baseData: {}, financeData: {}, identityData: {}, roleData: {},
         });
 
-        function gotoPageHandler(data) {
+        const gotoPageHandler = (data) => {
             if (!data || data.page !== 'detail') return;
             userDetails.value = true;
             userid.value = data.userid;
@@ -1463,17 +1463,17 @@ const UserDetails = {
             roleListData.value = data.role || [];
             getUserDetails();
         }
-        function goToList() {
+        const goToList = () => {
             bus.emit('g-event-goto-page', { page: 'list', userid: userid.value });
         }
-        function discardUpdate() {
+        const discardUpdate = () => {
             $.confirm({
                 title: 'WARNING!',
                 content: '<p>Are you sure you want to discard the changes? </p><br>Discarding the changes means you will lose all changes made',
                 buttons: {
                     delete: {
                         text: 'Discard Changes', btnClass: 'btn btn-warning mr-1',
-                        action: function () {
+                        action: () => {
                             getUserDetails();
                             userDetails.value = true;
                             overlay.hide();
@@ -1481,15 +1481,15 @@ const UserDetails = {
                     },
                     close: {
                         text: 'Cancel', btnClass: 'btn btn-outline-secondary',
-                        action: function () { overlay.hide(); },
+                        action: () => { overlay.hide(); },
                     },
                 },
             });
         }
-        function getUserDetails() {
+        const getUserDetails = () => {
             overlay.show();
             axios.get(common.DataService + '?qid=005&e=' + userid.value)
-                .then(function (response) {
+                .then(response => {
                     var d = response.data || {};
                     userData.baseData     = (d.base     && d.base[0])     || {};
                     userData.financeData  = (d.finance  && d.finance[0])  || {};
@@ -1497,24 +1497,24 @@ const UserDetails = {
                     userData.roleData     = (d.role     && d.role[0])     || {};
                     overlay.hide();
                 })
-                .catch(function (error) {
+                .catch(error => {
                     overlay.hide();
                     alert.Error('ERROR', safeMessage(error));
                 });
         }
-        function getBankLists() {
+        const getBankLists = () => {
             overlay.show();
             axios.get(common.DataService + '?qid=gen008')
-                .then(function (response) {
+                .then(response => {
                     bankListData.value = (response.data && response.data.data) || [];
                     overlay.hide();
                 })
-                .catch(function (error) {
+                .catch(error => {
                     overlay.hide();
                     alert.Error('ERROR', safeMessage(error));
                 });
         }
-        function updateUserProfile() {
+        const updateUserProfile = () => {
             var updateFormData = {
                 userid:       userid.value,
                 roleid:       userData.baseData.roleid,
@@ -1537,9 +1537,9 @@ const UserDetails = {
                 buttons: {
                     delete: {
                         text: 'Update Details', btnClass: 'btn btn-warning mr-1',
-                        action: function () {
+                        action: () => {
                             axios.post(u + '?qid=006', JSON.stringify(updateFormData))
-                                .then(function (response) {
+                                .then(response => {
                                     overlay.hide();
                                     if (response.data.result_code == '200') {
                                         bus.emit('g-event-update-user', {});
@@ -1549,7 +1549,7 @@ const UserDetails = {
                                         alert.Error('ERROR', 'User Details Update failed');
                                     }
                                 })
-                                .catch(function (error) {
+                                .catch(error => {
                                     overlay.hide();
                                     alert.Error('ERROR', safeMessage(error));
                                 });
@@ -1557,16 +1557,16 @@ const UserDetails = {
                     },
                     close: {
                         text: 'Cancel', btnClass: 'btn btn-outline-secondary',
-                        action: function () { overlay.hide(); },
+                        action: () => { overlay.hide(); },
                     },
                 },
             });
         }
-        function checkIfEmpty(data) { return data === null || data === '' || data === undefined ? 'Nil' : data; }
-        function userActivationDeactivation(actionid) {
+        const checkIfEmpty = (data) => { return data === null || data === '' || data === undefined ? 'Nil' : data; };
+        const userActivationDeactivation = (actionid) => {
             overlay.show();
             axios.post(common.DataService + '?qid=001', JSON.stringify([actionid]))
-                .then(function (response) {
+                .then(response => {
                     overlay.hide();
                     if (response.data.result_code == '200') {
                         bus.emit('g-event-update-user', {});
@@ -1576,30 +1576,30 @@ const UserDetails = {
                         alert.Error('ERROR', 'User De/Activation failed');
                     }
                 })
-                .catch(function (error) {
+                .catch(error => {
                     overlay.hide();
                     alert.Error('ERROR', safeMessage(error));
                 });
         }
-        function changeRole(event) { userData.baseData.role = event.target.options[event.target.options.selectedIndex].text; }
-        function changeBank(event) { userData.financeData.bank_name = event.target.options[event.target.options.selectedIndex].text; }
-        function downloadBadge(id) {
+        const changeRole = (event) => { userData.baseData.role = event.target.options[event.target.options.selectedIndex].text; };
+        const changeBank = (event) => { userData.financeData.bank_name = event.target.options[event.target.options.selectedIndex].text; };
+        const downloadBadge = (id) => {
             overlay.show();
             window.open(common.BadgeService + '?qid=002&e=' + id, '_parent');
             overlay.hide();
         }
-        function numbersOnlyWithoutDot(evt) {
+        const numbersOnlyWithoutDot = (evt) => {
             var e = evt || window.event;
             var charCode = e.which || e.keyCode;
             if (charCode > 31 && (charCode < 48 || charCode > 57)) e.preventDefault();
             return true;
         }
 
-        onMounted(function () {
+        onMounted(() => {
             bus.on('g-event-goto-page', gotoPageHandler);
             getBankLists();
         });
-        onBeforeUnmount(function () {
+        onBeforeUnmount(() => {
             bus.off('g-event-goto-page', gotoPageHandler);
         });
 

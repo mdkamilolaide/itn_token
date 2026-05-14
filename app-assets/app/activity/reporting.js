@@ -54,20 +54,20 @@ const ReportingLists = {
         let dateFlatpickr = null;
         let formSearchHandler = null;
 
-        function getAllTrainingLists() {
+        const getAllTrainingLists = () => {
             overlay.show();
             axios.get(common.DataService + '?qid=104a&gl=' + geoIndicator.geoLevel + '&glid=' + geoIndicator.geoLevelId)
-                .then(function (response) {
+                .then(response => {
                     trainingListData.value = (response.data && response.data.data) || [];
                     overlay.hide();
                 })
-                .catch(function (error) {
+                .catch(error => {
                     overlay.hide();
                     alert.Error('ERROR', safeMessage(error));
                 });
         }
 
-        function openModal(reportType) {
+        const openModal = (reportType) => {
             switch (reportType) {
                 case 'participantList':
                     report.reportTitle = 'Filter to a <b>Specific Training</b> to Download Participants List';
@@ -169,7 +169,7 @@ const ReportingLists = {
             }
         }
 
-        async function downloadReport() {
+        const downloadReport = async () => {
             var min = 1;
             var max = 100;
             var randomInt = Math.floor(Math.random() * (max - min + 1)) + min;
@@ -228,19 +228,19 @@ const ReportingLists = {
             }
         }
 
-        function downloadData(dlString) {
-            return new Promise(function (resolve, reject) {
+        const downloadData = (dlString) => {
+            return new Promise((resolve, reject) => {
                 $.ajax({
                     url: common.ExportService,
                     type: 'POST',
                     data: dlString,
-                    success: function (data) { resolve(data); },
-                    error: function (error) { reject(error); },
+                    success: (data) => { resolve(data); },
+                    error: (error) => { reject(error); },
                 });
             });
         }
 
-        function dismissOnClick() {
+        const dismissOnClick = () => {
             trainingForm.trainingId = 0;
             trainingForm.trainingName = '';
             report.reportTitle = '';
@@ -254,7 +254,7 @@ const ReportingLists = {
             $('#trainingListModal').modal('hide');
         }
 
-        function chooseSingleDate() {
+        const chooseSingleDate = () => {
             dateTitle.value = 'Choose Date to download the Report';
             // Re-init flatpickr — the input may not exist until the v-show
             // toggles to mobilization/distribution mode. Re-applying is safe.
@@ -263,10 +263,10 @@ const ReportingLists = {
                 altInput: true,
                 altFormat: 'F j, Y',
                 dateFormat: 'Y-m-d',
-                onChange: function (selectedDates, dateStr) { report.reportDate = dateStr; },
+                onChange: (selectedDates, dateStr) => { report.reportDate = dateStr; },
             });
         }
-        function chooseDateRange() {
+        const chooseDateRange = () => {
             dateTitle.value = 'Choose Date Range to Download the Report';
             try { if (dateFlatpickr && dateFlatpickr.destroy) dateFlatpickr.destroy(); } catch (e) {}
             dateFlatpickr = $('.date').flatpickr({
@@ -274,26 +274,26 @@ const ReportingLists = {
                 altFormat: 'F j, Y',
                 dateFormat: 'Y-m-d',
                 mode: 'range',
-                onChange: function (selectedDates, dateStr) { report.reportDate = dateStr; },
+                onChange: (selectedDates, dateStr) => { report.reportDate = dateStr; },
             });
         }
 
-        function selectAll()    { for (var i = 0; i < tableData.value.length; i++) tableData.value[i].pick = true; }
-        function uncheckAll()   { for (var i = 0; i < tableData.value.length; i++) tableData.value[i].pick = false; }
-        function selectToggle() {
+        const selectAll = () => { for (var i = 0; i < tableData.value.length; i++) tableData.value[i].pick = true; };
+        const uncheckAll = () => { for (var i = 0; i < tableData.value.length; i++) tableData.value[i].pick = false; };
+        const selectToggle = () => {
             if (checkToggle.value === false) { selectAll(); checkToggle.value = true; }
             else                              { uncheckAll(); checkToggle.value = false; }
         }
-        function checkedBg(pickOne) { return pickOne != '' ? 'bg-select' : ''; }
-        function selectedItems() { return tableData.value.filter(function (r) { return r.pick; }); }
-        function selectedID() { return tableData.value.filter(function (r) { return r.pick; }).map(function (r) { return r.dpid; }); }
+        const checkedBg = (pickOne) => { return pickOne != '' ? 'bg-select' : ''; };
+        const selectedItems = () => { return tableData.value.filter(r => r.pick); };
+        const selectedID = () => { return tableData.value.filter(r => r.pick).map(r => r.dpid); };
 
-        function autoUpdateTableRowNo() {
+        const autoUpdateTableRowNo = () => {
             var allTableRow = document.querySelectorAll('tr td:first-child');
-            allTableRow.forEach(function (element, i) { element.innerHTML = i + 1; });
+            allTableRow.forEach((element, i) => { element.innerHTML = i + 1; });
         }
 
-        onMounted(function () {
+        onMounted(() => {
             // Read JWT-injected hidden values BEFORE first fetch.
             geoIndicator.geoLevel = $('#v_g_geo_level').val() || '';
             geoIndicator.geoLevelId = $('#v_g_geo_level_id').val() || 0;
@@ -311,7 +311,7 @@ const ReportingLists = {
             autoUpdateTableRowNo();
         });
 
-        onBeforeUnmount(function () {
+        onBeforeUnmount(() => {
             if (formSearchHandler) {
                 try { $('#form-search').off('keyup', formSearchHandler); } catch (e) {}
                 formSearchHandler = null;

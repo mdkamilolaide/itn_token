@@ -18,14 +18,14 @@ const PageBody = {
     setup() {
         const page = ref('list');
 
-        function gotoPageHandler(data) {
+        const gotoPageHandler = (data) => {
             page.value = data.page;
         }
 
-        onMounted(function () {
+        onMounted(() => {
             bus.on('g-event-goto-page', gotoPageHandler);
         });
-        onBeforeUnmount(function () {
+        onBeforeUnmount(() => {
             bus.off('g-event-goto-page', gotoPageHandler);
         });
 
@@ -65,9 +65,9 @@ const UserList = {
             ward: '',
         });
 
-        function reloadUserListOnUpdate() { /* placeholder hook */ }
+        const reloadUserListOnUpdate = () => { /* placeholder hook */ };
 
-        function initJstree() {
+        const initJstree = () => {
             var filesTreeView = $('.my-drive');
             if (!filesTreeView.length || !$.fn || !$.fn.jstree) return;
             filesTreeView
@@ -78,7 +78,7 @@ const UserList = {
                         data: {
                             url: '../../../app-assets/data/jstree-data.json',
                             dataType: 'json',
-                            data: function (node) { return { id: node.id }; },
+                            data: (node) => { return { id: node.id }; },
                         },
                     },
                     plugins: ['types'],
@@ -90,10 +90,8 @@ const UserList = {
                         js: { icon: 'fab fa-node-js text-warning' },
                     },
                 })
-                .bind('select_node.jstree', function (e, data) {
-                    return data.instance.open_node(data.node);
-                })
-                .on('changed.jstree', function (e, data) {
+                .bind('select_node.jstree', (e, data) => data.instance.open_node(data.node))
+                .on('changed.jstree', (e, data) => {
                     var i, j, r = [];
                     var t = [];
                     for (i = 0, j = data.selected.length; i < j; i++) {
@@ -105,11 +103,11 @@ const UserList = {
                 });
         }
 
-        onMounted(function () {
+        onMounted(() => {
             initJstree();
             bus.on('g-event-update-user', reloadUserListOnUpdate);
         });
-        onBeforeUnmount(function () {
+        onBeforeUnmount(() => {
             bus.off('g-event-update-user', reloadUserListOnUpdate);
         });
 
@@ -213,7 +211,7 @@ const UserDetails = {
             roleData: {},
         });
 
-        function gotoPageHandler(data) {
+        const gotoPageHandler = (data) => {
             if (!data || data.page !== 'detail') return;
             userDetails.value = true;
             userid.value = data.userid;
@@ -221,14 +219,14 @@ const UserDetails = {
             getUserDetails();
         }
 
-        function goToList() {
+        const goToList = () => {
             bus.emit('g-event-goto-page', { page: 'list', userid: userid.value });
         }
 
-        function getUserDetails() {
+        const getUserDetails = () => {
             overlay.show();
             axios.get(common.DataService + '?qid=005&e=' + userid.value)
-                .then(function (response) {
+                .then(response => {
                     var d = response.data || {};
                     userData.baseData     = (d.base     && d.base[0])     || {};
                     userData.financeData  = (d.finance  && d.finance[0])  || {};
@@ -236,39 +234,39 @@ const UserDetails = {
                     userData.roleData     = (d.role     && d.role[0])     || {};
                     overlay.hide();
                 })
-                .catch(function (error) {
+                .catch(error => {
                     overlay.hide();
                     alert.Error('ERROR', safeMessage(error));
                 });
         }
 
-        function getBankLists() {
+        const getBankLists = () => {
             overlay.show();
             axios.get(common.DataService + '?qid=gen008')
-                .then(function (response) {
+                .then(response => {
                     bankListData.value = (response.data && response.data.data) || [];
                     overlay.hide();
                 })
-                .catch(function (error) {
+                .catch(error => {
                     overlay.hide();
                     alert.Error('ERROR', safeMessage(error));
                 });
         }
 
-        function getRoleList() {
+        const getRoleList = () => {
             overlay.show();
             axios.get(common.DataService + '?qid=007')
-                .then(function (response) {
+                .then(response => {
                     roleListData.value = (response.data && response.data.data) || [];
                     overlay.hide();
                 })
-                .catch(function (error) {
+                .catch(error => {
                     overlay.hide();
                     alert.Error('ERROR', safeMessage(error));
                 });
         }
 
-        function discardUpdate() {
+        const discardUpdate = () => {
             $.confirm({
                 title: 'WARNING!',
                 content:
@@ -277,7 +275,7 @@ const UserDetails = {
                     delete: {
                         text: 'Discard Changes',
                         btnClass: 'btn btn-warning mr-1',
-                        action: function () {
+                        action: () => {
                             getUserDetails();
                             userDetails.value = true;
                             overlay.hide();
@@ -286,13 +284,13 @@ const UserDetails = {
                     close: {
                         text: 'Cancel',
                         btnClass: 'btn btn-outline-secondary',
-                        action: function () { overlay.hide(); },
+                        action: () => { overlay.hide(); },
                     },
                 },
             });
         }
 
-        function updateUserProfile() {
+        const updateUserProfile = () => {
             var updateFormData = {
                 userid:       userid.value,
                 roleid:       userData.baseData.roleid,
@@ -317,9 +315,9 @@ const UserDetails = {
                     delete: {
                         text: 'Update Details',
                         btnClass: 'btn btn-warning mr-1',
-                        action: function () {
+                        action: () => {
                             axios.post(url + '?qid=006', JSON.stringify(updateFormData))
-                                .then(function (response) {
+                                .then(response => {
                                     overlay.hide();
                                     if (response.data.result_code == '200') {
                                         bus.emit('g-event-update-user', {});
@@ -329,7 +327,7 @@ const UserDetails = {
                                         alert.Error('ERROR', 'User update failed');
                                     }
                                 })
-                                .catch(function (error) {
+                                .catch(error => {
                                     overlay.hide();
                                     alert.Error('ERROR', safeMessage(error));
                                 });
@@ -338,21 +336,21 @@ const UserDetails = {
                     close: {
                         text: 'Cancel',
                         btnClass: 'btn btn-outline-secondary',
-                        action: function () { overlay.hide(); },
+                        action: () => { overlay.hide(); },
                     },
                 },
             });
         }
 
-        function checkIfEmpty(data) {
+        const checkIfEmpty = (data) => {
             return data === null || data === '' || data === undefined ? 'Nil' : data;
         }
 
-        function userActivationDeactivation(actionid) {
+        const userActivationDeactivation = (actionid) => {
             var selectedId = [actionid];
             overlay.show();
             axios.post(common.DataService + '?qid=001', JSON.stringify(selectedId))
-                .then(function (response) {
+                .then(response => {
                     overlay.hide();
                     if (response.data.result_code == '200') {
                         bus.emit('g-event-update-user', {});
@@ -362,38 +360,38 @@ const UserDetails = {
                         alert.Error('ERROR', 'User De/Activation failed');
                     }
                 })
-                .catch(function (error) {
+                .catch(error => {
                     overlay.hide();
                     alert.Error('ERROR', safeMessage(error));
                 });
         }
 
-        function changeRole(event) {
+        const changeRole = (event) => {
             userData.baseData.role = event.target.options[event.target.options.selectedIndex].text;
         }
-        function changeBank(event) {
+        const changeBank = (event) => {
             userData.financeData.bank_name = event.target.options[event.target.options.selectedIndex].text;
         }
 
-        function downloadBadge(id) {
+        const downloadBadge = (id) => {
             overlay.show();
             window.open(common.BadgeService + '?qid=002&e=' + id, '_parent');
             overlay.hide();
         }
 
-        function numbersOnlyWithoutDot(evt) {
+        const numbersOnlyWithoutDot = (evt) => {
             var e = evt || window.event;
             var charCode = e.which || e.keyCode;
             if (charCode > 31 && (charCode < 48 || charCode > 57)) e.preventDefault();
             return true;
         }
 
-        onMounted(function () {
+        onMounted(() => {
             bus.on('g-event-goto-page', gotoPageHandler);
             getRoleList();
             getBankLists();
         });
-        onBeforeUnmount(function () {
+        onBeforeUnmount(() => {
             bus.off('g-event-goto-page', gotoPageHandler);
         });
 

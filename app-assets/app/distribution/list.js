@@ -19,9 +19,9 @@ const PageBody = {
                 ? (getPermission(typeof per !== 'undefined' ? per : null, 'distribution') || { permission_value: 0 })
                 : { permission_value: 0 }
         );
-        function gotoPageHandler(data) { page.value = data && data.page; }
-        onMounted(function () { bus.on('g-event-goto-page', gotoPageHandler); });
-        onBeforeUnmount(function () { bus.off('g-event-goto-page', gotoPageHandler); });
+        const gotoPageHandler = (data) => { page.value = data && data.page; };
+        onMounted(() => { bus.on('g-event-goto-page', gotoPageHandler); });
+        onBeforeUnmount(() => { bus.off('g-event-goto-page', gotoPageHandler); });
         return { page, permission };
     },
     template: `
@@ -69,8 +69,8 @@ const DistributionList = {
             filterParam: { loginid: '', collected_date: '', geo_level: '', geo_level_id: '', geo_string: '' },
         });
 
-        function reloadUserListOnUpdate() { paginationDefault(); loadTableData(); }
-        function loadTableData() {
+        const reloadUserListOnUpdate = () => { paginationDefault(); loadTableData(); };
+        const loadTableData = () => {
             overlay.show();
             axios.get(
                 common.TableService +
@@ -84,61 +84,61 @@ const DistributionList = {
                 '&glid=' + tableOptions.filterParam.geo_level_id +
                 '&mdt=' + tableOptions.filterParam.collected_date
             )
-                .then(function (response) {
+                .then(response => {
                     var d = response && response.data;
                     tableData.value = Array.isArray(d && d.data) ? d.data : [];
                     tableOptions.total = (d && d.recordsTotal) || 0;
                     if (tableOptions.currentPage == 1) paginationDefault();
                     overlay.hide();
                 })
-                .catch(function (error) {
+                .catch(error => {
                     overlay.hide();
                     alert.Error('ERROR', safeMessage(error));
                 });
         }
 
-        function selectAll()  { for (var i = 0; i < tableData.value.length; i++) tableData.value[i].pick = true; }
-        function uncheckAll() { for (var i = 0; i < tableData.value.length; i++) tableData.value[i].pick = false; }
-        function selectToggle() {
+        const selectAll = () => { for (var i = 0; i < tableData.value.length; i++) tableData.value[i].pick = true; };
+        const uncheckAll = () => { for (var i = 0; i < tableData.value.length; i++) tableData.value[i].pick = false; };
+        const selectToggle = () => {
             if (checkToggle.value === false) { selectAll(); checkToggle.value = true; }
             else                              { uncheckAll(); checkToggle.value = false; }
         }
-        function checkedBg(p) { return p != '' ? 'bg-select' : ''; }
-        function toggleFilter() {
+        const checkedBg = (p) => { return p != '' ? 'bg-select' : ''; };
+        const toggleFilter = () => {
             if (filterState.value === false) {
                 filters.value = false;
                 try { $('#collected_date').flatpickr({ altInput: true, altFormat: 'F j, Y', dateFormat: 'Y-m-d' }).clear(); } catch (e) {}
             }
             return (filterState.value = !filterState.value);
         }
-        function paginationDefault() {
+        const paginationDefault = () => {
             tableOptions.pageLength = Math.ceil(tableOptions.total / tableOptions.perPage);
             tableOptions.limitStart = Math.ceil((tableOptions.currentPage - 1) * tableOptions.perPage);
             tableOptions.isNext = tableOptions.currentPage < tableOptions.pageLength;
             tableOptions.isPrev = tableOptions.currentPage > 1;
         }
-        function nextPage() { tableOptions.currentPage += 1; paginationDefault(); loadTableData(); }
-        function prevPage() { tableOptions.currentPage -= 1; paginationDefault(); loadTableData(); }
-        function currentPage() {
+        const nextPage = () => { tableOptions.currentPage += 1; paginationDefault(); loadTableData(); };
+        const prevPage = () => { tableOptions.currentPage -= 1; paginationDefault(); loadTableData(); };
+        const currentPage = () => {
             paginationDefault();
             if (tableOptions.currentPage < 1)                            alert.Error('ERROR', "The Page requested doesn't exist");
             else if (tableOptions.currentPage > tableOptions.pageLength) alert.Error('ERROR', "The Page requested doesn't exist");
             else                                                         loadTableData();
         }
-        function changePerPage(val) {
+        const changePerPage = (val) => {
             var maxPerPage = Math.ceil(tableOptions.total / val);
             if (maxPerPage < tableOptions.currentPage) tableOptions.currentPage = maxPerPage;
             tableOptions.perPage = val;
             paginationDefault();
             loadTableData();
         }
-        function sort(col) {
+        const sort = (col) => {
             if (tableOptions.orderField === col) tableOptions.orderDir = tableOptions.orderDir === 'asc' ? 'desc' : 'asc';
             else                                  tableOptions.orderField = col;
             paginationDefault();
             loadTableData();
         }
-        function applyFilter() {
+        const applyFilter = () => {
             var checkFill = 0;
             checkFill += tableOptions.filterParam.loginid != '' ? 1 : 0;
             checkFill += tableOptions.filterParam.collected_date != '' ? 1 : 0;
@@ -153,7 +153,7 @@ const DistributionList = {
                 alert.Error('ERROR', 'Invalid required data');
             }
         }
-        function removeSingleFilter(column_name) {
+        const removeSingleFilter = (column_name) => {
             tableOptions.filterParam[column_name] = '';
             if (column_name == 'geo_level' || column_name == 'geo_level_id') {
                 tableOptions.filterParam.geo_level = '';
@@ -170,7 +170,7 @@ const DistributionList = {
             paginationDefault();
             loadTableData();
         }
-        function clearAllFilter() {
+        const clearAllFilter = () => {
             try { $('#collected_date').flatpickr({ altInput: true, altFormat: 'F j, Y', dateFormat: 'Y-m-d' }).clear(); } catch (e) {}
             filters.value = false;
             tableOptions.filterParam.collected_date = '';
@@ -180,23 +180,23 @@ const DistributionList = {
             paginationDefault();
             loadTableData();
         }
-        function goToDetail(userid, user_status) {
+        const goToDetail = (userid, user_status) => {
             bus.emit('g-event-goto-page', { userid: userid, page: 'detail', user_status: user_status });
         }
-        function refreshData() { paginationDefault(); loadTableData(); }
-        function getGeoLocation() {
+        const refreshData = () => { paginationDefault(); loadTableData(); };
+        const getGeoLocation = () => {
             overlay.show();
             axios.get(common.DataService + '?qid=gen009')
-                .then(function (response) {
+                .then(response => {
                     geoData.value = (response.data && response.data.data) || [];
                     overlay.hide();
                 })
-                .catch(function (error) {
+                .catch(error => {
                     overlay.hide();
                     alert.Error('ERROR', safeMessage(error));
                 });
         }
-        function setLocation(select_index) {
+        const setLocation = (select_index) => {
             var i = select_index || 0;
             var row = geoData.value[i];
             if (!row) return;
@@ -205,7 +205,7 @@ const DistributionList = {
             tableOptions.filterParam.geo_string = row.title;
         }
 
-        async function exportMobilization() {
+        const exportMobilization = async () => {
             var qs =
                 'qid=401&draw=' + tableOptions.currentPage +
                 '&order_column=' + tableOptions.orderField +
@@ -222,10 +222,10 @@ const DistributionList = {
                 ' Mobilization List';
             overlay.show();
 
-            var count = await new Promise(function (resolve) {
+            var count = await new Promise(resolve => {
                 $.ajax({
                     url: common.DataService, type: 'POST', data: qs, dataType: 'json',
-                    success: function (data) { resolve(data.total); },
+                    success: (data) => { resolve(data.total); },
                 });
             });
             var downloadMax = (window.common && window.common.ExportDownloadLimit) || 25000;
@@ -235,10 +235,10 @@ const DistributionList = {
                 alert.Error('Download Error', 'No data found');
             } else {
                 alert.Info('DOWNLOADING...', 'Downloading ' + count + ' record(s)');
-                var outcome = await new Promise(function (resolve) {
+                var outcome = await new Promise(resolve => {
                     $.ajax({
                         url: common.ExportService, type: 'POST', data: qs,
-                        success: function (data) { resolve(data); },
+                        success: (data) => { resolve(data); },
                     });
                 });
                 var exportData = JSON.parse(outcome);
@@ -249,7 +249,7 @@ const DistributionList = {
             overlay.hide();
         }
 
-        function showdistributionDetailsModal(i) {
+        const showdistributionDetailsModal = (i) => {
             overlay.show();
             var row = tableData.value[i] || {};
             tableDetails.geo_string = row.geo_string;
@@ -277,13 +277,13 @@ const DistributionList = {
             $('#distributionDetails').modal('show');
             overlay.hide();
         }
-        function hidedistributionDetailsModal() {
+        const hidedistributionDetailsModal = () => {
             overlay.show();
             $('#distributionDetails').modal('hide');
             for (var k in tableDetails) tableDetails[k] = '';
             overlay.hide();
         }
-        function checkIfEmpty(data) { return data === null || data === '' ? 'Nil' : data; }
+        const checkIfEmpty = (data) => { return data === null || data === '' ? 'Nil' : data; };
 
         // Kick off data fetches in setup rather than onMounted — the
         // <distribution_list v-if="permission.permission_value > 1"> wrap
@@ -294,7 +294,7 @@ const DistributionList = {
         getGeoLocation();
         loadTableData();
 
-        onMounted(function () {
+        onMounted(() => {
             bus.on('g-event-update-user', reloadUserListOnUpdate);
             try {
                 var select = $('.select2');
@@ -310,7 +310,7 @@ const DistributionList = {
                 $('.date').flatpickr({ altInput: true, altFormat: 'F j, Y', dateFormat: 'Y-m-d' });
             } catch (e) {}
         });
-        onBeforeUnmount(function () {
+        onBeforeUnmount(() => {
             bus.off('g-event-update-user', reloadUserListOnUpdate);
         });
 
@@ -528,45 +528,45 @@ const DistributionDetails = {
         const roleListData = ref([]);
         const userData = reactive({ baseData: [], financeData: [], identityData: [], roleData: [] });
 
-        function gotoPageHandler(data) {
+        const gotoPageHandler = (data) => {
             userDetails.value = true;
             userid.value = data.userid;
             user_status.value = data.user_status;
             getUserDetails();
         }
-        function goToList() { bus.emit('g-event-goto-page', { page: 'list', userid: userid.value }); }
-        function discardUpdate() {
+        const goToList = () => { bus.emit('g-event-goto-page', { page: 'list', userid: userid.value }); };
+        const discardUpdate = () => {
             $.confirm({
                 title: 'WARNING!',
                 content: '<p>Are you sure you want to discard the changes?</p>',
                 buttons: {
-                    delete: { text: 'Discard Changes', btnClass: 'btn btn-warning mr-1', action: function () { getUserDetails(); userDetails.value = true; overlay.hide(); } },
-                    close: { text: 'Cancel', btnClass: 'btn btn-outline-secondary', action: function () { overlay.hide(); } },
+                    delete: { text: 'Discard Changes', btnClass: 'btn btn-warning mr-1', action: () => { getUserDetails(); userDetails.value = true; overlay.hide(); } },
+                    close: { text: 'Cancel', btnClass: 'btn btn-outline-secondary', action: () => { overlay.hide(); } },
                 },
             });
         }
-        function getUserDetails() {
+        const getUserDetails = () => {
             overlay.show();
             axios.get(common.DataService + '?qid=005&e=' + userid.value)
-                .then(function (response) {
+                .then(response => {
                     userData.baseData = (response.data.base && response.data.base[0]) || {};
                     userData.financeData = (response.data.finance && response.data.finance[0]) || {};
                     userData.identityData = (response.data.identity && response.data.identity[0]) || {};
                     userData.roleData = (response.data.role && response.data.role[0]) || {};
                     overlay.hide();
                 })
-                .catch(function (error) { overlay.hide(); alert.Error('ERROR', safeMessage(error)); });
+                .catch(error => { overlay.hide(); alert.Error('ERROR', safeMessage(error)); });
         }
-        function getBankLists() {
+        const getBankLists = () => {
             overlay.show();
             axios.get(common.DataService + '?qid=gen008')
-                .then(function (response) {
+                .then(response => {
                     bankListData.value = (response.data && response.data.data) || [];
                     overlay.hide();
                 })
-                .catch(function (error) { overlay.hide(); alert.Error('ERROR', safeMessage(error)); });
+                .catch(error => { overlay.hide(); alert.Error('ERROR', safeMessage(error)); });
         }
-        function updateUserProfile() {
+        const updateUserProfile = () => {
             var data = {
                 userid: userid.value,
                 roleid: userData.baseData.roleid,
@@ -582,9 +582,9 @@ const DistributionDetails = {
                 buttons: {
                     delete: {
                         text: 'Update Details', btnClass: 'btn btn-warning mr-1',
-                        action: function () {
+                        action: () => {
                             axios.post(common.DataService + '?qid=006', JSON.stringify(data))
-                                .then(function (response) {
+                                .then(response => {
                                     if (response.data.result_code == '200') {
                                         overlay.hide();
                                         bus.emit('g-event-update-user', {});
@@ -592,27 +592,27 @@ const DistributionDetails = {
                                         alert.Success('SUCCESS', response.data.total + ' User Updated');
                                     } else { overlay.hide(); alert.Error('ERROR', 'User update failed'); }
                                 })
-                                .catch(function (error) { overlay.hide(); alert.Error('ERROR', safeMessage(error)); });
+                                .catch(error => { overlay.hide(); alert.Error('ERROR', safeMessage(error)); });
                         },
                     },
-                    close: { text: 'Cancel', btnClass: 'btn btn-outline-secondary', action: function () { overlay.hide(); } },
+                    close: { text: 'Cancel', btnClass: 'btn btn-outline-secondary', action: () => { overlay.hide(); } },
                 },
             });
         }
-        function getRoleList() {
+        const getRoleList = () => {
             overlay.show();
             axios.get(common.DataService + '?qid=007')
-                .then(function (response) {
+                .then(response => {
                     roleListData.value = (response.data && response.data.data) || [];
                     overlay.hide();
                 })
-                .catch(function (error) { overlay.hide(); alert.Error('ERROR', safeMessage(error)); });
+                .catch(error => { overlay.hide(); alert.Error('ERROR', safeMessage(error)); });
         }
-        function checkIfEmpty(data) { return data === null || data === '' ? 'Nil' : data; }
-        function userActivationDeactivation(actionid) {
+        const checkIfEmpty = (data) => { return data === null || data === '' ? 'Nil' : data; };
+        const userActivationDeactivation = (actionid) => {
             overlay.show();
             axios.post(common.DataService + '?qid=001', JSON.stringify([actionid]))
-                .then(function (response) {
+                .then(response => {
                     overlay.hide();
                     if (response.data.result_code == '200') {
                         bus.emit('g-event-update-user', {});
@@ -620,18 +620,18 @@ const DistributionDetails = {
                         alert.Success('SUCCESS', 'User De/Activation Successful');
                     } else { alert.Error('ERROR', 'User De/Activation failed'); }
                 })
-                .catch(function (error) { overlay.hide(); alert.Error('ERROR', safeMessage(error)); });
+                .catch(error => { overlay.hide(); alert.Error('ERROR', safeMessage(error)); });
         }
-        function changeRole(event) { userData.baseData.role = event.target.options[event.target.options.selectedIndex].text; }
-        function changeBank(event) { userData.financeData.bank_name = event.target.options[event.target.options.selectedIndex].text; }
-        function downloadBadge(uid) {
+        const changeRole = (event) => { userData.baseData.role = event.target.options[event.target.options.selectedIndex].text; };
+        const changeBank = (event) => { userData.financeData.bank_name = event.target.options[event.target.options.selectedIndex].text; };
+        const downloadBadge = (uid) => {
             overlay.show();
             window.open(common.BadgeService + '?qid=002&e=' + uid, '_parent');
             overlay.hide();
         }
 
-        onMounted(function () { bus.on('g-event-goto-page', gotoPageHandler); });
-        onBeforeUnmount(function () { bus.off('g-event-goto-page', gotoPageHandler); });
+        onMounted(() => { bus.on('g-event-goto-page', gotoPageHandler); });
+        onBeforeUnmount(() => { bus.off('g-event-goto-page', gotoPageHandler); });
 
         return {
             userid, userDetails, user_status, bankListData, roleListData, userData,

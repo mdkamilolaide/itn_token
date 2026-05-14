@@ -80,7 +80,7 @@ const SampleTable = {
         const dpLevelData = ref([]);
         const roleListData = ref([]);
 
-        function loadTableData() {
+        const loadTableData = () => {
             overlay.show();
             var u = common.TableService;
             axios.get(
@@ -92,35 +92,35 @@ const SampleTable = {
                 '&order_dir=' + tableOptions.orderDir +
                 '&gr=' + tableOptions.filterParam.usergroup
             )
-                .then(function (response) {
+                .then(response => {
                     var d = response && response.data;
                     tableData.value = Array.isArray(d && d.data) ? d.data : [];
                     tableOptions.total = (d && d.recordsTotal) || 0;
                     if (tableOptions.currentPage == 1) paginationDefault();
                     overlay.hide();
                 })
-                .catch(function (error) {
+                .catch(error => {
                     overlay.hide();
                     alert.Error('ERROR', safeMessage(error));
                 });
         }
 
-        function selectAll()    { for (var i = 0; i < tableData.value.length; i++) tableData.value[i].pick = true; }
-        function uncheckAll()   { for (var i = 0; i < tableData.value.length; i++) tableData.value[i].pick = false; }
-        function selectToggle() {
+        const selectAll = () => { for (var i = 0; i < tableData.value.length; i++) tableData.value[i].pick = true; };
+        const uncheckAll = () => { for (var i = 0; i < tableData.value.length; i++) tableData.value[i].pick = false; };
+        const selectToggle = () => {
             if (checkToggle.value === false) { selectAll(); checkToggle.value = true; }
             else                              { uncheckAll(); checkToggle.value = false; }
         }
-        function checkedBg(pickOne) { return pickOne != '' ? 'bg-select' : ''; }
+        const checkedBg = (pickOne) => { return pickOne != '' ? 'bg-select' : ''; };
 
-        function toggleFilter() {
+        const toggleFilter = () => {
             if (filterState.value === false) filters.value = false;
             return (filterState.value = !filterState.value);
         }
-        function selectedItems() { return tableData.value.filter(function (r) { return r.pick; }); }
-        function selectedID()    { return tableData.value.filter(function (r) { return r.pick; }).map(function (r) { return r.userid; }); }
+        const selectedItems = () => { return tableData.value.filter(r => r.pick); };
+        const selectedID = () => { return tableData.value.filter(r => r.pick).map(r => r.userid); };
 
-        function totalCheckedBox() {
+        const totalCheckedBox = () => {
             var total = selectedID().length;
             var el = document.getElementById('total-selected');
             if (!el) return;
@@ -131,35 +131,35 @@ const SampleTable = {
             }
         }
 
-        function paginationDefault() {
+        const paginationDefault = () => {
             tableOptions.pageLength = Math.ceil(tableOptions.total / tableOptions.perPage);
             tableOptions.limitStart = Math.ceil((tableOptions.currentPage - 1) * tableOptions.perPage);
             tableOptions.isNext = tableOptions.currentPage < tableOptions.pageLength;
             tableOptions.isPrev = tableOptions.currentPage > 1;
         }
-        function nextPage() { tableOptions.currentPage += 1; paginationDefault(); loadTableData(); }
-        function prevPage() { tableOptions.currentPage -= 1; paginationDefault(); loadTableData(); }
-        function resetSelected() { uncheckAll(); checkToggle.value = false; totalCheckedBox(); }
-        function currentPage() {
+        const nextPage = () => { tableOptions.currentPage += 1; paginationDefault(); loadTableData(); };
+        const prevPage = () => { tableOptions.currentPage -= 1; paginationDefault(); loadTableData(); };
+        const resetSelected = () => { uncheckAll(); checkToggle.value = false; totalCheckedBox(); };
+        const currentPage = () => {
             paginationDefault();
             if (tableOptions.currentPage < 1)                            alert.Error('ERROR', "The Page requested doesn't exist");
             else if (tableOptions.currentPage > tableOptions.pageLength) alert.Error('ERROR', "The Page requested doesn't exist");
             else                                                         loadTableData();
         }
-        function changePerPage(val) {
+        const changePerPage = (val) => {
             tableOptions.currentPage = 1;
             tableOptions.perPage = val;
             paginationDefault();
             loadTableData();
         }
-        function sort(col) {
+        const sort = (col) => {
             if (tableOptions.orderField === col) tableOptions.orderDir = tableOptions.orderDir === 'asc' ? 'desc' : 'asc';
             else                                  tableOptions.orderField = col;
             paginationDefault();
             loadTableData();
         }
 
-        function applyFilter() {
+        const applyFilter = () => {
             var checkFill = tableOptions.filterParam.usergroup != '' ? 1 : 0;
             if (checkFill > 0) {
                 toggleFilter();
@@ -170,14 +170,14 @@ const SampleTable = {
                 alert.Error('ERROR', 'Invalid required data');
             }
         }
-        function clearAllFilter() {
+        const clearAllFilter = () => {
             filters.value = false;
             tableOptions.filterParam.usergroup = '';
             paginationDefault();
             loadTableData();
         }
 
-        function activateUserByGroup(group) {
+        const activateUserByGroup = (group) => {
             var u = common.DataService;
             $.confirm({
                 title: 'WARNING!',
@@ -185,9 +185,9 @@ const SampleTable = {
                 buttons: {
                     delete: {
                         text: 'Activate All', btnClass: 'btn btn-danger mr-1',
-                        action: function () {
+                        action: () => {
                             axios.post(u + '?qid=004&e=' + group)
-                                .then(function (response) {
+                                .then(response => {
                                     overlay.hide();
                                     if (response.data.result_code == '201') {
                                         loadTableData();
@@ -196,17 +196,17 @@ const SampleTable = {
                                         alert.Error('ERROR', 'Unable to activate ' + response.data.group + ' at the moment please try again later');
                                     }
                                 })
-                                .catch(function (error) {
+                                .catch(error => {
                                     overlay.hide();
                                     alert.Error('ERROR', safeMessage(error));
                                 });
                         },
                     },
-                    cancel: function () { overlay.hide(); },
+                    cancel: () => { overlay.hide(); },
                 },
             });
         }
-        function deactivateUserByGroup(group) {
+        const deactivateUserByGroup = (group) => {
             var u = common.DataService;
             overlay.show();
             $.confirm({
@@ -215,9 +215,9 @@ const SampleTable = {
                 buttons: {
                     delete: {
                         text: 'Deactivate All', btnClass: 'btn btn-danger mr-1',
-                        action: function () {
+                        action: () => {
                             axios.post(u + '?qid=003&e=' + group)
-                                .then(function (response) {
+                                .then(response => {
                                     overlay.hide();
                                     if (response.data.result_code == '201') {
                                         loadTableData();
@@ -226,32 +226,32 @@ const SampleTable = {
                                         alert.Error('ERROR', 'Unable to deactivate ' + response.data.group + ' at the moment please try again later.');
                                     }
                                 })
-                                .catch(function (error) {
+                                .catch(error => {
                                     overlay.hide();
                                     alert.Error('ERROR', safeMessage(error));
                                 });
                         },
                     },
-                    cancel: function () { overlay.hide(); },
+                    cancel: () => { overlay.hide(); },
                 },
             });
         }
 
-        function showBulkUserModal() {
+        const showBulkUserModal = () => {
             bulkUserModal.value = true;
             bulkUserForm.groupName = '';
             clearAllFilter();
         }
-        function hideBulkUserModal() {
+        const hideBulkUserModal = () => {
             bulkUserModal.value = false;
             bulkUserForm.groupName = '';
             tableOptions.filterParam.usergroup = '';
         }
 
-        function getsysDefaultDataSettings() {
+        const getsysDefaultDataSettings = () => {
             overlay.show();
             axios.get(common.DataService + '?qid=gen007')
-                .then(function (response) {
+                .then(response => {
                     if (response.data.data && response.data.data.length > 0) {
                         sysDefaultData.value = response.data.data[0];
                         getLgasLevel(response.data.data[0].stateid);
@@ -261,100 +261,100 @@ const SampleTable = {
                     }
                     overlay.hide();
                 })
-                .catch(function (error) {
+                .catch(error => {
                     overlay.hide();
                     alert.Error('ERROR', safeMessage(error));
                 });
         }
-        function getGeoLevel() {
+        const getGeoLevel = () => {
             overlay.show();
             axios.get(common.DataService + '?qid=gen001')
-                .then(function (response) {
+                .then(response => {
                     geoLevelData.value = (response.data && response.data.data) || [];
                     overlay.hide();
                 })
-                .catch(function (error) {
+                .catch(error => {
                     overlay.hide();
                     alert.Error('ERROR', safeMessage(error));
                 });
         }
-        function getLgasLevel(stateid) {
+        const getLgasLevel = (stateid) => {
             overlay.show();
             axios.post(common.DataService + '?qid=gen003', JSON.stringify(stateid))
-                .then(function (response) {
+                .then(response => {
                     lgaLevelData.value = (response.data && response.data.data) || [];
                     overlay.hide();
                 })
-                .catch(function (error) {
+                .catch(error => {
                     overlay.hide();
                     alert.Error('ERROR', safeMessage(error));
                 });
         }
-        function getClusterLevel() {
+        const getClusterLevel = () => {
             overlay.show();
             axios.get(common.DataService + '?qid=gen004&e=' + geoIndicator.cluster)
-                .then(function (response) {
+                .then(response => {
                     clusterLevelData.value = (response.data && response.data.data) || [];
                     overlay.hide();
                 })
-                .catch(function (error) {
+                .catch(error => {
                     overlay.hide();
                     alert.Error('ERROR', safeMessage(error));
                 });
         }
-        function getWardLevel() {
+        const getWardLevel = () => {
             overlay.show();
             axios.get(common.DataService + '?qid=gen005&e=' + geoIndicator.lga)
-                .then(function (response) {
+                .then(response => {
                     wardLevelData.value = (response.data && response.data.data) || [];
                     overlay.hide();
                 })
-                .catch(function (error) {
+                .catch(error => {
                     overlay.hide();
                     alert.Error('ERROR', safeMessage(error));
                 });
         }
-        function getDpLevel() {
+        const getDpLevel = () => {
             overlay.show();
             axios.get(common.DataService + '?qid=gen006&wardid=' + geoIndicator.ward)
-                .then(function (response) {
+                .then(response => {
                     dpLevelData.value = (response.data && response.data.data) || [];
                     overlay.hide();
                 })
-                .catch(function (error) {
+                .catch(error => {
                     overlay.hide();
                     alert.Error('ERROR', safeMessage(error));
                 });
         }
-        function getAllUserGroup() {
+        const getAllUserGroup = () => {
             overlay.show();
             axios.get(common.DataService + '?qid=026')
-                .then(function (response) {
+                .then(response => {
                     var group = [];
                     var rows = (response.data && response.data.data) || [];
                     for (var i = 0; i < rows.length; i++) group.push(rows[i]['user_group']);
                     userGroup.value = group;
                     overlay.hide();
                 })
-                .catch(function (error) {
+                .catch(error => {
                     overlay.hide();
                     alert.Error('ERROR', safeMessage(error));
                 });
         }
-        function getRoleList() {
+        const getRoleList = () => {
             overlay.show();
             axios.get(common.DataService + '?qid=007')
-                .then(function (response) {
+                .then(response => {
                     roleListData.value = (response.data && response.data.data) || [];
                     overlay.hide();
                 })
-                .catch(function (error) {
+                .catch(error => {
                     overlay.hide();
                     alert.Error('ERROR', safeMessage(error));
                 });
         }
 
-        function changeGeoLevel() {
+        const changeGeoLevel = () => {
             if (bulkUserForm.geoLevel == 'country') {
                 alert.Error('ERROR', 'Invalid Geo-Level selected, please select a valid Geo-Level');
             } else if (bulkUserForm.geoLevel == 'state') {
@@ -367,11 +367,11 @@ const SampleTable = {
             }
         }
 
-        function onSubmitBulkUserCreation() {
+        const onSubmitBulkUserCreation = () => {
             var u = common.DataService;
             overlay.show();
             axios.post(u + '?qid=002', JSON.stringify(bulkUserForm))
-                .then(function (response) {
+                .then(response => {
                     if (response.data.result_code == '201') {
                         resetBulkUserForm();
                         bulkUserModal.value = false;
@@ -387,13 +387,13 @@ const SampleTable = {
                         alert.Error('Error', 'Users Creation Failed, Kindly check your input fields');
                     }
                 })
-                .catch(function (error) {
+                .catch(error => {
                     alert.Error('ERROR', safeMessage(error));
                     overlay.hide();
                 });
         }
 
-        function resetBulkUserForm() {
+        const resetBulkUserForm = () => {
             bulkUserForm.totalUser = 1;
             bulkUserForm.groupName = '';
             bulkUserForm.password = '';
@@ -402,19 +402,19 @@ const SampleTable = {
             overlay.hide();
         }
 
-        function refreshData() {
+        const refreshData = () => {
             paginationDefault();
             getAllUserGroup();
             loadTableData();
         }
 
-        function downloadGroupBadge(user_group) {
+        const downloadGroupBadge = (user_group) => {
             overlay.show();
             var iframe = document.createElement('iframe');
             iframe.style.display = 'none';
             iframe.src = url.value + '?qid=001&e=' + user_group;
             document.body.appendChild(iframe);
-            setTimeout(function () {
+            setTimeout(() => {
                 overlay.hide();
                 if (iframe.parentNode) iframe.parentNode.removeChild(iframe);
             }, 5000);
@@ -423,7 +423,7 @@ const SampleTable = {
         // Lightweight autocomplete that wires the listeners onto a DOM input
         // by id. Preserved from the v2 component for the "Group Name" field
         // and the filter "User Group" field.
-        function autocomplete(inp, arr) {
+        const autocomplete = (inp, arr) => {
             if (!inp) return;
             var currentFocus;
             inp.addEventListener('input', function () {
@@ -459,15 +459,15 @@ const SampleTable = {
                     if (currentFocus > -1 && x) x[currentFocus].click();
                 }
             });
-            function addActive(x) {
+            const addActive = (x) => {
                 if (!x) return false;
                 removeActive(x);
                 if (currentFocus >= x.length) currentFocus = 0;
                 if (currentFocus < 0) currentFocus = x.length - 1;
                 x[currentFocus].classList.add('autocomplete-active');
             }
-            function removeActive(x) { for (var i = 0; i < x.length; i++) x[i].classList.remove('autocomplete-active'); }
-            function closeAllLists(elmnt) {
+            const removeActive = (x) => { for (var i = 0; i < x.length; i++) x[i].classList.remove('autocomplete-active'); };
+            const closeAllLists = (elmnt) => {
                 var x = document.getElementsByClassName('autocomplete-items');
                 for (var i = 0; i < x.length; i++) {
                     if (elmnt != x[i] && elmnt != inp) {
@@ -477,16 +477,16 @@ const SampleTable = {
                     }
                 }
             }
-            document.addEventListener('click', function () {
+            document.addEventListener('click', () => {
                 var node = document.getElementById('group-nameautocomplete-list');
                 if (node) node.innerHTML = '';
             });
         }
 
-        function loadAuto()  { autocomplete(document.getElementById('group-name'), userGroup.value); }
-        function autoGroup() { autocomplete(document.getElementById('usergroup'),  userGroup.value); }
+        const loadAuto = () => { autocomplete(document.getElementById('group-name'), userGroup.value); };
+        const autoGroup = () => { autocomplete(document.getElementById('usergroup'),  userGroup.value); };
 
-        onMounted(function () {
+        onMounted(() => {
             getGeoLevel();
             getsysDefaultDataSettings();
             getAllUserGroup();

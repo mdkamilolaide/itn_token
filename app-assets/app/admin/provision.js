@@ -30,7 +30,7 @@ const SampleTable = {
 
         let flatpickrInstance = null;
 
-        function resetDate() {
+        const resetDate = () => {
             if (filterState.value == 0) {
                 expiringDate.value = '';
                 if (flatpickrInstance && typeof flatpickrInstance.clear === 'function') {
@@ -39,14 +39,14 @@ const SampleTable = {
             }
         }
 
-        function downloadBadge(date) {
+        const downloadBadge = (date) => {
             overlay.show();
             var url = common.DpBadgeService;
             window.open(url + '?qid=003&date=' + date, '_parent');
             overlay.hide();
         }
 
-        onMounted(function () {
+        onMounted(() => {
             // flatpickr is loaded via the submodule.provision deps; guard anyway.
             var $el = $('#date');
             if ($el.length && typeof $el.flatpickr === 'function') {
@@ -55,14 +55,14 @@ const SampleTable = {
                     altFormat: 'F j, Y',
                     dateFormat: 'Y-m-d',
                     minDate: 'today',
-                    onChange: function (selectedDates, dateStr) {
+                    onChange: (selectedDates, dateStr) => {
                         expiringDate.value = dateStr;
                     },
                 });
             }
         });
 
-        onBeforeUnmount(function () {
+        onBeforeUnmount(() => {
             if (flatpickrInstance && typeof flatpickrInstance.destroy === 'function') {
                 try { flatpickrInstance.destroy(); } catch (e) { /* swallow */ }
                 flatpickrInstance = null;

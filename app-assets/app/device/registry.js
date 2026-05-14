@@ -65,7 +65,7 @@ const SampleTable = {
         const showCamera = ref(false);
         const deviceDetails = ref({});
 
-        function loadTableData() {
+        const loadTableData = () => {
             overlay.show();
             var url = common.TableService;
             axios.get(
@@ -78,66 +78,66 @@ const SampleTable = {
                 '&act=' + tableOptions.filterParam.status +
                 '&sno=' + tableOptions.filterParam.serial_no
             )
-                .then(function (response) {
+                .then(response => {
                     var d = response && response.data;
                     tableData.value = Array.isArray(d && d.data) ? d.data : [];
                     tableOptions.total = (d && d.recordsTotal) || 0;
                     if (tableOptions.currentPage == 1) paginationDefault();
                     overlay.hide();
                 })
-                .catch(function (error) {
+                .catch(error => {
                     overlay.hide();
                     alert.Error('ERROR', safeMessage(error));
                 });
         }
 
-        function selectAll() {
+        const selectAll = () => {
             for (var i = 0; i < tableData.value.length; i++) tableData.value[i].pick = true;
         }
-        function uncheckAll() {
+        const uncheckAll = () => {
             for (var i = 0; i < tableData.value.length; i++) tableData.value[i].pick = false;
         }
-        function selectToggle() {
+        const selectToggle = () => {
             if (checkToggle.value === false) { selectAll(); checkToggle.value = true; }
             else                              { uncheckAll(); checkToggle.value = false; }
         }
-        function checkedBg(pickOne) { return pickOne != '' ? 'bg-select' : ''; }
+        const checkedBg = (pickOne) => { return pickOne != '' ? 'bg-select' : ''; };
 
-        function toggleFilter() {
+        const toggleFilter = () => {
             if (filterState.value === false) filters.value = false;
             return (filterState.value = !filterState.value);
         }
 
-        function selectedItems() {
-            return tableData.value.filter(function (r) { return r.pick; });
+        const selectedItems = () => {
+            return tableData.value.filter(r => r.pick);
         }
-        function selectedID() {
-            return tableData.value.filter(function (r) { return r.pick; }).map(function (r) { return r.serial_no; });
+        const selectedID = () => {
+            return tableData.value.filter(r => r.pick).map(r => r.serial_no);
         }
 
-        function paginationDefault() {
+        const paginationDefault = () => {
             tableOptions.pageLength = Math.ceil(tableOptions.total / tableOptions.perPage);
             tableOptions.limitStart = Math.ceil((tableOptions.currentPage - 1) * tableOptions.perPage);
             tableOptions.isNext = tableOptions.currentPage < tableOptions.pageLength;
             tableOptions.isPrev = tableOptions.currentPage > 1;
         }
 
-        function nextPage() { tableOptions.currentPage += 1; paginationDefault(); loadTableData(); }
-        function prevPage() { tableOptions.currentPage -= 1; paginationDefault(); loadTableData(); }
-        function currentPage() {
+        const nextPage = () => { tableOptions.currentPage += 1; paginationDefault(); loadTableData(); };
+        const prevPage = () => { tableOptions.currentPage -= 1; paginationDefault(); loadTableData(); };
+        const currentPage = () => {
             paginationDefault();
             if (tableOptions.currentPage < 1)                            alert.Error('ERROR', "The Page requested doesn't exist");
             else if (tableOptions.currentPage > tableOptions.pageLength) alert.Error('ERROR', "The Page requested doesn't exist");
             else                                                         loadTableData();
         }
-        function changePerPage(val) {
+        const changePerPage = (val) => {
             var maxPerPage = Math.ceil(tableOptions.total / val);
             if (maxPerPage < tableOptions.currentPage) tableOptions.currentPage = maxPerPage;
             tableOptions.perPage = val;
             paginationDefault();
             loadTableData();
         }
-        function sort(col) {
+        const sort = (col) => {
             if (tableOptions.orderField === col) {
                 tableOptions.orderDir = tableOptions.orderDir === 'asc' ? 'desc' : 'asc';
             } else {
@@ -146,7 +146,7 @@ const SampleTable = {
             paginationDefault();
             loadTableData();
         }
-        function applyFilter() {
+        const applyFilter = () => {
             var checkFill = 0;
             checkFill += tableOptions.filterParam.status    != '' ? 1 : 0;
             checkFill += tableOptions.filterParam.serial_no != '' ? 1 : 0;
@@ -159,7 +159,7 @@ const SampleTable = {
                 alert.Error('ERROR', 'Invalid required data');
             }
         }
-        function removeSingleFilter(column_name) {
+        const removeSingleFilter = (column_name) => {
             tableOptions.filterParam[column_name] = '';
             var g = 0;
             for (var k in tableOptions.filterParam) {
@@ -169,16 +169,16 @@ const SampleTable = {
             paginationDefault();
             loadTableData();
         }
-        function clearAllFilter() {
+        const clearAllFilter = () => {
             filters.value = false;
             tableOptions.filterParam.status = '';
             tableOptions.filterParam.serial_no = '';
             paginationDefault();
             loadTableData();
         }
-        function refreshData() { paginationDefault(); loadTableData(); }
+        const refreshData = () => { paginationDefault(); loadTableData(); };
 
-        function deviceActivationDeactivation(serial_no, active_status) {
+        const deviceActivationDeactivation = (serial_no, active_status) => {
             var url = common.DataService;
             var message, btn_text, btn_class, response_txt;
             if (active_status == '1') {
@@ -199,9 +199,9 @@ const SampleTable = {
                     delete: {
                         text: btn_text,
                         btnClass: 'btn mr-1' + btn_class,
-                        action: function () {
+                        action: () => {
                             axios.post(url + '?qid=501&sn=' + serial_no)
-                                .then(function (response) {
+                                .then(response => {
                                     if (response.data.result_code == '200') {
                                         loadTableData();
                                         alert.Success('SUCCESS', response_txt);
@@ -209,17 +209,17 @@ const SampleTable = {
                                         alert.Error('ERROR', "Unable to De/Activate Device with Serial No <b>" + serial_no + "</b> at the moment please try again later");
                                     }
                                 })
-                                .catch(function (error) {
+                                .catch(error => {
                                     alert.Error('ERROR', safeMessage(error));
                                 });
                         },
                     },
-                    cancel: function () {},
+                    cancel: () => {},
                 },
             });
         }
 
-        function bulkDeActivateDevice() {
+        const bulkDeActivateDevice = () => {
             var ids = selectedID();
             if (ids.length < 1) {
                 alert.Error('ERROR', 'No Device selected');
@@ -233,9 +233,9 @@ const SampleTable = {
                     delete: {
                         text: 'De/Activate',
                         btnClass: 'btn btn-danger mr-1',
-                        action: function () {
+                        action: () => {
                             axios.post(url + '?qid=502', JSON.stringify(ids))
-                                .then(function (response) {
+                                .then(response => {
                                     overlay.hide();
                                     if (response.data.result_code == '200') {
                                         loadTableData();
@@ -244,18 +244,18 @@ const SampleTable = {
                                         alert.Error('ERROR', 'Device De/Activation failed');
                                     }
                                 })
-                                .catch(function (error) {
+                                .catch(error => {
                                     overlay.hide();
                                     alert.Error('ERROR', safeMessage(error));
                                 });
                         },
                     },
-                    cancel: function () { overlay.hide(); },
+                    cancel: () => { overlay.hide(); },
                 },
             });
         }
 
-        function deleteDevice(serial_no, state) {
+        const deleteDevice = (serial_no, state) => {
             var url = common.DataService;
             var message;
             var selected_data;
@@ -278,9 +278,9 @@ const SampleTable = {
                     delete: {
                         text: 'Delete',
                         btnClass: 'btn btn-danger mr-1',
-                        action: function () {
+                        action: () => {
                             axios.post(url + '?qid=503', selected_data)
-                                .then(function (response) {
+                                .then(response => {
                                     overlay.hide();
                                     if (response.data.result_code == '200') {
                                         loadTableData();
@@ -289,18 +289,18 @@ const SampleTable = {
                                         alert.Error('ERROR', 'Device Removal failed');
                                     }
                                 })
-                                .catch(function (error) {
+                                .catch(error => {
                                     overlay.hide();
                                     alert.Error('ERROR', safeMessage(error));
                                 });
                         },
                     },
-                    cancel: function () { overlay.hide(); },
+                    cancel: () => { overlay.hide(); },
                 },
             });
         }
 
-        function showUpdateDeviceModal(update_state, index) {
+        const showUpdateDeviceModal = (update_state, index) => {
             resetForm();
             if (update_state === 'bulk') {
                 appSerialState.value = true;
@@ -316,11 +316,11 @@ const SampleTable = {
             }
             $('#updateDeviceDetails').modal({ backdrop: 'static', keyboard: false });
         }
-        function hideUpdateDeviceModal() {
+        const hideUpdateDeviceModal = () => {
             resetForm();
             $('#updateDeviceDetails').modal('hide');
         }
-        function resetForm() {
+        const resetForm = () => {
             deviceDetailsForm.appSerial = '';
             deviceDetailsForm.imeiOne = '';
             deviceDetailsForm.imeiTwo = '';
@@ -328,11 +328,11 @@ const SampleTable = {
             deviceDetailsForm.simCardSerialNo = '';
             overlay.hide();
         }
-        function updateDeviceDetails() {
+        const updateDeviceDetails = () => {
             var url = common.DataService;
             overlay.show();
             axios.post(url + '?qid=504', JSON.stringify(deviceDetailsForm))
-                .then(function (response) {
+                .then(response => {
                     if (response.data.result_code == '200') {
                         hideUpdateDeviceModal();
                         alert.Success('Success', response.data.data);
@@ -343,13 +343,13 @@ const SampleTable = {
                         alert.Error('Error', response.data.data);
                     }
                 })
-                .catch(function (error) {
+                .catch(error => {
                     alert.Error('ERROR', safeMessage(error));
                     overlay.hide();
                 });
         }
 
-        function startCamera(field_name, action) {
+        const startCamera = (field_name, action) => {
             showCamera.value = true;
             currentField.value = field_name;
             if (typeof ZXing === 'undefined') {
@@ -364,11 +364,11 @@ const SampleTable = {
                 if (video && video.srcObject) {
                     var tracks = video.srcObject.getTracks();
                     if (tracks[0]) tracks[0].stop();
-                    tracks.forEach(function (t) { t.stop(); });
+                    tracks.forEach(t => { t.stop(); });
                 }
                 showCamera.value = false;
             } else {
-                codeReader.decodeFromVideoDevice(null, 'webcam-preview', function (result, err) {
+                codeReader.decodeFromVideoDevice(null, 'webcam-preview', (result, err) => {
                     var current = currentField.value;
                     if (result) {
                         deviceDetailsForm[current] = (field_name === 'appSerial') ? result.text.split('|')[0].trim() : result.text;
@@ -384,20 +384,20 @@ const SampleTable = {
             }
         }
 
-        function showDeviceDetailsModal(i) {
+        const showDeviceDetailsModal = (i) => {
             deviceDetails.value = tableData.value[i] || {};
             $('#deviceDetails').modal('show');
         }
-        function hideDeviceDetailsModal() {
+        const hideDeviceDetailsModal = () => {
             overlay.show();
             $('#deviceDetails').modal('hide');
             overlay.hide();
         }
 
-        function checkIfEmpty(data) {
+        const checkIfEmpty = (data) => {
             return data === null || data === '' || data === undefined ? 'Nil' : data;
         }
-        function displayDate(d) {
+        const displayDate = (d) => {
             var date = new Date(d);
             return date.toLocaleString('en-us', {
                 year: 'numeric', month: 'long', day: 'numeric',
@@ -405,7 +405,7 @@ const SampleTable = {
             });
         }
 
-        onMounted(function () {
+        onMounted(() => {
             loadTableData();
         });
 

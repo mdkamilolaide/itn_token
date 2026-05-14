@@ -58,7 +58,7 @@ const SampleTable = {
         const selectedData = ref([]);
         const selectedID = ref([]);
 
-        function getTable($table, queryString) {
+        const getTable = ($table, queryString) => {
             return $table.DataTable({
                 processing: true,
                 serverSide: true,
@@ -72,36 +72,36 @@ const SampleTable = {
             });
         }
 
-        function freshLoad() {
+        const freshLoad = () => {
             inTable = getTable($('#basicTable'), 'qid=100');
         }
 
-        function refreshList() {
+        const refreshList = () => {
             $('#basicTable').DataTable().ajax.reload();
         }
 
-        function loadList() {
+        const loadList = () => {
             if ($.fn.dataTable.isDataTable('#basicTable')) refreshList();
             else freshLoad();
         }
 
-        function ReloadList() {
+        const ReloadList = () => {
             $('#basicTable').DataTable().ajax.url(common.TableService + '?qid=100').load();
         }
 
-        function loadTableData() {
+        const loadTableData = () => {
             // Kept for API parity with the v2 component — populates tableData
             // from qid=sam001. Not used by the DataTables flow above.
             axios.get(common.DataService + '?qid=sam001')
-                .then(function (response) {
+                .then(response => {
                     tableData.value = (response.data && response.data.data) || [];
                 })
-                .catch(function (error) {
+                .catch(error => {
                     alert.Error('ERROR', safeMessage(error));
                 });
         }
 
-        function getSelectedData() {
+        const getSelectedData = () => {
             if (!inTable) return;
             var indexes = inTable.rows({ selected: true })[0];
             selectedData.value = inTable.rows(indexes).data().toArray();
@@ -113,11 +113,11 @@ const SampleTable = {
             }
         }
 
-        onMounted(function () {
+        onMounted(() => {
             loadList();
         });
 
-        onBeforeUnmount(function () {
+        onBeforeUnmount(() => {
             // Destroy the DataTable on unmount so we don't leak on hot reload
             // or page transitions that re-create the same #basicTable id.
             if (inTable) {

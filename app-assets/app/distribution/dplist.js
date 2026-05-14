@@ -45,23 +45,23 @@ const DashboardContainer = {
         const tableData = ref([]);
         const bulkUserForm = reactive({ geoLevel: '', geoLevelId: 0, mobilizationDate: '' });
 
-        function getAllStat() {
+        const getAllStat = () => {
             var endpoints = [common.DataService + '?qid=401a&lgaid=' + geoIndicator.lga];
             overlay.show();
-            Promise.all(endpoints.map(function (e) { return axios.get(e); })).then(
-                axios.spread(function (...allData) {
+            Promise.all(endpoints.map(e => axios.get(e))).then(
+                axios.spread((...allData) => {
                     tableData.value = (allData[0] && allData[0].data && allData[0].data.data) || [];
                     overlay.hide();
                 })
-            ).catch(function (error) {
+            ).catch(error => {
                 overlay.hide();
                 alert.Error('ERROR', safeMessage(error));
             });
         }
-        function getsysDefaultDataSettings() {
+        const getsysDefaultDataSettings = () => {
             overlay.show();
             axios.get(common.DataService + '?qid=gen007')
-                .then(function (response) {
+                .then(response => {
                     if (response.data.data && response.data.data.length > 0) {
                         sysDefaultData.value = response.data.data[0];
                         getLgasLevel(response.data.data[0].stateid);
@@ -70,59 +70,59 @@ const DashboardContainer = {
                     }
                     overlay.hide();
                 })
-                .catch(function (error) {
+                .catch(error => {
                     overlay.hide();
                     alert.Error('ERROR', safeMessage(error));
                 });
         }
-        function getGeoLevel() {
+        const getGeoLevel = () => {
             overlay.show();
             axios.get(common.DataService + '?qid=gen001')
-                .then(function (response) {
+                .then(response => {
                     geoLevelData.value = (response.data && response.data.data) || [];
                     overlay.hide();
                 })
-                .catch(function (error) {
+                .catch(error => {
                     overlay.hide();
                     alert.Error('ERROR', safeMessage(error));
                 });
         }
-        function getLgasLevel(stateid) {
+        const getLgasLevel = (stateid) => {
             overlay.show();
             axios.post(common.DataService + '?qid=gen003', JSON.stringify(stateid))
-                .then(function (response) {
+                .then(response => {
                     lgaLevelData.value = (response.data && response.data.data) || [];
                     overlay.hide();
                 })
-                .catch(function (error) {
+                .catch(error => {
                     overlay.hide();
                     alert.Error('ERROR', safeMessage(error));
                 });
         }
-        function getWardLevel() {
+        const getWardLevel = () => {
             overlay.show();
             bulkUserForm.geoLevelId = '';
             axios.get(common.DataService + '?qid=gen005&e=' + geoIndicator.lga)
-                .then(function (response) {
+                .then(response => {
                     wardLevelData.value = (response.data && response.data.data) || [];
                     overlay.hide();
                 })
-                .catch(function (error) {
+                .catch(error => {
                     overlay.hide();
                     alert.Error('ERROR', safeMessage(error));
                 });
         }
 
-        function selectAll()  { for (var i = 0; i < tableData.value.length; i++) tableData.value[i].pick = true; }
-        function uncheckAll() { for (var i = 0; i < tableData.value.length; i++) tableData.value[i].pick = false; }
-        function selectToggle() {
+        const selectAll = () => { for (var i = 0; i < tableData.value.length; i++) tableData.value[i].pick = true; };
+        const uncheckAll = () => { for (var i = 0; i < tableData.value.length; i++) tableData.value[i].pick = false; };
+        const selectToggle = () => {
             if (checkToggle.value === false) { selectAll(); checkToggle.value = true; }
             else                              { uncheckAll(); checkToggle.value = false; }
         }
-        function checkedBg(p) { return p != '' ? 'bg-select' : ''; }
-        function selectedID() { return tableData.value.filter(function (r) { return r.pick; }).map(function (r) { return r.dpid; }); }
+        const checkedBg = (p) => { return p != '' ? 'bg-select' : ''; };
+        const selectedID = () => { return tableData.value.filter(r => r.pick).map(r => r.dpid); };
 
-        function downloadDpBadge(i) {
+        const downloadDpBadge = (i) => {
             overlay.show();
             var row = tableData.value[i];
             if (!row) { overlay.hide(); return; }
@@ -134,12 +134,12 @@ const DashboardContainer = {
             iframe.style.display = 'none';
             iframe.src = url;
             document.body.appendChild(iframe);
-            setTimeout(function () {
+            setTimeout(() => {
                 overlay.hide();
                 document.body.removeChild(iframe);
             }, 5000);
         }
-        function downloadBadges() {
+        const downloadBadges = () => {
             overlay.show();
             if (parseInt(selectedID().length) > 0) {
                 window.open(common.DpBadgeService + '?qid=001&e=' + selectedID(), '_parent');
@@ -148,7 +148,7 @@ const DashboardContainer = {
             }
             overlay.hide();
         }
-        function loadDp() {
+        const loadDp = () => {
             if (geoIndicator.lga == '') {
                 alert.Error('Error', 'Kindly choose a LGA and Ward');
                 return;
@@ -156,7 +156,7 @@ const DashboardContainer = {
             getAllStat();
         }
 
-        onMounted(function () {
+        onMounted(() => {
             getGeoLevel();
             getsysDefaultDataSettings();
             $('#dp-search').on('keyup', function () {

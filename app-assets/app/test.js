@@ -7,10 +7,10 @@ const { useApp } = window.utils;
 
 useApp({
     setup() {
-        function clickInfo()    { alert.Info('Testa', 'Testing to know if this will work'); }
-        function clickError()   { alert.Error('Testa', 'Testing to know if this will work'); }
-        function clickSuccess() { alert.Success('Testa', 'Testing to know if this will work'); }
-        function clickWarning() { alert.Warning('Testa', 'Testing to know if this will work'); }
+        const clickInfo = () => { alert.Info('Testa', 'Testing to know if this will work'); };
+        const clickError = () => { alert.Error('Testa', 'Testing to know if this will work'); };
+        const clickSuccess = () => { alert.Success('Testa', 'Testing to know if this will work'); };
+        const clickWarning = () => { alert.Warning('Testa', 'Testing to know if this will work'); };
         return { clickInfo, clickError, clickSuccess, clickWarning };
     },
     template: `

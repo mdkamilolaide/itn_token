@@ -13,7 +13,7 @@
  * load utils.js but typically don't reference it.
  */
 
-(function (root) {
+(root => {
     'use strict';
 
     var utils = {};
@@ -22,7 +22,7 @@
      * Formatting
      * ------------------------------------------------------------------ */
 
-    utils.displayDate = function (d) {
+    utils.displayDate = d => {
         if (!d) return '';
         var date = new Date(d);
         if (isNaN(date.getTime())) return '';
@@ -33,45 +33,37 @@
         });
     };
 
-    utils.capitalize = function (word) {
+    utils.capitalize = word => {
         if (!word) return word;
         var lower = String(word).toLowerCase();
         return lower.charAt(0).toUpperCase() + lower.slice(1);
     };
 
-    utils.capitalizeEachWords = function (text) {
+    utils.capitalizeEachWords = text => {
         if (!text) return text;
         return String(text)
             .toLowerCase()
             .split(' ')
-            .map(function (w) {
-                return w.length ? w.charAt(0).toUpperCase() + w.slice(1) : w;
-            })
+            .map(w => w.length ? w.charAt(0).toUpperCase() + w.slice(1) : w)
             .join(' ');
     };
 
-    utils.formatNumber = function (num) {
+    utils.formatNumber = num => {
         var n = num ? parseInt(num, 10) : 0;
         return n ? n.toLocaleString() : 0;
     };
 
     /** Safe number formatter used everywhere defensive null-guards are needed. */
-    utils.fmt = function (v) {
-        return parseInt(v || 0).toLocaleString();
-    };
+    utils.fmt = v => parseInt(v || 0).toLocaleString();
 
-    utils.checkIfEmpty = function (v) {
-        return v === null || v === '' || v === undefined ? 'Nil' : v;
-    };
+    utils.checkIfEmpty = v => v === null || v === '' || v === undefined ? 'Nil' : v;
 
-    utils.convertStringNumberToFigures = function (d) {
-        return utils.fmt(d);
-    };
+    utils.convertStringNumberToFigures = d => utils.fmt(d);
 
     /** Builds a filename-safe timestamp like "08-May-06_40_15_AM". */
-    utils.formatTimestampForFilename = function () {
+    utils.formatTimestampForFilename = () => {
         var now = new Date();
-        var pad2 = function (n) { return String(n).padStart(2, '0'); };
+        var pad2 = n => String(n).padStart(2, '0');
         var day = pad2(now.getDate());
         var month = now.toLocaleString('default', { month: 'short' });
         var hours = now.getHours();
@@ -92,14 +84,14 @@
         'Tab', 'Escape', 'Home', 'End',
     ];
 
-    utils.numbersOnlyWithoutDot = function (event) {
+    utils.numbersOnlyWithoutDot = event => {
         if (ALLOWED_NAV_KEYS.indexOf(event.key) !== -1) return;
         if (!/^\d$/.test(event.key)) {
             event.preventDefault();
         }
     };
 
-    utils.validatePaste = function (event) {
+    utils.validatePaste = event => {
         var pasteData = (event.clipboardData || window.clipboardData).getData('text');
         if (!/^\d+$/.test(pasteData)) {
             event.preventDefault();
@@ -111,17 +103,17 @@
      * Reads URLs from window.common (already loaded by common.js).
      * ------------------------------------------------------------------ */
 
-    utils.dataQuery = function (qid, params) {
+    utils.dataQuery = (qid, params) => {
         var url = (window.common && window.common.DataService) || '';
         return axios.get(url, { params: Object.assign({ qid: qid }, params || {}) });
     };
 
-    utils.tableQuery = function (qid, params) {
+    utils.tableQuery = (qid, params) => {
         var url = (window.common && window.common.TableService) || '';
         return axios.get(url, { params: Object.assign({ qid: qid }, params || {}) });
     };
 
-    utils.exportPost = function (qid, body) {
+    utils.exportPost = (qid, body) => {
         var url = (window.common && window.common.ExportService) || '';
         return axios.post(url + '?qid=' + encodeURIComponent(qid), body);
     };
@@ -131,7 +123,7 @@
      * Server returns { result_code, message } JSON for 4xx; surface that
      * before falling back to error.message or String(error).
      */
-    utils.safeMessage = function (err) {
+    utils.safeMessage = err => {
         if (err && err.response && err.response.data && err.response.data.message) {
             return err.response.data.message;
         }
@@ -147,15 +139,15 @@
      * Mini-mitt: ~25 LOC, no external dependency.
      * ------------------------------------------------------------------ */
 
-    utils.bus = (function () {
+    utils.bus = (() => {
         var all = new Map();
         return {
-            on: function (type, handler) {
+            on: (type, handler) => {
                 var arr = all.get(type);
                 if (!arr) { arr = []; all.set(type, arr); }
                 arr.push(handler);
             },
-            off: function (type, handler) {
+            off: (type, handler) => {
                 var arr = all.get(type);
                 if (!arr) return;
                 if (handler === undefined) {
@@ -165,12 +157,12 @@
                 var i = arr.indexOf(handler);
                 if (i >= 0) arr.splice(i, 1);
             },
-            emit: function (type, evt) {
+            emit: (type, evt) => {
                 var arr = all.get(type);
                 if (!arr) return;
-                arr.slice().forEach(function (h) { h(evt); });
+                arr.slice().forEach(h => { h(evt); });
             },
-            clear: function () { all.clear(); },
+            clear: () => { all.clear(); },
         };
     })();
 
@@ -181,37 +173,33 @@
      * unchanged after returning these from setup().
      * ------------------------------------------------------------------ */
 
-    utils.useFormat = function () {
-        return {
-            displayDate: utils.displayDate,
-            capitalize: utils.capitalize,
-            capitalizeEachWords: utils.capitalizeEachWords,
-            formatNumber: utils.formatNumber,
-            convertStringNumberToFigures: utils.convertStringNumberToFigures,
-            fmt: utils.fmt,
-            checkIfEmpty: utils.checkIfEmpty,
-            numbersOnlyWithoutDot: utils.numbersOnlyWithoutDot,
-            validatePaste: utils.validatePaste,
-            percentageUsed: utils.percentageUsed,
-            progressBarWidth: utils.progressBarWidth,
-            progressBarStatus: utils.progressBarStatus,
-        };
-    };
+    utils.useFormat = () => ({
+        displayDate: utils.displayDate,
+        capitalize: utils.capitalize,
+        capitalizeEachWords: utils.capitalizeEachWords,
+        formatNumber: utils.formatNumber,
+        convertStringNumberToFigures: utils.convertStringNumberToFigures,
+        fmt: utils.fmt,
+        checkIfEmpty: utils.checkIfEmpty,
+        numbersOnlyWithoutDot: utils.numbersOnlyWithoutDot,
+        validatePaste: utils.validatePaste,
+        percentageUsed: utils.percentageUsed,
+        progressBarWidth: utils.progressBarWidth,
+        progressBarStatus: utils.progressBarStatus
+    });
 
     /* ------------------------------------------------------------------
      * Progress bar helpers — used across smc/logistics, eolin, netcard
      * dashboards. Expressed as a percent-string ("47.50%") + a Bootstrap
      * status class (bg-danger/warning/primary/success) chosen by band.
      * ------------------------------------------------------------------ */
-    utils.percentageUsed = function (issue, used) {
+    utils.percentageUsed = (issue, used) => {
         var p = (parseFloat(used) / parseFloat(issue)) * 100;
         if (isNaN(p)) return 0;
         return Number.isInteger(p) ? p : p.toFixed(2);
     };
-    utils.progressBarWidth = function (issue, used) {
-        return utils.percentageUsed(issue, used) + '%';
-    };
-    utils.progressBarStatus = function (issue, used) {
+    utils.progressBarWidth = (issue, used) => utils.percentageUsed(issue, used) + '%';
+    utils.progressBarStatus = (issue, used) => {
         var progress = utils.percentageUsed(issue, used);
         var state = 'warning';
         if (progress <= 30)      state = 'danger';
@@ -226,7 +214,7 @@
      * Auto-registers each handler against the corresponding event name on
      * onMounted and unregisters on onBeforeUnmount. Pass any subset.
      */
-    utils.useEventBus = function (handlers) {
+    utils.useEventBus = handlers => {
         handlers = handlers || {};
         var Vue = root.Vue;
         if (!Vue || !Vue.onMounted || !Vue.onBeforeUnmount) {
@@ -240,11 +228,11 @@
         if (typeof handlers.onUpdate === 'function') pairs.push(['g-event-update', handlers.onUpdate]);
         if (typeof handlers.onUpdateUser === 'function') pairs.push(['g-event-update-user', handlers.onUpdateUser]);
 
-        Vue.onMounted(function () {
-            pairs.forEach(function (p) { utils.bus.on(p[0], p[1]); });
+        Vue.onMounted(() => {
+            pairs.forEach(p => { utils.bus.on(p[0], p[1]); });
         });
-        Vue.onBeforeUnmount(function () {
-            pairs.forEach(function (p) { utils.bus.off(p[0], p[1]); });
+        Vue.onBeforeUnmount(() => {
+            pairs.forEach(p => { utils.bus.off(p[0], p[1]); });
         });
     };
 
@@ -258,7 +246,7 @@
      * that previously did `Vue.component("apexchart", VueApexCharts)` keep
      * working without the legacy vue-apexcharts (Vue 2 only) library.
      */
-    utils.useApp = function (options) {
+    utils.useApp = options => {
         var Vue = root.Vue;
         if (!Vue || typeof Vue.createApp !== 'function') {
             throw new Error('[utils.useApp] Vue 3 not loaded.');
@@ -298,7 +286,7 @@
      * Requires window.ApexCharts (loaded by apexcharts.min.js in the
      * page's js_structure entry).
      * ------------------------------------------------------------------ */
-    function cloneDeepPreserveFns(value, seen) {
+    const cloneDeepPreserveFns = (value, seen) => {
         if (value === null || typeof value !== 'object') return value;
         seen = seen || new WeakMap();
         if (seen.has(value)) return seen.get(value);
@@ -323,90 +311,90 @@
         return out;
     }
 
-    utils.ApexChart = (function () {
-        return {
-            props: {
-                options: { type: Object, default: function () { return {}; } },
-                type: { type: String, default: '' },
-                series: { type: Array, required: true, default: function () { return []; } },
-                width: { default: '100%' },
-                height: { default: 'auto' },
-            },
-            setup: function (props) {
-                var Vue = root.Vue;
-                var ref = Vue.ref;
-                var onMounted = Vue.onMounted;
-                var onBeforeUnmount = Vue.onBeforeUnmount;
-                var watch = Vue.watch;
-                var nextTick = Vue.nextTick;
+    utils.ApexChart = (() => ({
+        props: {
+            options: { type: Object, default: () => { return {}; } },
+            type: { type: String, default: '' },
+            series: { type: Array, required: true, default: () => { return []; } },
+            width: { default: '100%' },
+            height: { default: 'auto' },
+        },
 
-                var chartEl = ref(null);
-                var chart = null;
-                var initScheduled = false;
+        setup: function (props) {
+            var Vue = root.Vue;
+            var ref = Vue.ref;
+            var onMounted = Vue.onMounted;
+            var onBeforeUnmount = Vue.onBeforeUnmount;
+            var watch = Vue.watch;
+            var nextTick = Vue.nextTick;
 
-                function buildOptions() {
-                    var o = cloneDeepPreserveFns(props.options || {});
-                    var chartCfg = Object.assign({}, o.chart || {}, {
-                        type: props.type || (o.chart && o.chart.type) || 'line',
-                        height: props.height,
-                        width: props.width,
-                    });
-                    return Object.assign({}, o, {
-                        chart: chartCfg,
-                        series: cloneDeepPreserveFns(props.series || []),
-                    });
-                }
+            var chartEl = ref(null);
+            var chart = null;
+            var initScheduled = false;
 
-                function destroy() {
-                    try { if (chart) chart.destroy(); } catch (e) { /* swallow */ }
-                    chart = null;
-                }
+            const buildOptions = () => {
+                var o = cloneDeepPreserveFns(props.options || {});
+                var chartCfg = Object.assign({}, o.chart || {}, {
+                    type: props.type || (o.chart && o.chart.type) || 'line',
+                    height: props.height,
+                    width: props.width,
+                });
+                return Object.assign({}, o, {
+                    chart: chartCfg,
+                    series: cloneDeepPreserveFns(props.series || []),
+                });
+            }
 
-                function init() {
-                    initScheduled = false;
-                    if (!chartEl.value || !root.ApexCharts) return;
-                    destroy();
-                    try {
-                        chart = new root.ApexCharts(chartEl.value, buildOptions());
-                        var p = chart.render();
-                        if (p && typeof p.catch === 'function') {
-                            p.catch(function (e) { console.error('[utils.ApexChart] async render failed:', e); });
-                        }
-                    } catch (e) {
-                        console.error('[utils.ApexChart] render failed:', e);
+            const destroy = () => {
+                try { if (chart) chart.destroy(); } catch (e) { /* swallow */ }
+                chart = null;
+            }
+
+            const init = () => {
+                initScheduled = false;
+                if (!chartEl.value || !root.ApexCharts) return;
+                destroy();
+                try {
+                    chart = new root.ApexCharts(chartEl.value, buildOptions());
+                    var p = chart.render();
+                    if (p && typeof p.catch === 'function') {
+                        p.catch(e => { console.error('[utils.ApexChart] async render failed:', e); });
                     }
+                } catch (e) {
+                    console.error('[utils.ApexChart] render failed:', e);
                 }
+            }
 
-                function scheduleInit() {
-                    if (initScheduled) return;
-                    initScheduled = true;
-                    nextTick(init);
+            const scheduleInit = () => {
+                if (initScheduled) return;
+                initScheduled = true;
+                nextTick(init);
+            }
+
+            onMounted(scheduleInit);
+            onBeforeUnmount(destroy);
+
+            // Options change → full re-init (handles schema/type changes
+            // and initial-empty → populated transitions reliably).
+            watch(() => props.options, scheduleInit, { deep: true });
+
+            // Series-only change → cheap updateSeries when the chart is
+            // already alive; falls through to scheduleInit if not.
+            watch(() => props.series, n => {
+                if (chart && typeof chart.updateSeries === 'function') {
+                    try { chart.updateSeries(cloneDeepPreserveFns(n || [])); return; }
+                    catch (e) { /* fall through to re-init */ }
                 }
+                scheduleInit();
+            }, { deep: true });
 
-                onMounted(scheduleInit);
-                onBeforeUnmount(destroy);
+            watch(() => [props.type, props.width, props.height], scheduleInit);
 
-                // Options change → full re-init (handles schema/type changes
-                // and initial-empty → populated transitions reliably).
-                watch(function () { return props.options; }, scheduleInit, { deep: true });
+            return { chartEl: chartEl };
+        },
 
-                // Series-only change → cheap updateSeries when the chart is
-                // already alive; falls through to scheduleInit if not.
-                watch(function () { return props.series; }, function (n) {
-                    if (chart && typeof chart.updateSeries === 'function') {
-                        try { chart.updateSeries(cloneDeepPreserveFns(n || [])); return; }
-                        catch (e) { /* fall through to re-init */ }
-                    }
-                    scheduleInit();
-                }, { deep: true });
-
-                watch(function () { return [props.type, props.width, props.height]; }, scheduleInit);
-
-                return { chartEl: chartEl };
-            },
-            template: '<div ref="chartEl"></div>',
-        };
-    })();
+        template: '<div ref="chartEl"></div>'
+    }))();
 
     /* ------------------------------------------------------------------
      * Bootstrap 4 modal a11y fix — Chrome's "Blocked aria-hidden on an
@@ -428,8 +416,8 @@
      *
      * Applies to every Bootstrap modal (v2 and v3 stacks alike).
      * ------------------------------------------------------------------ */
-    (function () {
-        function blurActive() {
+    (() => {
+        const blurActive = () => {
             var active = document.activeElement;
             if (active && active !== document.body && typeof active.blur === 'function') {
                 try { active.blur(); } catch (e) { /* swallow */ }
@@ -439,7 +427,7 @@
         // Layer 1: MutationObserver. Runs immediately when aria-hidden is
         // set anywhere; if focus is trapped under it, blur synchronously.
         if (typeof MutationObserver !== 'undefined') {
-            var observer = new MutationObserver(function (mutations) {
+            var observer = new MutationObserver(mutations => {
                 for (var i = 0; i < mutations.length; i++) {
                     var m = mutations[i];
                     if (m.type !== 'attributes' || m.attributeName !== 'aria-hidden') continue;
@@ -453,7 +441,7 @@
                 }
             });
             // Wait for body to exist before observing.
-            function startObserver() {
+            const startObserver = () => {
                 if (!document.body) {
                     document.addEventListener('DOMContentLoaded', startObserver);
                     return;
@@ -467,7 +455,7 @@
             startObserver();
         }
 
-        function bind() {
+        const bind = () => {
             var $ = root.jQuery;
             if (!$ || !$.fn || !$.fn.modal) return;
 

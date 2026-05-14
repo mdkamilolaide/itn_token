@@ -13,9 +13,9 @@ const { useApp, useFormat, bus, safeMessage } = window.utils;
 const PageBody = {
     setup() {
         const page = ref('list');
-        function gotoPageHandler(data) { page.value = data && data.page; }
-        onMounted(function () { bus.on('g-event-goto-page', gotoPageHandler); });
-        onBeforeUnmount(function () { bus.off('g-event-goto-page', gotoPageHandler); });
+        const gotoPageHandler = (data) => { page.value = data && data.page; };
+        onMounted(() => { bus.on('g-event-goto-page', gotoPageHandler); });
+        onBeforeUnmount(() => { bus.off('g-event-goto-page', gotoPageHandler); });
         return { page };
     },
     template: `
@@ -51,8 +51,8 @@ const ChildList = {
             },
         });
 
-        function reloadUserListOnUpdate() { paginationDefault(); loadTableData(); }
-        function loadTableData() {
+        const reloadUserListOnUpdate = () => { paginationDefault(); loadTableData(); };
+        const loadTableData = () => {
             overlay.show();
             axios.get(
                 common.TableService +
@@ -71,61 +71,61 @@ const ChildList = {
                 '&dob=' + tableOptions.filterParam.dob +
                 '&rda=' + tableOptions.filterParam.created
             )
-                .then(function (response) {
+                .then(response => {
                     var d = response && response.data;
                     tableData.value = Array.isArray(d && d.data) ? d.data : [];
                     tableOptions.total = (d && d.recordsTotal) || 0;
                     if (tableOptions.currentPage == 1) paginationDefault();
                     overlay.hide();
                 })
-                .catch(function (error) {
+                .catch(error => {
                     overlay.hide();
                     alert.Error('ERROR', safeMessage(error));
                 });
         }
 
-        function selectAll()  { for (var i = 0; i < tableData.value.length; i++) tableData.value[i].pick = true; }
-        function uncheckAll() { for (var i = 0; i < tableData.value.length; i++) tableData.value[i].pick = false; }
-        function selectToggle() {
+        const selectAll = () => { for (var i = 0; i < tableData.value.length; i++) tableData.value[i].pick = true; };
+        const uncheckAll = () => { for (var i = 0; i < tableData.value.length; i++) tableData.value[i].pick = false; };
+        const selectToggle = () => {
             if (checkToggle.value === false) { selectAll(); checkToggle.value = true; }
             else                              { uncheckAll(); checkToggle.value = false; }
         }
-        function checkedBg(p) { return p != '' ? 'bg-select' : ''; }
-        function toggleFilter() {
+        const checkedBg = (p) => { return p != '' ? 'bg-select' : ''; };
+        const toggleFilter = () => {
             if (filterState.value === false) filters.value = false;
             return (filterState.value = !filterState.value);
         }
-        function paginationDefault() {
+        const paginationDefault = () => {
             tableOptions.pageLength = Math.ceil(tableOptions.total / tableOptions.perPage);
             tableOptions.limitStart = Math.ceil((tableOptions.currentPage - 1) * tableOptions.perPage);
             tableOptions.isNext = tableOptions.currentPage < tableOptions.pageLength;
             tableOptions.isPrev = tableOptions.currentPage > 1;
         }
-        function nextPage() { tableOptions.currentPage += 1; paginationDefault(); loadTableData(); }
-        function prevPage() { tableOptions.currentPage -= 1; paginationDefault(); loadTableData(); }
-        function currentPage() {
+        const nextPage = () => { tableOptions.currentPage += 1; paginationDefault(); loadTableData(); };
+        const prevPage = () => { tableOptions.currentPage -= 1; paginationDefault(); loadTableData(); };
+        const currentPage = () => {
             paginationDefault();
             if (tableOptions.currentPage < 1)                            alert.Error('ERROR', "The Page requested doesn't exist");
             else if (tableOptions.currentPage > tableOptions.pageLength) alert.Error('ERROR', "The Page requested doesn't exist");
             else                                                         loadTableData();
         }
-        function changePerPage(val) {
+        const changePerPage = (val) => {
             var maxPerPage = Math.ceil(tableOptions.total / val);
             if (maxPerPage < tableOptions.currentPage) tableOptions.currentPage = maxPerPage;
             tableOptions.perPage = val;
             paginationDefault();
             loadTableData();
         }
-        function sort(col) {
+        const sort = (col) => {
             if (tableOptions.orderField === col) tableOptions.orderDir = tableOptions.orderDir === 'asc' ? 'desc' : 'asc';
             else                                  tableOptions.orderField = col;
             paginationDefault();
             loadTableData();
         }
-        function applyFilter() {
+        const applyFilter = () => {
             var checkFill = 0;
             ['geo_level', 'geo_level_id', 'hh_token', 'hoh_name', 'hoh_phone',
-             'beneficiary_id', 'name', 'gender', 'dob', 'created', 'updated'].forEach(function (k) {
+             'beneficiary_id', 'name', 'gender', 'dob', 'created', 'updated'].forEach(k => {
                 if (tableOptions.filterParam[k] != '') checkFill++;
             });
             if (checkFill > 0) {
@@ -137,7 +137,7 @@ const ChildList = {
                 alert.Error('ERROR', 'Invalid required data');
             }
         }
-        function removeSingleFilter(column_name) {
+        const removeSingleFilter = (column_name) => {
             tableOptions.filterParam[column_name] = '';
             if (column_name == 'geo_level' || column_name == 'geo_level_id') {
                 tableOptions.filterParam.geo_level = '';
@@ -151,29 +151,29 @@ const ChildList = {
             paginationDefault();
             loadTableData();
         }
-        function clearAllFilter() {
+        const clearAllFilter = () => {
             filters.value = false;
             ['geo_level', 'geo_level_id', 'hh_token', 'hoh_name', 'hoh_phone',
-             'beneficiary_id', 'name', 'gender', 'dob', 'created', 'updated'].forEach(function (k) {
+             'beneficiary_id', 'name', 'gender', 'dob', 'created', 'updated'].forEach(k => {
                 tableOptions.filterParam[k] = '';
             });
             paginationDefault();
             loadTableData();
         }
-        function refreshData() { paginationDefault(); loadTableData(); }
-        function getGeoLocation() {
+        const refreshData = () => { paginationDefault(); loadTableData(); };
+        const getGeoLocation = () => {
             overlay.show();
             axios.get(common.DataService + '?qid=gen009')
-                .then(function (response) {
+                .then(response => {
                     geoData.value = (response.data && response.data.data) || [];
                     overlay.hide();
                 })
-                .catch(function (error) {
+                .catch(error => {
                     overlay.hide();
                     alert.Error('ERROR', safeMessage(error));
                 });
         }
-        function setLocation(select_index) {
+        const setLocation = (select_index) => {
             var i = select_index || 0;
             var row = geoData.value[i];
             if (!row) return;
@@ -181,11 +181,11 @@ const ChildList = {
             tableOptions.filterParam.geo_level_id = row.geo_level_id;
             tableOptions.filterParam.geo_string = row.title;
         }
-        function displayDayMonthYear(d) {
+        const displayDayMonthYear = (d) => {
             var date = new Date(d);
             return date.toLocaleString('en-us', { year: 'numeric', month: 'long', day: 'numeric' });
         }
-        function calculateTotalMonths(dob) {
+        const calculateTotalMonths = (dob) => {
             var d = new Date(dob);
             var c = new Date();
             var months = (c.getFullYear() - d.getFullYear()) * 12;
@@ -195,7 +195,7 @@ const ChildList = {
             return months + ' Month' + (months > 1 ? 's' : '') + ' Old';
         }
 
-        onMounted(function () {
+        onMounted(() => {
             getGeoLocation();
             loadTableData();
             bus.on('g-event-update-user', reloadUserListOnUpdate);
@@ -212,7 +212,7 @@ const ChildList = {
                 $('.date').flatpickr({ altInput: true, altFormat: 'F j, Y', dateFormat: 'Y-m-d' });
             } catch (e) {}
         });
-        onBeforeUnmount(function () {
+        onBeforeUnmount(() => {
             bus.off('g-event-update-user', reloadUserListOnUpdate);
         });
 

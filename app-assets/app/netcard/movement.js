@@ -16,9 +16,9 @@ const { useApp, useFormat, bus, safeMessage } = window.utils;
 const PageBody = {
     setup() {
         const page = ref('movement');
-        function gotoPageHandler(data) { page.value = data && data.page; }
-        onMounted(function () { bus.on('g-event-goto-page', gotoPageHandler); });
-        onBeforeUnmount(function () { bus.off('g-event-goto-page', gotoPageHandler); });
+        const gotoPageHandler = (data) => { page.value = data && data.page; };
+        onMounted(() => { bus.on('g-event-goto-page', gotoPageHandler); });
+        onBeforeUnmount(() => { bus.off('g-event-goto-page', gotoPageHandler); });
         return { page };
     },
     template: `
@@ -83,7 +83,7 @@ const NecardMovement = {
             beneficiary: 0, total: 0, mobilizer: 0,
         });
 
-        function loadTableData() {
+        const loadTableData = () => {
             overlay.show();
             axios.get(
                 common.TableService +
@@ -94,58 +94,58 @@ const NecardMovement = {
                 '&order_dir=' + tableOptions.orderDir +
                 '&mt=' + tableOptions.filterParam.movementType
             )
-                .then(function (response) {
+                .then(response => {
                     var d = response && response.data;
                     tableData.value = Array.isArray(d && d.data) ? d.data : [];
                     tableOptions.total = (d && d.recordsTotal) || 0;
                     if (tableOptions.currentPage == 1) paginationDefault();
                     overlay.hide();
                 })
-                .catch(function (error) {
+                .catch(error => {
                     overlay.hide();
                     alert.Error('ERROR', safeMessage(error));
                 });
         }
 
-        function selectAll()    { for (var i = 0; i < tableData.value.length; i++) tableData.value[i].pick = true; }
-        function uncheckAll()   { for (var i = 0; i < tableData.value.length; i++) tableData.value[i].pick = false; }
-        function selectToggle() {
+        const selectAll = () => { for (var i = 0; i < tableData.value.length; i++) tableData.value[i].pick = true; };
+        const uncheckAll = () => { for (var i = 0; i < tableData.value.length; i++) tableData.value[i].pick = false; };
+        const selectToggle = () => {
             if (checkToggle.value === false) { selectAll(); checkToggle.value = true; }
             else                              { uncheckAll(); checkToggle.value = false; }
         }
-        function checkedBg(pickOne) { return pickOne != '' ? 'bg-select' : ''; }
-        function toggleFilter() {
+        const checkedBg = (pickOne) => { return pickOne != '' ? 'bg-select' : ''; };
+        const toggleFilter = () => {
             if (filterState.value === false) filters.value = false;
             return (filterState.value = !filterState.value);
         }
-        function paginationDefault() {
+        const paginationDefault = () => {
             tableOptions.pageLength = Math.ceil(tableOptions.total / tableOptions.perPage);
             tableOptions.limitStart = Math.ceil((tableOptions.currentPage - 1) * tableOptions.perPage);
             tableOptions.isNext = tableOptions.currentPage < tableOptions.pageLength;
             tableOptions.isPrev = tableOptions.currentPage > 1;
         }
-        function nextPage() { tableOptions.currentPage += 1; paginationDefault(); loadTableData(); }
-        function prevPage() { tableOptions.currentPage -= 1; paginationDefault(); loadTableData(); }
-        function currentPage() {
+        const nextPage = () => { tableOptions.currentPage += 1; paginationDefault(); loadTableData(); };
+        const prevPage = () => { tableOptions.currentPage -= 1; paginationDefault(); loadTableData(); };
+        const currentPage = () => {
             paginationDefault();
             if (tableOptions.currentPage < 1)                            alert.Error('ERROR', "The Page requested doesn't exist");
             else if (tableOptions.currentPage > tableOptions.pageLength) alert.Error('ERROR', "The Page requested doesn't exist");
             else                                                         loadTableData();
         }
-        function changePerPage(val) {
+        const changePerPage = (val) => {
             var maxPerPage = Math.ceil(tableOptions.total / val);
             if (maxPerPage < tableOptions.currentPage) tableOptions.currentPage = maxPerPage;
             tableOptions.perPage = val;
             paginationDefault();
             loadTableData();
         }
-        function sort(col) {
+        const sort = (col) => {
             if (tableOptions.orderField === col) tableOptions.orderDir = tableOptions.orderDir === 'asc' ? 'desc' : 'asc';
             else                                  tableOptions.orderField = col;
             paginationDefault();
             loadTableData();
         }
-        function applyFilter() {
+        const applyFilter = () => {
             if (tableOptions.filterParam.movementType != '') {
                 toggleFilter();
                 filters.value = true;
@@ -155,7 +155,7 @@ const NecardMovement = {
                 alert.Error('ERROR', 'Invalid required data');
             }
         }
-        function removeSingleFilter(column_name) {
+        const removeSingleFilter = (column_name) => {
             tableOptions.filterParam[column_name] = '';
             var g = 0;
             for (var k in tableOptions.filterParam) {
@@ -165,7 +165,7 @@ const NecardMovement = {
             paginationDefault();
             loadTableData();
         }
-        function clearAllFilter() {
+        const clearAllFilter = () => {
             filters.value = false;
             tableOptions.filterParam.movementType = '';
             paginationDefault();
@@ -173,14 +173,14 @@ const NecardMovement = {
         }
 
         /* State move modal ------------------------------------------- */
-        function showStateMoveModal() {
+        const showStateMoveModal = () => {
             overlay.show();
             stateMovementForm.totalNetcard = 1;
             stateMovementForm.stateMoveModal = true;
             stateMovementForm.lgaName = '';
             overlay.hide();
         }
-        function hideStateMoveModal() {
+        const hideStateMoveModal = () => {
             overlay.show();
             stateMovementForm.lgaid = '';
             stateMovementForm.totalNetcard = 1;
@@ -190,10 +190,10 @@ const NecardMovement = {
             wardLevelData.value = [];
             overlay.hide();
         }
-        function setLgaName(event) {
+        const setLgaName = (event) => {
             stateMovementForm.lgaName = event.target.options[event.target.options.selectedIndex].text;
         }
-        function transferFromStateToLGA() {
+        const transferFromStateToLGA = () => {
             if (
                 parseInt(stateMovementForm.totalNetcard) > 0 &&
                 parseInt(stateMovementForm.totalNetcard) <= parseInt(allStatistics.stateBalance)
@@ -204,7 +204,7 @@ const NecardMovement = {
                     buttons: {
                         delete: {
                             text: 'transfer', btnClass: 'btn btn-danger mr-1 text-capitalize',
-                            action: function () {
+                            action: () => {
                                 axios.post(
                                     common.DataService +
                                     '?qid=202&total=' + stateMovementForm.totalNetcard +
@@ -212,7 +212,7 @@ const NecardMovement = {
                                     '&lgaid=' + stateMovementForm.lgaid +
                                     '&id=' + $('#v_g_id').val()
                                 )
-                                    .then(function (response) {
+                                    .then(response => {
                                         if (response.data.result_code == 200) {
                                             hideStateMoveModal();
                                             refreshData();
@@ -223,13 +223,13 @@ const NecardMovement = {
                                             alert.Error('Error', response.data.message);
                                         }
                                     })
-                                    .catch(function (error) {
+                                    .catch(error => {
                                         alert.Error('ERROR', safeMessage(error));
                                         overlay.hide();
                                     });
                             },
                         },
-                        cancel: function () { overlay.hide(); },
+                        cancel: () => { overlay.hide(); },
                     },
                 });
             } else {
@@ -239,7 +239,7 @@ const NecardMovement = {
         }
 
         /* LGA move modal --------------------------------------------- */
-        function showLgaMoveModal() {
+        const showLgaMoveModal = () => {
             overlay.show();
             lgaMovementForm.lgaMoveModal = true;
             lgaMovementForm.lgaMoveBtn = 'Forward';
@@ -248,7 +248,7 @@ const NecardMovement = {
             lgaMovementForm.destinationName = '';
             overlay.hide();
         }
-        function hideLgaMoveModal() {
+        const hideLgaMoveModal = () => {
             overlay.show();
             lgaMovementForm.lgaMoveModal = false;
             lgaMovementForm.lgaMoveBtn = '';
@@ -263,7 +263,7 @@ const NecardMovement = {
             $('#lgaMove').modal('hide');
             overlay.hide();
         }
-        function setLgaOriginName(event) {
+        const setLgaOriginName = (event) => {
             if (lgaMovementForm.lgaMoveBtn == 'Forward') {
                 lgaMovementForm.destinationid = '';
                 lgaMovementForm.destinationName = '';
@@ -275,17 +275,17 @@ const NecardMovement = {
             var raw = origin[origin.length - 1];
             lgaMovementForm.originBalance = raw == '' ? 0 : parseInt(raw);
         }
-        function setLgaDestinationName(event) {
+        const setLgaDestinationName = (event) => {
             if (lgaMovementForm.lgaMoveBtn == 'Forward') {
                 lgaMovementForm.destinationName = event.target.options[event.target.options.selectedIndex].text;
             }
         }
-        function setLgaReverseVariable() {
+        const setLgaReverseVariable = () => {
             lgaMovementForm.lgaMoveBtn = 'Reverse';
             lgaMovementForm.destinationid = sysDefaultData.value.stateid;
             lgaMovementForm.destinationName = sysDefaultData.value.state;
         }
-        function lgaTransfer(transfer_type) {
+        const lgaTransfer = (transfer_type) => {
             var origin_name = lgaMovementForm.originName.split(' - ')[0];
             if (parseInt(lgaMovementForm.totalNetcard) > parseInt(lgaMovementForm.originBalance)) {
                 alert.Error('ERROR', "You can't transfer more than " + lgaMovementForm.originBalance + ' e-Netcard');
@@ -297,15 +297,15 @@ const NecardMovement = {
                 ? 'Are you sure you want to reverse <b>' + lgaMovementForm.totalNetcard + '</b> e-Netcard from <b>' + origin_name + '</b> to <b>' + lgaMovementForm.destinationName + '</b> State?'
                 : 'Are you sure you want to Transfer <b>' + lgaMovementForm.totalNetcard + '</b> e-Netcards from <b>' + origin_name + '</b> LGA to <b>' + lgaMovementForm.destinationName + '</b> Ward?';
             var successMsg = transfer_type == 'Reverse'
-                ? function (n) { return n + ' Netcards has been reversed successfully from <b>' + origin_name + '</b> LGA to <b>' + lgaMovementForm.destinationName + '</b>'; }
-                : function (n) { return '<b>' + n + '</b> e-Netcards has been transfered successfully from <b>' + origin_name + '</b> LGA to <b>' + lgaMovementForm.destinationName + '</b> Ward'; };
+                ? n => n + ' Netcards has been reversed successfully from <b>' + origin_name + '</b> LGA to <b>' + lgaMovementForm.destinationName + '</b>'
+                : n => '<b>' + n + '</b> e-Netcards has been transfered successfully from <b>' + origin_name + '</b> LGA to <b>' + lgaMovementForm.destinationName + '</b> Ward';
 
             $.confirm({
                 title: 'WARNING!', content: content,
                 buttons: {
                     delete: {
                         text: transfer_type, btnClass: 'btn btn-danger mr-1 text-capitalize',
-                        action: function () {
+                        action: () => {
                             axios.post(
                                 common.DataService +
                                 '?qid=' + qid +
@@ -314,7 +314,7 @@ const NecardMovement = {
                                 '&destinationid=' + lgaMovementForm.destinationid +
                                 '&id=' + $('#v_g_id').val()
                             )
-                                .then(function (response) {
+                                .then(response => {
                                     if (response.data.result_code == '200') {
                                         alert.Success('Success', successMsg(response.data.message));
                                         hideLgaMoveModal();
@@ -325,19 +325,19 @@ const NecardMovement = {
                                         alert.Error('Error', response.data.message);
                                     }
                                 })
-                                .catch(function (error) {
+                                .catch(error => {
                                     alert.Error('ERROR', safeMessage(error));
                                     overlay.hide();
                                 });
                         },
                     },
-                    cancel: function () { overlay.hide(); },
+                    cancel: () => { overlay.hide(); },
                 },
             });
         }
 
         /* Ward move modal -------------------------------------------- */
-        function showWardMoveModal() {
+        const showWardMoveModal = () => {
             overlay.show();
             wardMovementForm.wardMoveModal = true;
             wardMovementForm.wardMoveBtn = 'Forward';
@@ -347,7 +347,7 @@ const NecardMovement = {
             wardMovementForm.destinationid = '';
             overlay.hide();
         }
-        function hideWardMoveModal() {
+        const hideWardMoveModal = () => {
             overlay.show();
             $('#wardMove').modal('hide');
             wardMovementForm.wardMoveModal = false;
@@ -363,18 +363,18 @@ const NecardMovement = {
             wardNetBalancesData.value = [];
             overlay.hide();
         }
-        function setWardOriginName(event) {
+        const setWardOriginName = (event) => {
             wardMovementForm.originName = event.target.options[event.target.options.selectedIndex].text;
             var trimmed = wardMovementForm.originName.trim().replace(',', '').split('-');
             wardMovementForm.originBalance = trimmed[1] == '' ? 0 : parseInt(trimmed[1]);
         }
-        function setWardDestinationName(event) {
+        const setWardDestinationName = (event) => {
             wardMovementForm.originBalance = 0;
             wardMovementForm.originid = '';
             getWardsNetBalances();
             wardMovementForm.destinationName = event.target.options[event.target.options.selectedIndex].text;
         }
-        function wardTransfer() {
+        const wardTransfer = () => {
             var origin_name = wardMovementForm.originName.split(' - ')[0];
             if (parseInt(wardMovementForm.totalNetcard) > parseInt(wardMovementForm.originBalance)) {
                 alert.Error('ERROR', "You can't reverse more than " + wardMovementForm.originBalance + ' e-Netcard');
@@ -387,7 +387,7 @@ const NecardMovement = {
                 buttons: {
                     delete: {
                         text: 'Reverse e-Netcard', btnClass: 'btn btn-danger mr-1 text-capitalize',
-                        action: function () {
+                        action: () => {
                             axios.post(
                                 common.DataService +
                                 '?qid=205&total=' + wardMovementForm.totalNetcard +
@@ -395,7 +395,7 @@ const NecardMovement = {
                                 '&destinationid=' + wardMovementForm.destinationid +
                                 '&id=' + $('#v_g_id').val()
                             )
-                                .then(function (response) {
+                                .then(response => {
                                     if (response.data.result_code == '200') {
                                         alert.Success('Success', '<b>' + response.data.message + '</b> Netcards has been reversed successfully from <b>' + origin_name + '</b> Ward to <b>' + wardMovementForm.destinationName + '</b> LGA');
                                         hideWardMoveModal();
@@ -406,22 +406,22 @@ const NecardMovement = {
                                         alert.Error('Error', response.data.message);
                                     }
                                 })
-                                .catch(function (error) {
+                                .catch(error => {
                                     alert.Error('ERROR', safeMessage(error));
                                     overlay.hide();
                                 });
                         },
                     },
-                    cancel: function () { overlay.hide(); },
+                    cancel: () => { overlay.hide(); },
                 },
             });
         }
 
         /* Geo lookups + stats ---------------------------------------- */
-        function getsysDefaultDataSettings() {
+        const getsysDefaultDataSettings = () => {
             overlay.show();
             axios.get(common.DataService + '?qid=gen007')
-                .then(function (response) {
+                .then(response => {
                     if (response.data.data && response.data.data.length > 0) {
                         sysDefaultData.value = response.data.data[0];
                         getLgasLevel(response.data.data[0].stateid);
@@ -431,82 +431,82 @@ const NecardMovement = {
                     }
                     overlay.hide();
                 })
-                .catch(function (error) {
+                .catch(error => {
                     overlay.hide();
                     alert.Error('ERROR', safeMessage(error));
                 });
         }
-        function getLgasLevel(stateid) {
+        const getLgasLevel = (stateid) => {
             overlay.show();
             axios.post(common.DataService + '?qid=gen003', JSON.stringify(stateid))
-                .then(function (response) {
+                .then(response => {
                     lgaLevelData.value = (response.data && response.data.data) || [];
                     overlay.hide();
                 })
-                .catch(function (error) {
+                .catch(error => {
                     overlay.hide();
                     alert.Error('ERROR', safeMessage(error));
                 });
         }
-        function getLgasNetBalances() {
+        const getLgasNetBalances = () => {
             overlay.show();
             axios.post(common.DataService + '?qid=206')
-                .then(function (response) {
+                .then(response => {
                     lgaNetBalancesData.value = (response.data && response.data.data) || [];
                     overlay.hide();
                 })
-                .catch(function (error) {
+                .catch(error => {
                     overlay.hide();
                     alert.Error('ERROR', safeMessage(error));
                 });
         }
-        function getWardLevel() {
+        const getWardLevel = () => {
             overlay.show();
             axios.get(common.DataService + '?qid=gen005&e=' + lgaMovementForm.originid)
-                .then(function (response) {
+                .then(response => {
                     wardLevelData.value = (response.data && response.data.data) || [];
                     overlay.hide();
                 })
-                .catch(function (error) {
+                .catch(error => {
                     overlay.hide();
                     alert.Error('ERROR', safeMessage(error));
                 });
         }
-        function getWardsNetBalances() {
+        const getWardsNetBalances = () => {
             overlay.show();
             axios.get(common.DataService + '?qid=207&lgaid=' + wardMovementForm.destinationid)
-                .then(function (response) {
+                .then(response => {
                     wardNetBalancesData.value = (response.data && response.data.data) || [];
                     overlay.hide();
                 })
-                .catch(function (error) {
+                .catch(error => {
                     overlay.hide();
                     alert.Error('ERROR', safeMessage(error));
                 });
         }
-        function getWardData(event) {
+        const getWardData = (event) => {
             overlay.show();
             var lgaid = event.target.options[event.target.options.selectedIndex].value;
             axios.get(common.DataService + '?qid=207&lgaid=' + lgaid)
-                .then(function (response) {
+                .then(response => {
                     wardNetBalancesData.value = (response.data && response.data.data) || [];
                     overlay.hide();
                 })
-                .catch(function (error) {
+                .catch(error => {
                     overlay.hide();
                     alert.Error('ERROR', safeMessage(error));
                 });
         }
-        function refreshData() {
+        const refreshData = () => {
             paginationDefault();
             loadTableData();
             getLgasNetBalances();
             getAllStat();
         }
-        function extractTotals(data) {
+        const extractTotals = (data) => {
             var state = 0, lga = 0, ward = 0, mobilizer = 0, beneficiary = 0;
             if (Array.isArray(data)) {
-                data.forEach(function (item) {
+                data.forEach(item => {
                     if (!item || typeof item !== 'object') return;
                     if (item.location === 'state') state = item.total || 0;
                     else if (item.location === 'lga') lga = item.total || 0;
@@ -517,10 +517,10 @@ const NecardMovement = {
             }
             return { state: state, lga: lga, ward: ward, mobilizer: mobilizer, beneficiary: beneficiary };
         }
-        function getAllStat() {
+        const getAllStat = () => {
             var endpoints = [common.DataService + '?qid=201', common.DataService + '?qid=201a'];
-            Promise.all(endpoints.map(function (e) { return axios.get(e); })).then(
-                axios.spread(function (...allData) {
+            Promise.all(endpoints.map(e => axios.get(e))).then(
+                axios.spread((...allData) => {
                     overlay.show();
                     var totalRow = (allData[1] && allData[1].data && allData[1].data.data && allData[1].data.data[0]) || {};
                     allStatistics.total = parseInt(totalRow.total || 0);
@@ -532,22 +532,22 @@ const NecardMovement = {
                     allStatistics.beneficiary = stat.beneficiary;
                     overlay.hide();
                 })
-            ).catch(function () { overlay.hide(); });
+            ).catch(() => { overlay.hide(); });
         }
 
-        function onlyNumber(event) {
+        const onlyNumber = (event) => {
             var keyCode = event.keyCode || event.which;
             if ((keyCode < 48 || keyCode > 57) && keyCode == 46) event.preventDefault();
         }
 
-        onMounted(function () {
+        onMounted(() => {
             getsysDefaultDataSettings();
             getLgasNetBalances();
             loadTableData();
             getAllStat();
             bus.on('g-event-update', loadTableData);
         });
-        onBeforeUnmount(function () {
+        onBeforeUnmount(() => {
             bus.off('g-event-update', loadTableData);
         });
 

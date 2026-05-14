@@ -73,17 +73,13 @@ const MonitoringLists = {
         const filteredData = computed(() => {
             var q = String(bulkUserForm.mobilizationDate || '').toLowerCase().trim();
             if (!q) return tableData.value;
-            return tableData.value.filter(function (row) {
-                return Object.values(row || {}).some(function (v) {
-                    return String(v).toLowerCase().indexOf(q) !== -1;
-                });
-            });
+            return tableData.value.filter(row => Object.values(row || {}).some(v => String(v).toLowerCase().indexOf(q) !== -1));
         });
 
-        function getMonitoringToolsList() {
+        const getMonitoringToolsList = () => {
             overlay.show();
             dataQuery('700')
-                .then(function (response) {
+                .then(response => {
                     if (response.data && response.data.data && response.data.data.length > 0) {
                         tableData.value = response.data.data;
                     } else {
@@ -91,13 +87,13 @@ const MonitoringLists = {
                     }
                     overlay.hide();
                 })
-                .catch(function (error) {
+                .catch(error => {
                     overlay.hide();
                     alert.Error('ERROR', safeMessage(error));
                 });
         }
 
-        function downloadReport(i, total) {
+        const downloadReport = (i, total) => {
             const today = window.utils.formatTimestampForFilename();
             const map = {
                 1: { fileName: 'i-9a_Forms_' + total + '_' + today, dlString: 'qid=701' },
@@ -131,7 +127,7 @@ const MonitoringLists = {
             alert.Info('DOWNLOADING...', 'Downloading ' + total + ' record(s)');
 
             downloadData(cfg.dlString)
-                .then(function (outcome) {
+                .then(outcome => {
                     var exportData = typeof outcome === 'string' ? JSON.parse(outcome) : outcome;
                     if (window.Jhxlsx && typeof window.Jhxlsx.export === 'function') {
                         window.Jhxlsx.export(exportData, { fileName: cfg.fileName });
@@ -139,43 +135,43 @@ const MonitoringLists = {
                         alert.Error('Download Error', 'Excel exporter (Jhxlsx) not loaded');
                     }
                 })
-                .catch(function (error) {
+                .catch(error => {
                     console.error(error);
                     alert.Error('Download Error', safeMessage(error));
                 })
-                .finally(function () {
+                .finally(() => {
                     overlay.hide();
                 });
         }
 
-        function downloadData(dlString) {
-            return new Promise(function (resolve, reject) {
+        const downloadData = (dlString) => {
+            return new Promise((resolve, reject) => {
                 $.ajax({
                     url: common.ExportService,
                     type: 'POST',
                     data: dlString,
-                    success: function (data) { resolve(data); },
-                    error: function (error) { reject(error); },
+                    success: (data) => { resolve(data); },
+                    error: (error) => { reject(error); },
                 });
             });
         }
 
         // Selection helpers (preserved for parity with v2; not currently used in the template)
-        function selectAll() {
+        const selectAll = () => {
             if (tableData.value.length > 0) {
                 for (var i = 0; i < tableData.value.length; i++) {
                     tableData.value[i].pick = true;
                 }
             }
         }
-        function uncheckAll() {
+        const uncheckAll = () => {
             if (tableData.value.length > 0) {
                 for (var i = 0; i < tableData.value.length; i++) {
                     tableData.value[i].pick = false;
                 }
             }
         }
-        function selectToggle() {
+        const selectToggle = () => {
             if (checkToggle.value === false) {
                 selectAll();
                 checkToggle.value = true;
@@ -184,25 +180,25 @@ const MonitoringLists = {
                 checkToggle.value = false;
             }
         }
-        function checkedBg(pickOne) { return pickOne != '' ? 'bg-select' : ''; }
-        function toggleFilter() {
+        const checkedBg = (pickOne) => { return pickOne != '' ? 'bg-select' : ''; };
+        const toggleFilter = () => {
             if (filterState.value === false) filters.value = false;
             return (filterState.value = !filterState.value);
         }
-        function selectedItems() {
-            return tableData.value.filter(function (r) { return r.pick; });
+        const selectedItems = () => {
+            return tableData.value.filter(r => r.pick);
         }
-        function selectedID() {
-            return tableData.value.filter(function (r) { return r.pick; }).map(function (r) { return r.dpid; });
+        const selectedID = () => {
+            return tableData.value.filter(r => r.pick).map(r => r.dpid);
         }
 
-        function loadDp() {
+        const loadDp = () => {
             // Preserved hook — original template's "Load" button calls this.
             // The search/filter is now reactive via the computed above; reload simply re-fetches.
             getMonitoringToolsList();
         }
 
-        onMounted(function () {
+        onMounted(() => {
             getMonitoringToolsList();
         });
 

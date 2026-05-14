@@ -49,8 +49,8 @@ const PageTable = {
         const dpLevelData = ref([]);
         const userPass = reactive({ pass: '', loginid: '', name: '', isBulk: false });
 
-        function reloadUserListOnUpdate() { paginationDefault(); loadTableData(); }
-        function loadTableData() {
+        const reloadUserListOnUpdate = () => { paginationDefault(); loadTableData(); };
+        const loadTableData = () => {
             overlay.show();
             axios.get(
                 common.TableService +
@@ -69,61 +69,61 @@ const PageTable = {
                 '&bv=' + tableOptions.filterParam.bank_status +
                 '&ri=' + tableOptions.filterParam.role_id
             )
-                .then(function (response) {
+                .then(response => {
                     var d = response && response.data;
                     tableData.value = Array.isArray(d && d.data) ? d.data : [];
                     tableOptions.total = (d && d.recordsTotal) || 0;
                     if (tableOptions.currentPage == 1) paginationDefault();
                     overlay.hide();
                 })
-                .catch(function (error) {
+                .catch(error => {
                     overlay.hide();
                     alert.Error('ERROR', safeMessage(error));
                 });
         }
-        function selectAll()  { for (var i = 0; i < tableData.value.length; i++) tableData.value[i].pick = true; }
-        function uncheckAll() { for (var i = 0; i < tableData.value.length; i++) tableData.value[i].pick = false; }
-        function selectToggle() {
+        const selectAll = () => { for (var i = 0; i < tableData.value.length; i++) tableData.value[i].pick = true; };
+        const uncheckAll = () => { for (var i = 0; i < tableData.value.length; i++) tableData.value[i].pick = false; };
+        const selectToggle = () => {
             if (checkToggle.value === false) { selectAll(); checkToggle.value = true; }
             else                              { uncheckAll(); checkToggle.value = false; }
         }
-        function checkedBg(pickOne) { return pickOne != '' ? 'bg-select' : ''; }
-        function toggleFilter() {
+        const checkedBg = (pickOne) => { return pickOne != '' ? 'bg-select' : ''; };
+        const toggleFilter = () => {
             if (filterState.value === false) filters.value = false;
             return (filterState.value = !filterState.value);
         }
-        function selectedItems() { return tableData.value.filter(function (r) { return r.pick; }); }
-        function selectedID()    { return tableData.value.filter(function (r) { return r.pick; }).map(function (r) { return r.userid; }); }
+        const selectedItems = () => { return tableData.value.filter(r => r.pick); };
+        const selectedID = () => { return tableData.value.filter(r => r.pick).map(r => r.userid); };
 
-        function paginationDefault() {
+        const paginationDefault = () => {
             tableOptions.pageLength = Math.ceil(tableOptions.total / tableOptions.perPage);
             tableOptions.limitStart = Math.ceil((tableOptions.currentPage - 1) * tableOptions.perPage);
             tableOptions.isNext = tableOptions.currentPage < tableOptions.pageLength;
             tableOptions.isPrev = tableOptions.currentPage > 1;
         }
-        function resetSelected() { uncheckAll(); checkToggle.value = false; totalCheckedBox(); }
-        function nextPage() { resetSelected(); tableOptions.currentPage += 1; paginationDefault(); loadTableData(); }
-        function prevPage() { resetSelected(); tableOptions.currentPage -= 1; paginationDefault(); loadTableData(); }
-        function currentPage() {
+        const resetSelected = () => { uncheckAll(); checkToggle.value = false; totalCheckedBox(); };
+        const nextPage = () => { resetSelected(); tableOptions.currentPage += 1; paginationDefault(); loadTableData(); };
+        const prevPage = () => { resetSelected(); tableOptions.currentPage -= 1; paginationDefault(); loadTableData(); };
+        const currentPage = () => {
             paginationDefault();
             if (tableOptions.currentPage < 1)                            alert.Error('ERROR', "The Page requested doesn't exist");
             else if (tableOptions.currentPage > tableOptions.pageLength) alert.Error('ERROR', "The Page requested doesn't exist");
             else                                                         loadTableData();
         }
-        function changePerPage(val) {
+        const changePerPage = (val) => {
             resetSelected();
             tableOptions.currentPage = 1;
             tableOptions.perPage = val;
             paginationDefault();
             loadTableData();
         }
-        function sort(col) {
+        const sort = (col) => {
             if (tableOptions.orderField === col) tableOptions.orderDir = tableOptions.orderDir === 'asc' ? 'desc' : 'asc';
             else                                  tableOptions.orderField = col;
             paginationDefault();
             loadTableData();
         }
-        function applyFilter() {
+        const applyFilter = () => {
             var checkFill = 0;
             checkFill += tableOptions.filterParam.user_status != '' ? 1 : 0;
             checkFill += tableOptions.filterParam.loginid != '' ? 1 : 0;
@@ -142,7 +142,7 @@ const PageTable = {
                 alert.Error('ERROR', 'Invalid required data');
             }
         }
-        function removeSingleFilter(column_name) {
+        const removeSingleFilter = (column_name) => {
             tableOptions.filterParam[column_name] = '';
             if (column_name == 'geo_string') {
                 tableOptions.filterParam.geo_level = '';
@@ -161,7 +161,7 @@ const PageTable = {
             paginationDefault();
             loadTableData();
         }
-        function clearAllFilter() {
+        const clearAllFilter = () => {
             filters.value = false;
             try { $('.select2').val('').trigger('change'); } catch (e) {}
             tableOptions.filterParam.user_status = '';
@@ -178,37 +178,37 @@ const PageTable = {
             paginationDefault();
             loadTableData();
         }
-        function goToDetail(userid, user_status) {
+        const goToDetail = (userid, user_status) => {
             bus.emit('g-event-goto-page', {
                 userid: userid, page: 'detail',
                 user_status: user_status, role: roleListData.value,
             });
         }
-        function getRoleList() {
+        const getRoleList = () => {
             overlay.show();
             axios.get(common.DataService + '?qid=007')
-                .then(function (response) {
+                .then(response => {
                     roleListData.value = (response.data && response.data.data) || [];
                     overlay.hide();
                 })
-                .catch(function (error) {
+                .catch(error => {
                     overlay.hide();
                     alert.Error('ERROR', safeMessage(error));
                 });
         }
-        function getGeoLocation() {
+        const getGeoLocation = () => {
             overlay.show();
             axios.get(common.DataService + '?qid=gen009')
-                .then(function (response) {
+                .then(response => {
                     geoData.value = (response.data && response.data.data) || [];
                     overlay.hide();
                 })
-                .catch(function (error) {
+                .catch(error => {
                     overlay.hide();
                     alert.Error('ERROR', safeMessage(error));
                 });
         }
-        function setLocation(select_index) {
+        const setLocation = (select_index) => {
             var i = select_index || 0;
             var row = geoData.value[i];
             if (!row) return;
@@ -216,13 +216,13 @@ const PageTable = {
             tableOptions.filterParam.geo_level_id = row.geo_level_id;
             tableOptions.filterParam.geo_string = row.geo_string;
         }
-        function refreshData() { paginationDefault(); loadTableData(); }
-        function downloadBadge(uid) {
+        const refreshData = () => { paginationDefault(); loadTableData(); };
+        const downloadBadge = (uid) => {
             overlay.show();
             window.open(url.value + '?qid=002&e=' + uid, '_parent');
             overlay.hide();
         }
-        function downloadBadges() {
+        const downloadBadges = () => {
             overlay.show();
             if (parseInt(selectedID().length) > 0) {
                 window.open(url.value + '?qid=003&e=' + selectedID(), '_parent');
@@ -231,19 +231,19 @@ const PageTable = {
             }
             overlay.hide();
         }
-        function getGeoLevel() {
+        const getGeoLevel = () => {
             overlay.show();
             axios.get(common.DataService + '?qid=gen001')
-                .then(function (response) {
+                .then(response => {
                     geoLevelData.value = (response.data && response.data.data) || [];
                     overlay.hide();
                 })
-                .catch(function (error) {
+                .catch(error => {
                     overlay.hide();
                     alert.Error('ERROR', safeMessage(error));
                 });
         }
-        function totalCheckedBox() {
+        const totalCheckedBox = () => {
             var total = selectedID().length;
             var el = document.getElementById('total-selected');
             if (!el) return;
@@ -253,7 +253,7 @@ const PageTable = {
                 el.replaceChildren();
             }
         }
-        async function exportUserData() {
+        const exportUserData = async () => {
             var qs =
                 '&draw=' + tableOptions.currentPage +
                 '&order_column=' + tableOptions.orderField +
@@ -277,10 +277,10 @@ const PageTable = {
                 ' User List';
             overlay.show();
 
-            var count = await new Promise(function (resolve) {
+            var count = await new Promise(resolve => {
                 $.ajax({
                     url: common.DataService, type: 'POST', data: veriUrl, dataType: 'json',
-                    success: function (data) { resolve(data.total); },
+                    success: (data) => { resolve(data.total); },
                 });
             });
             var downloadMax = (window.common && window.common.ExportDownloadLimit) || 25000;
@@ -290,10 +290,10 @@ const PageTable = {
                 alert.Error('Download Error', 'No data found');
             } else {
                 alert.Info('DOWNLOADING...', 'Downloading ' + count + ' record(s)');
-                var outcome = await new Promise(function (resolve) {
+                var outcome = await new Promise(resolve => {
                     $.ajax({
                         url: common.ExportService, type: 'POST', data: dlString,
-                        success: function (data) { resolve(data); },
+                        success: (data) => { resolve(data); },
                     });
                 });
                 var exportData = JSON.parse(outcome);
@@ -304,9 +304,9 @@ const PageTable = {
             resetSelected();
             overlay.hide();
         }
-        function checkIfAndReturnEmpty(data) { return data === null || data === '' ? '' : data; }
+        const checkIfAndReturnEmpty = (data) => { return data === null || data === '' ? '' : data; };
 
-        onMounted(function () {
+        onMounted(() => {
             getGeoLocation();
             try {
                 var select = $('.select2');
@@ -324,7 +324,7 @@ const PageTable = {
             getGeoLevel();
             bus.on('g-event-update-user', reloadUserListOnUpdate);
         });
-        onBeforeUnmount(function () {
+        onBeforeUnmount(() => {
             bus.off('g-event-update-user', reloadUserListOnUpdate);
         });
 

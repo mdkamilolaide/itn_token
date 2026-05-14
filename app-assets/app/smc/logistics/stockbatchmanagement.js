@@ -12,7 +12,7 @@ const appState = Vue.reactive({
     permission: (typeof getPermission === 'function')
         ? (getPermission(typeof per !== 'undefined' ? per : null, 'smc') || { permission_value: 0 })
         : { permission_value: 0 },
-    userId: (function () { var el = document.getElementById('v_g_id'); return el ? el.value : ''; })(),
+    userId: (() => { var el = document.getElementById('v_g_id'); return el ? el.value : ''; })(),
     geoLevelForm: { geoLevel: '', geoLevelId: 0 },
     defaultStateId: '',
     sysDefaultData: [],
@@ -26,7 +26,7 @@ const appState = Vue.reactive({
     filterText: '',
 });
 
-function displayDateLong(d, fullDate, withTime) {
+const displayDateLong = (d, fullDate, withTime) => {
     if (fullDate === undefined) fullDate = false;
     if (withTime === undefined) withTime = true;
     var date = new Date(d);
@@ -45,37 +45,37 @@ const PageAvailabilityCheck = {
         const searchState = ref(false);
         const searchText = ref('');
 
-        function getAllPeriodLists() {
+        const getAllPeriodLists = () => {
             overlay.show();
             axios.get(common.DataService + '?qid=1004')
-                .then(function (response) {
+                .then(response => {
                     appState.periodData = (response.data && response.data.data) || [];
                     overlay.hide();
                 })
-                .catch(function (error) {
+                .catch(error => {
                     overlay.hide();
                     alert.Error('ERROR', safeMessage(error));
                 });
         }
-        function getReceiptHeader() {
+        const getReceiptHeader = () => {
             overlay.show();
             axios.get(common.DataService + '?qid=gen0013')
-                .then(function (response) {
+                .then(response => {
                     var data = response.data && response.data.data && response.data.data[0];
                     appState.receiptHeader = (data && data.logo) || '';
                     overlay.hide();
                 })
-                .catch(function (error) {
+                .catch(error => {
                     overlay.hide();
                     alert.Error('ERROR', safeMessage(error));
                 });
         }
-        function generateBatchStock() {
+        const generateBatchStock = () => {
             if (appState.currentPeriodId == '') { alert.Error('ERROR', 'Please select a visit'); return; }
             var data = { periodid: appState.currentPeriodId };
             overlay.show();
             axios.post(common.DataService + '?qid=1132', JSON.stringify(data))
-                .then(function (response) {
+                .then(response => {
                     overlay.hide();
                     if (response.data.result_code == '200') {
                         appState.stockBatchData = response.data.data || [];
@@ -84,36 +84,32 @@ const PageAvailabilityCheck = {
                         alert.Error('ERROR', response.data.message);
                     }
                 })
-                .catch(function (error) {
+                .catch(error => {
                     overlay.hide();
                     var msg = (error && error.response && error.response.data && error.response.data.message) || safeMessage(error);
                     alert.Error('ERROR', msg);
                 });
         }
-        function resetCheckTable() {
+        const resetCheckTable = () => {
             appState.stockBatchData = [];
             searchState.value = false;
         }
-        function resetForm() {
+        const resetForm = () => {
             resetCheckTable();
             appState.currentPeriodId = '';
             appState.currentProductCode = '';
         }
 
-        const filteredStockData = computed(function () {
+        const filteredStockData = computed(() => {
             var keyword = (appState.filterText || '').toLowerCase().trim();
             if (!keyword) return appState.stockBatchData || [];
-            return (appState.stockBatchData || []).filter(function (item) {
-                return (
-                    (item.product_name && item.product_name.toLowerCase().includes(keyword)) ||
-                    (item.batch && item.batch.toLowerCase().includes(keyword)) ||
-                    (item.origin_string && item.origin_string.toLowerCase().includes(keyword)) ||
-                    (item.destination_string && item.destination_string.toLowerCase().includes(keyword))
-                );
-            });
+            return (appState.stockBatchData || []).filter(item => (item.product_name && item.product_name.toLowerCase().includes(keyword)) ||
+            (item.batch && item.batch.toLowerCase().includes(keyword)) ||
+            (item.origin_string && item.origin_string.toLowerCase().includes(keyword)) ||
+            (item.destination_string && item.destination_string.toLowerCase().includes(keyword)));
         });
-        const groupDataByFacility = computed(function () {
-            var grouped = filteredStockData.value.reduce(function (acc, item) {
+        const groupDataByFacility = computed(() => {
+            var grouped = filteredStockData.value.reduce((acc, item) => {
                 var key = item.lgaid + '||' + item.lga;
                 if (!acc[key]) acc[key] = { lgaid: item.lgaid, lga: item.lga, items: [] };
                 var updatedItem = Object.assign({}, item, {
@@ -124,15 +120,15 @@ const PageAvailabilityCheck = {
                 acc[key].items.push(updatedItem);
                 return acc;
             }, {});
-            return Object.values(grouped).sort(function (a, b) { return a.lga.localeCompare(b.lga); });
+            return Object.values(grouped).sort((a, b) => a.lga.localeCompare(b.lga));
         });
 
-        function generatePDF() {
+        const generatePDF = () => {
             var content = [];
             var data = groupDataByFacility.value;
             if (!data || data.length === 0) { alert.Error('ERROR', 'No data available for PDF generation.'); return; }
             var todayDate = displayDateLong(new Date().toLocaleDateString(), false, true);
-            data.forEach(function (group, index) {
+            data.forEach((group, index) => {
                 content.push(
                     { text: 'STOCK BATCH ORDER FOR ' + group.lga + ' LGA', fontSize: 12, style: 'header', alignment: 'center', margin: [0, 0, 0, 40] },
                     {
@@ -149,17 +145,15 @@ const PageAvailabilityCheck = {
                                     { text: 'Expiry Date', style: 'tableHeader', noWrap: true },
                                     { text: 'Quantity', style: 'tableHeader' },
                                 ],
-                            ].concat(group.items.map(function (item, i) {
-                                return [
-                                    { text: i + 1, style: 'tableBodyFont8' },
-                                    { text: item.destination_string, style: 'tableBodyFont8' },
-                                    { text: item.product_name, style: 'tableBodyFont8', noWrap: true },
-                                    { text: item.product_code, style: 'tableBodyFont8' },
-                                    { text: item.batch, style: 'tableBodyFont8' },
-                                    { text: item.expiry, style: 'tableBodyFont8', noWrap: true },
-                                    { text: item.secondary_qty, style: 'tableBodyFont8' },
-                                ];
-                            })),
+                            ].concat(group.items.map((item, i) => [
+                                { text: i + 1, style: 'tableBodyFont8' },
+                                { text: item.destination_string, style: 'tableBodyFont8' },
+                                { text: item.product_name, style: 'tableBodyFont8', noWrap: true },
+                                { text: item.product_code, style: 'tableBodyFont8' },
+                                { text: item.batch, style: 'tableBodyFont8' },
+                                { text: item.expiry, style: 'tableBodyFont8', noWrap: true },
+                                { text: item.secondary_qty, style: 'tableBodyFont8' },
+                            ])),
                         },
                         layout: 'lightHorizontalLines',
                         margin: [0, 0, 0, 20],
@@ -173,7 +167,7 @@ const PageAvailabilityCheck = {
                 pageOrientation: 'landscape',
                 pageMargins: [40, 60, 40, 60],
                 images: { logoDataURL: 'data:image/svg+xml;base64,' + appState.receiptHeader },
-                header: function (currentPage, pageCount) {
+                header: (currentPage, pageCount) => {
                     return {
                         columns: [
                             currentPage === 1 ? { image: 'logoDataURL', width: 80 } : { text: '', width: 80 },
@@ -182,7 +176,7 @@ const PageAvailabilityCheck = {
                         margin: [40, 20, 40, 0],
                     };
                 },
-                footer: function (currentPage, pageCount) {
+                footer: (currentPage, pageCount) => {
                     return {
                         columns: [
                             { text: 'Generated by Ipolongo System', alignment: 'left', fontSize: 9 },
@@ -205,23 +199,23 @@ const PageAvailabilityCheck = {
             }
         }
 
-        function debounce(fn, delay) {
+        const debounce = (fn, delay) => {
             var timeout;
             return function () {
                 var args = arguments;
                 clearTimeout(timeout);
-                timeout = setTimeout(function () { fn.apply(null, args); }, delay);
+                timeout = setTimeout(() => { fn.apply(null, args); }, delay);
             };
         }
-        var debouncedSearch = debounce(function (val) { appState.filterText = val; }, 300);
-        watch(searchText, function (val) { debouncedSearch(val); });
+        var debouncedSearch = debounce(val => { appState.filterText = val; }, 300);
+        watch(searchText, val => { debouncedSearch(val); });
 
-        onMounted(function () {
+        onMounted(() => {
             getAllPeriodLists();
             getReceiptHeader();
             bus.on('g-event-reset-form', resetForm);
         });
-        onBeforeUnmount(function () {
+        onBeforeUnmount(() => {
             bus.off('g-event-reset-form', resetForm);
         });
 
@@ -230,7 +224,7 @@ const PageAvailabilityCheck = {
             filteredStockData, groupDataByFacility,
             getAllPeriodLists, getReceiptHeader, generateBatchStock,
             resetCheckTable, resetForm, generatePDF,
-            displayDate: function (d, fullDate, withTime) { return displayDateLong(d, fullDate, withTime); },
+            displayDate: (d, fullDate, withTime) => { return displayDateLong(d, fullDate, withTime); },
             convertStringNumberToFigures: fmtUtils.convertStringNumberToFigures,
             capitalize: fmtUtils.capitalize,
         };

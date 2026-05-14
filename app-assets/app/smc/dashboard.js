@@ -26,7 +26,7 @@ const EVT_REFRESH = 'fire-event-refresh';
 const EVT_CLEAR = 'fire-event-clear-filter';
 const EVT_REMOVE_SINGLE = 'fire-event-remove-single-filter';
 
-function joinWithCommaAnd(array, status) {
+const joinWithCommaAnd = (array, status) => {
     if (!array || array.length === 0) return '';
     if (array.length === 1) return array[0];
     var copy = array.slice();
@@ -34,23 +34,23 @@ function joinWithCommaAnd(array, status) {
     return status ? copy.join(',') + ',' + lastElement : copy.join(', ') + ' and ' + lastElement;
 }
 
-function cleanUrl(url) {
+const cleanUrl = (url) => {
     var urlObj = new URL(url);
     var params = urlObj.searchParams;
     var allowed = ['qid', 'filterId'];
     var keysToRemove = [];
     var keys = Array.from(params.keys());
-    keys.forEach(function (k) { if (allowed.indexOf(k) === -1) keysToRemove.push(k); });
-    keysToRemove.forEach(function (k) { params.delete(k); });
+    keys.forEach(k => { if (allowed.indexOf(k) === -1) keysToRemove.push(k); });
+    keysToRemove.forEach(k => { params.delete(k); });
     return urlObj.toString();
 }
 
-function splitWordAndCapitalize(str) {
+const splitWordAndCapitalize = (str) => {
     var words = String(str || '').split(/(?=[A-Z])|_| /);
-    return words.map(function (w) { return w.charAt(0).toUpperCase() + w.slice(1).toLowerCase(); }).join(' ');
+    return words.map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
 }
 
-function buildFilterQs(periodIds, reportDate) {
+const buildFilterQs = (periodIds, reportDate) => {
     var rd = reportDate || '';
     var parts = rd.split(' to ');
     var sd = parts[0] || '';
@@ -58,7 +58,7 @@ function buildFilterQs(periodIds, reportDate) {
     return '&pid=' + periodIds + '&sdate=' + sd + '&edate=' + ed;
 }
 
-function splitDateRange(reportDate) {
+const splitDateRange = (reportDate) => {
     var rd = reportDate || '';
     var parts = rd.split(' to ');
     return { start: parts[0] || '', end: parts[1] || '' };
@@ -66,21 +66,21 @@ function splitDateRange(reportDate) {
 
 // Common chart shell: each panel overrides title/colors/series and reuses
 // the same axis + label formatting.
-function makeBarChartOptions(opts) {
+const makeBarChartOptions = (opts) => {
     return {
         chart: { type: 'bar', stacked: !!opts.stacked },
         colors: opts.colors,
         xaxis: { categories: opts.categories || [] },
         legend: {
             position: 'bottom',
-            formatter: function (seriesName) { return capitalizeOne(seriesName); },
+            formatter: (seriesName) => { return capitalizeOne(seriesName); },
             fontFamily: 'Arial, sans-serif',
             fontSize: '12px',
         },
         title: { text: opts.title, align: 'center' },
         yaxis: {
             labels: {
-                formatter: function (val) { return parseInt(val).toLocaleString(); },
+                formatter: (val) => { return parseInt(val).toLocaleString(); },
             },
         },
         plotOptions: {
@@ -88,7 +88,7 @@ function makeBarChartOptions(opts) {
         },
         dataLabels: {
             enabled: true,
-            formatter: function (val) { return parseInt(val).toLocaleString(); },
+            formatter: (val) => { return parseInt(val).toLocaleString(); },
             offsetY: -18,
             style: { fontSize: '12px', colors: ['#000'] },
         },
@@ -103,7 +103,7 @@ function makeBarChartOptions(opts) {
     };
 }
 
-function capitalizeOne(word) {
+const capitalizeOne = (word) => {
     if (!word) return word;
     var lower = String(word).toLowerCase();
     return lower.charAt(0).toUpperCase() + lower.slice(1);
@@ -113,11 +113,11 @@ function capitalizeOne(word) {
 // mount so .scrollBox elements inside each panel are picked up.
 const PageBody = {
     setup() {
-        onMounted(function () {
+        onMounted(() => {
             try {
                 var els = document.querySelectorAll('.scrollBox');
                 if (els && window.PerfectScrollbar) {
-                    els.forEach(function (el) { new window.PerfectScrollbar(el); });
+                    els.forEach(el => { new window.PerfectScrollbar(el); });
                 }
             } catch (e) { /* swallow */ }
         });
@@ -164,7 +164,7 @@ const ChildList = {
         const series = ref([]);
         const chartOptions = ref({ xaxis: { title: { text: '' } } });
 
-        function loadTableData(fId, title) {
+        const loadTableData = (fId, title) => {
             var fp = tableOptions.filterParam;
             var periodIds = joinWithCommaAnd(fp.periodid.slice(), true);
             var range = splitDateRange(fp.reportDate);
@@ -195,7 +195,7 @@ const ChildList = {
             loadDashboardData(queryUrl);
         }
 
-        async function loadDashboardData(u) {
+        const loadDashboardData = async (u) => {
             try {
                 overlay.show();
                 filterUrl.value = u;
@@ -217,22 +217,22 @@ const ChildList = {
             }
         }
 
-        function toggleFilter() {
+        const toggleFilter = () => {
             if (!filterState.value && !checkIfFilterOn.value) filters.value = false;
             return (filterState.value = !filterState.value);
         }
-        function fireFilterEvent() {
+        const fireFilterEvent = () => {
             bus.emit(EVT_APPLY, [
                 tableOptions.filterParam.periodid.slice(),
                 tableOptions.filterParam.visitTitle,
                 tableOptions.filterParam.reportDate,
             ]);
         }
-        function fireRefreshEvent() { bus.emit(EVT_REFRESH); }
-        function fireClearFilter() { bus.emit(EVT_CLEAR); }
-        function fireRemoveSingleFilter(name) { bus.emit(EVT_REMOVE_SINGLE, name); }
+        const fireRefreshEvent = () => { bus.emit(EVT_REFRESH); };
+        const fireClearFilter = () => { bus.emit(EVT_CLEAR); };
+        const fireRemoveSingleFilter = (name) => { bus.emit(EVT_REMOVE_SINGLE, name); };
 
-        function applyFilter() {
+        const applyFilter = () => {
             var checkFill = 0;
             if (tableOptions.filterParam.periodid.length > 0) checkFill++;
             if ((tableOptions.filterParam.reportDate || '').length > 0) checkFill++;
@@ -248,7 +248,7 @@ const ChildList = {
                 clearAllFilter();
             }
         }
-        function loadNewData() {
+        const loadNewData = () => {
             var checkFill = 0;
             if (tableOptions.filterParam.periodid.length > 0) checkFill++;
             if ((tableOptions.filterParam.reportDate || '').length > 0) checkFill++;
@@ -262,7 +262,7 @@ const ChildList = {
                 filters.value = checkIfFilterOn.value = false;
             }
         }
-        function removeSingleFilter(column_name) {
+        const removeSingleFilter = (column_name) => {
             var fp = tableOptions.filterParam;
             if (Array.isArray(fp[column_name])) fp[column_name] = [];
             else fp[column_name] = '';
@@ -272,14 +272,12 @@ const ChildList = {
                 try { $('.period').val('').trigger('change'); } catch (e) {}
             }
             if (column_name === 'reportDate') clearFlatpickr('date');
-            var hasActive = Object.values(fp).some(function (v) {
-                return Array.isArray(v) ? v.length > 0 : v !== '';
-            });
+            var hasActive = Object.values(fp).some(v => Array.isArray(v) ? v.length > 0 : v !== '');
             filters.value = checkIfFilterOn.value = hasActive;
             fireRemoveSingleFilter(column_name);
             loadNewData();
         }
-        function clearAllFilter() {
+        const clearAllFilter = () => {
             filters.value = false;
             Object.assign(tableOptions.filterParam, { periodid: [], visitTitle: '', reportDate: '' });
             try { $('.period').val('').trigger('change'); } catch (e) {}
@@ -287,25 +285,25 @@ const ChildList = {
             fireClearFilter();
             loadDashboardData(cleanUrl(filterUrl.value));
         }
-        function clearFlatpickr(dateClass) {
+        const clearFlatpickr = (dateClass) => {
             try {
                 var inst = $('.' + dateClass)[0] && $('.' + dateClass)[0]._flatpickr;
                 if (inst) inst.clear();
             } catch (e) {}
         }
-        function checkAndHideFilter(name) {
+        const checkAndHideFilter = (name) => {
             return name !== 'periodid';
         }
-        function refreshData() {
+        const refreshData = () => {
             getAllPeriodLists();
             fireRefreshEvent();
             loadDashboardData(filterUrl.value);
         }
-        function controlBreadCrum(fId, level, title) {
+        const controlBreadCrum = (fId, level, title) => {
             reportLevel.value = level;
             loadTableData(fId, title);
         }
-        function plotChart() {
+        const plotChart = () => {
             chartOptions.value = makeBarChartOptions({
                 colors: ['#7367f0', '#b9b3f7'],
                 title: 'Child Registration',
@@ -314,40 +312,38 @@ const ChildList = {
             });
             series.value = (statData.chartData && statData.chartData[0]) || [];
         }
-        function getAllPeriodLists() {
+        const getAllPeriodLists = () => {
             overlay.show();
             axios.get((window.common && window.common.DataService) + '?qid=1004')
-                .then(function (response) {
+                .then(response => {
                     periodData.value = (response.data && response.data.data) || [];
                     overlay.hide();
                 })
-                .catch(function (error) {
+                .catch(error => {
                     overlay.hide();
                     alert.Error('ERROR', safeMessage(error));
                 });
         }
-        function setPeriodTitle(event) {
+        const setPeriodTitle = (event) => {
             var selected = Array.isArray(event) ? event : [];
             tableOptions.filterParam.periodid = [];
             var titles = [];
-            selected.forEach(function (id) {
+            selected.forEach(id => {
                 tableOptions.filterParam.periodid.push(id);
-                var period = (periodData.value || []).find(function (p) { return p.periodid == id; });
+                var period = (periodData.value || []).find(p => p.periodid == id);
                 if (period) titles.push(period.title);
             });
             tableOptions.filterParam.visitTitle = joinWithCommaAnd(titles);
         }
 
-        const getTopChildStat = computed(function () {
-            return statData.tableData.reduce(function (acc, curr) {
-                acc.male += parseInt(curr.male, 10) || 0;
-                acc.female += parseInt(curr.female, 10) || 0;
-                acc.total += parseInt(curr.total, 10) || 0;
-                return acc;
-            }, { male: 0, female: 0, total: 0 });
-        });
+        const getTopChildStat = computed(() => statData.tableData.reduce((acc, curr) => {
+            acc.male += parseInt(curr.male, 10) || 0;
+            acc.female += parseInt(curr.female, 10) || 0;
+            acc.total += parseInt(curr.total, 10) || 0;
+            return acc;
+        }, { male: 0, female: 0, total: 0 }));
 
-        onMounted(function () {
+        onMounted(() => {
             getAllPeriodLists();
             loadTableData(0, '');
             try {
@@ -557,7 +553,7 @@ const DrugAdmin = {
         const series = ref([]);
         const chartOptions = ref({ xaxis: { title: { text: '' } } });
 
-        function loadTableData(fId, title) {
+        const loadTableData = (fId, title) => {
             var fp = tableOptions.filterParam;
             var periodIds = joinWithCommaAnd(fp.periodid.slice(), true);
             var range = splitDateRange(fp.reportDate);
@@ -587,7 +583,7 @@ const DrugAdmin = {
 
             loadDashboardData(queryUrl);
         }
-        async function loadDashboardData(u) {
+        const loadDashboardData = async (u) => {
             try {
                 overlay.show();
                 filterUrl.value = u;
@@ -608,17 +604,17 @@ const DrugAdmin = {
                 overlay.hide();
             }
         }
-        function handleFilterChange(data) {
+        const handleFilterChange = (data) => {
             tableOptions.filterParam.periodid = (data && data[0]) ? data[0].slice() : [];
             tableOptions.filterParam.visitTitle = (data && data[1]) || '';
             tableOptions.filterParam.reportDate = (data && data[2]) || '';
             applyFilter();
         }
-        function controlBreadCrum(fId, level, title) {
+        const controlBreadCrum = (fId, level, title) => {
             reportLevel.value = level;
             loadTableData(fId, title);
         }
-        function plotChart() {
+        const plotChart = () => {
             chartOptions.value = makeBarChartOptions({
                 colors: ['#FF9800', '#7367f0'],
                 title: 'Drug Administration',
@@ -627,8 +623,8 @@ const DrugAdmin = {
             });
             series.value = (statData.chartData && statData.chartData[0]) || [];
         }
-        function refreshData() { loadDashboardData(filterUrl.value); }
-        function applyFilter() {
+        const refreshData = () => { loadDashboardData(filterUrl.value); };
+        const applyFilter = () => {
             var checkFill = 0;
             if (tableOptions.filterParam.periodid.length > 0) checkFill++;
             if ((tableOptions.filterParam.reportDate || '').length > 0) checkFill++;
@@ -640,11 +636,11 @@ const DrugAdmin = {
                 clearAllFilter();
             }
         }
-        function clearAllFilter() {
+        const clearAllFilter = () => {
             Object.assign(tableOptions.filterParam, { periodid: [], visitTitle: '', reportDate: '' });
             loadDashboardData(cleanUrl(filterUrl.value));
         }
-        function removeSingleFilter(column_name) {
+        const removeSingleFilter = (column_name) => {
             var fp = tableOptions.filterParam;
             if (Array.isArray(fp[column_name])) fp[column_name] = [];
             else fp[column_name] = '';
@@ -655,26 +651,24 @@ const DrugAdmin = {
             applyFilter();
         }
 
-        const getTopChildStat = computed(function () {
-            return statData.tableData.reduce(function (acc, curr) {
-                acc.eligible += parseInt(curr.eligible, 10) || 0;
-                acc.non_eligible += parseInt(curr.non_eligible, 10) || 0;
-                acc.referral += parseInt(curr.referral, 10) || 0;
-                acc.spaq1 += parseInt(curr.spaq1, 10) || 0;
-                acc.spaq2 += parseInt(curr.spaq2, 10) || 0;
-                acc.total += parseInt(curr.total, 10) || 0;
-                return acc;
-            }, { eligible: 0, non_eligible: 0, referral: 0, spaq1: 0, spaq2: 0, total: 0 });
-        });
+        const getTopChildStat = computed(() => statData.tableData.reduce((acc, curr) => {
+            acc.eligible += parseInt(curr.eligible, 10) || 0;
+            acc.non_eligible += parseInt(curr.non_eligible, 10) || 0;
+            acc.referral += parseInt(curr.referral, 10) || 0;
+            acc.spaq1 += parseInt(curr.spaq1, 10) || 0;
+            acc.spaq2 += parseInt(curr.spaq2, 10) || 0;
+            acc.total += parseInt(curr.total, 10) || 0;
+            return acc;
+        }, { eligible: 0, non_eligible: 0, referral: 0, spaq1: 0, spaq2: 0, total: 0 }));
 
-        onMounted(function () {
+        onMounted(() => {
             bus.on(EVT_APPLY, handleFilterChange);
             bus.on(EVT_REFRESH, refreshData);
             bus.on(EVT_CLEAR, clearAllFilter);
             bus.on(EVT_REMOVE_SINGLE, removeSingleFilter);
             loadTableData(0, '');
         });
-        onBeforeUnmount(function () {
+        onBeforeUnmount(() => {
             bus.off(EVT_APPLY, handleFilterChange);
             bus.off(EVT_REFRESH, refreshData);
             bus.off(EVT_CLEAR, clearAllFilter);
@@ -849,7 +843,7 @@ const ReferralAdmin = {
         const series = ref([]);
         const chartOptions = ref({ xaxis: { title: { text: '' } } });
 
-        function loadTableData(fId, title) {
+        const loadTableData = (fId, title) => {
             var fp = tableOptions.filterParam;
             var periodIds = joinWithCommaAnd(fp.periodid.slice(), true);
             var range = splitDateRange(fp.reportDate);
@@ -879,7 +873,7 @@ const ReferralAdmin = {
 
             loadDashboardData(queryUrl);
         }
-        async function loadDashboardData(u) {
+        const loadDashboardData = async (u) => {
             try {
                 overlay.show();
                 filterUrl.value = u;
@@ -900,17 +894,17 @@ const ReferralAdmin = {
                 overlay.hide();
             }
         }
-        function handleFilterChange(data) {
+        const handleFilterChange = (data) => {
             tableOptions.filterParam.periodid = (data && data[0]) ? data[0].slice() : [];
             tableOptions.filterParam.visitTitle = (data && data[1]) || '';
             tableOptions.filterParam.reportDate = (data && data[2]) || '';
             applyFilter();
         }
-        function controlBreadCrum(fId, level, title) {
+        const controlBreadCrum = (fId, level, title) => {
             reportLevel.value = level;
             loadTableData(fId, title);
         }
-        function plotChart() {
+        const plotChart = () => {
             chartOptions.value = makeBarChartOptions({
                 colors: ['#D7D8E2', '#4351F4'],
                 title: 'Referral',
@@ -919,8 +913,8 @@ const ReferralAdmin = {
             });
             series.value = (statData.chartData && statData.chartData[0]) || [];
         }
-        function refreshData() { loadDashboardData(filterUrl.value); }
-        function applyFilter() {
+        const refreshData = () => { loadDashboardData(filterUrl.value); };
+        const applyFilter = () => {
             var checkFill = 0;
             if (tableOptions.filterParam.periodid.length > 0) checkFill++;
             if ((tableOptions.filterParam.reportDate || '').length > 0) checkFill++;
@@ -932,11 +926,11 @@ const ReferralAdmin = {
                 clearAllFilter();
             }
         }
-        function clearAllFilter() {
+        const clearAllFilter = () => {
             Object.assign(tableOptions.filterParam, { periodid: [], visitTitle: '', reportDate: '' });
             loadDashboardData(cleanUrl(filterUrl.value));
         }
-        function removeSingleFilter(column_name) {
+        const removeSingleFilter = (column_name) => {
             var fp = tableOptions.filterParam;
             if (Array.isArray(fp[column_name])) fp[column_name] = [];
             else fp[column_name] = '';
@@ -947,23 +941,21 @@ const ReferralAdmin = {
             applyFilter();
         }
 
-        const getTopChildStat = computed(function () {
-            return statData.tableData.reduce(function (acc, curr) {
-                acc.referred += parseInt(curr.referred, 10) || 0;
-                acc.attended += parseInt(curr.attended, 10) || 0;
-                acc.total += parseInt(curr.total, 10) || 0;
-                return acc;
-            }, { referred: 0, attended: 0, total: 0 });
-        });
+        const getTopChildStat = computed(() => statData.tableData.reduce((acc, curr) => {
+            acc.referred += parseInt(curr.referred, 10) || 0;
+            acc.attended += parseInt(curr.attended, 10) || 0;
+            acc.total += parseInt(curr.total, 10) || 0;
+            return acc;
+        }, { referred: 0, attended: 0, total: 0 }));
 
-        onMounted(function () {
+        onMounted(() => {
             bus.on(EVT_APPLY, handleFilterChange);
             bus.on(EVT_REFRESH, refreshData);
             bus.on(EVT_CLEAR, clearAllFilter);
             bus.on(EVT_REMOVE_SINGLE, removeSingleFilter);
             loadTableData(0, '');
         });
-        onBeforeUnmount(function () {
+        onBeforeUnmount(() => {
             bus.off(EVT_APPLY, handleFilterChange);
             bus.off(EVT_REFRESH, refreshData);
             bus.off(EVT_CLEAR, clearAllFilter);
@@ -1106,7 +1098,7 @@ const IccAdmin = {
             secondDuplicateIds: [],
         });
 
-        function loadTableData(fId, title) {
+        const loadTableData = (fId, title) => {
             var fp = tableOptions.filterParam;
             var periodIds = joinWithCommaAnd(fp.periodid.slice(), true);
             var range = splitDateRange(fp.reportDate);
@@ -1136,7 +1128,7 @@ const IccAdmin = {
 
             loadDashboardData(queryUrl);
         }
-        async function loadDashboardData(u) {
+        const loadDashboardData = async (u) => {
             try {
                 overlay.show();
                 filterUrl.value = u;
@@ -1157,18 +1149,18 @@ const IccAdmin = {
                 overlay.hide();
             }
         }
-        function handleFilterChange(data) {
+        const handleFilterChange = (data) => {
             tableOptions.filterParam.periodid = (data && data[0]) ? data[0].slice() : [];
             tableOptions.filterParam.visitTitle = (data && data[1]) || '';
             tableOptions.filterParam.reportDate = (data && data[2]) || '';
             applyFilter();
         }
-        function controlBreadCrum(fId, level, title) {
+        const controlBreadCrum = (fId, level, title) => {
             reportLevel.value = level;
             loadTableData(fId, title);
         }
-        function refreshData() { loadDashboardData(filterUrl.value); }
-        function applyFilter() {
+        const refreshData = () => { loadDashboardData(filterUrl.value); };
+        const applyFilter = () => {
             var checkFill = 0;
             if (tableOptions.filterParam.periodid.length > 0) checkFill++;
             if ((tableOptions.filterParam.reportDate || '').length > 0) checkFill++;
@@ -1180,11 +1172,11 @@ const IccAdmin = {
                 clearAllFilter();
             }
         }
-        function clearAllFilter() {
+        const clearAllFilter = () => {
             Object.assign(tableOptions.filterParam, { periodid: [], visitTitle: '', reportDate: '' });
             loadDashboardData(cleanUrl(filterUrl.value));
         }
-        function removeSingleFilter(column_name) {
+        const removeSingleFilter = (column_name) => {
             var fp = tableOptions.filterParam;
             if (Array.isArray(fp[column_name])) fp[column_name] = [];
             else fp[column_name] = '';
@@ -1195,11 +1187,11 @@ const IccAdmin = {
             applyFilter();
         }
 
-        function findDuplicateIds(data) {
+        const findDuplicateIds = (data) => {
             var idMap = {};
             var duplicates = [];
             var firstDuplicateOccurence = [];
-            (data || []).forEach(function (item, index) {
+            (data || []).forEach((item, index) => {
                 if (idMap[item.id] !== undefined) {
                     duplicates.push(index);
                     firstDuplicateOccurence.push(index - 1);
@@ -1209,56 +1201,52 @@ const IccAdmin = {
             });
             return { duplicates: duplicates, firstDuplicateOccurence: firstDuplicateOccurence };
         }
-        function rowColSpan(index) {
+        const rowColSpan = (index) => {
             return statData.firstDuplicateIds.indexOf(index) !== -1;
         }
-        function hideCell(index) {
+        const hideCell = (index) => {
             return statData.secondDuplicateIds.indexOf(index) !== -1;
         }
-        function groupStyle(i) {
+        const groupStyle = (i) => {
             var merged = statData.firstDuplicateIds.concat(statData.secondDuplicateIds);
             return merged.indexOf(i) !== -1;
         }
-        function total(g) {
-            return ['administered', 'redosed', 'wasted', 'loss'].reduce(function (sum, key) {
-                return sum + (parseInt(g[key] || 0, 10) || 0);
-            }, 0);
+        const total = (g) => {
+            return ['administered', 'redosed', 'wasted', 'loss'].reduce((sum, key) => sum + (parseInt(g[key] || 0, 10) || 0), 0);
         }
 
-        const getTopIccStat = computed(function () {
-            return statData.tableData.reduce(function (acc, item) {
-                if (item.drug === 'SPAQ 1') {
-                    acc.sumSpaq1Issued += parseInt(item.total_issued) || 0;
-                    acc.sumSpaq1Administered += parseInt(item.administered) || 0;
-                    acc.sumSpaq1Redosed += parseInt(item.redosed) || 0;
-                    acc.sumSpaq1Wasted += parseInt(item.wasted) || 0;
-                    acc.sumSpaq1Loss += parseInt(item.loss) || 0;
-                    acc.sumSpaq1Facility += parseInt(item.count_facility) || 0;
-                } else if (item.drug === 'SPAQ 2') {
-                    acc.sumSpaq2Issued += parseInt(item.total_issued) || 0;
-                    acc.sumSpaq2Administered += parseInt(item.administered) || 0;
-                    acc.sumSpaq2Redosed += parseInt(item.redosed) || 0;
-                    acc.sumSpaq2Wasted += parseInt(item.wasted) || 0;
-                    acc.sumSpaq2Loss += parseInt(item.loss) || 0;
-                    acc.sumSpaq2Facility += parseInt(item.count_facility) || 0;
-                }
-                return acc;
-            }, {
-                sumSpaq1Issued: 0, sumSpaq1Administered: 0, sumSpaq1Redosed: 0,
-                sumSpaq1Wasted: 0, sumSpaq1Loss: 0, sumSpaq1Facility: 0,
-                sumSpaq2Issued: 0, sumSpaq2Administered: 0, sumSpaq2Redosed: 0,
-                sumSpaq2Wasted: 0, sumSpaq2Loss: 0, sumSpaq2Facility: 0,
-            });
-        });
+        const getTopIccStat = computed(() => statData.tableData.reduce((acc, item) => {
+            if (item.drug === 'SPAQ 1') {
+                acc.sumSpaq1Issued += parseInt(item.total_issued) || 0;
+                acc.sumSpaq1Administered += parseInt(item.administered) || 0;
+                acc.sumSpaq1Redosed += parseInt(item.redosed) || 0;
+                acc.sumSpaq1Wasted += parseInt(item.wasted) || 0;
+                acc.sumSpaq1Loss += parseInt(item.loss) || 0;
+                acc.sumSpaq1Facility += parseInt(item.count_facility) || 0;
+            } else if (item.drug === 'SPAQ 2') {
+                acc.sumSpaq2Issued += parseInt(item.total_issued) || 0;
+                acc.sumSpaq2Administered += parseInt(item.administered) || 0;
+                acc.sumSpaq2Redosed += parseInt(item.redosed) || 0;
+                acc.sumSpaq2Wasted += parseInt(item.wasted) || 0;
+                acc.sumSpaq2Loss += parseInt(item.loss) || 0;
+                acc.sumSpaq2Facility += parseInt(item.count_facility) || 0;
+            }
+            return acc;
+        }, {
+            sumSpaq1Issued: 0, sumSpaq1Administered: 0, sumSpaq1Redosed: 0,
+            sumSpaq1Wasted: 0, sumSpaq1Loss: 0, sumSpaq1Facility: 0,
+            sumSpaq2Issued: 0, sumSpaq2Administered: 0, sumSpaq2Redosed: 0,
+            sumSpaq2Wasted: 0, sumSpaq2Loss: 0, sumSpaq2Facility: 0,
+        }));
 
-        onMounted(function () {
+        onMounted(() => {
             bus.on(EVT_APPLY, handleFilterChange);
             bus.on(EVT_REFRESH, refreshData);
             bus.on(EVT_CLEAR, clearAllFilter);
             bus.on(EVT_REMOVE_SINGLE, removeSingleFilter);
             loadTableData(0, '');
         });
-        onBeforeUnmount(function () {
+        onBeforeUnmount(() => {
             bus.off(EVT_APPLY, handleFilterChange);
             bus.off(EVT_REFRESH, refreshData);
             bus.off(EVT_CLEAR, clearAllFilter);

@@ -14,9 +14,9 @@ const { useApp, useFormat, bus, safeMessage } = window.utils;
 const PageBody = {
     setup() {
         const page = ref('list');
-        function gotoPageHandler(data) { page.value = data && data.page; }
-        onMounted(function () { bus.on('g-event-goto-page', gotoPageHandler); });
-        onBeforeUnmount(function () { bus.off('g-event-goto-page', gotoPageHandler); });
+        const gotoPageHandler = (data) => { page.value = data && data.page; };
+        onMounted(() => { bus.on('g-event-goto-page', gotoPageHandler); });
+        onBeforeUnmount(() => { bus.off('g-event-goto-page', gotoPageHandler); });
         return { page };
     },
     template: `
@@ -58,7 +58,7 @@ const ReferralList = {
             },
         });
 
-        function joinWithCommaAnd(array, status) {
+        const joinWithCommaAnd = (array, status) => {
             if (!array || array.length === 0) return '';
             if (array.length === 1) return array[0];
             var copy = array.slice();
@@ -66,7 +66,7 @@ const ReferralList = {
             return status ? copy.join(',') + ',' + lastElement : copy.join(', ') + ' and ' + lastElement;
         }
 
-        async function loadTableData() {
+        const loadTableData = async () => {
             overlay.show();
             var fp = tableOptions.filterParam;
             var periodIds = joinWithCommaAnd(fp.periodid, true);
@@ -80,7 +80,7 @@ const ReferralList = {
                 common.DataService + '?qid=1110&pid=' + periodIds + '&gid=' + fp.geo_level_id + '&gl=' + fp.geo_level + '&atd=' + fp.referralStatus,
             ];
             try {
-                var responses = await Promise.all(endpoints.map(function (e) { return axios.get(e); }));
+                var responses = await Promise.all(endpoints.map(e => axios.get(e)));
                 var t = responses[0] && responses[0].data;
                 tableData.value = Array.isArray(t && t.data) ? t.data : [];
                 tableOptions.total = (t && t.recordsTotal) || 0;
@@ -98,38 +98,38 @@ const ReferralList = {
             }
         }
 
-        function toggleFilter() {
+        const toggleFilter = () => {
             if (!filterState.value && !checkIfFilterOn.value) filters.value = false;
             return (filterState.value = !filterState.value);
         }
-        function paginationDefault() {
+        const paginationDefault = () => {
             tableOptions.pageLength = Math.ceil(tableOptions.total / tableOptions.perPage);
             tableOptions.limitStart = Math.ceil((tableOptions.currentPage - 1) * tableOptions.perPage);
             tableOptions.isNext = tableOptions.currentPage < tableOptions.pageLength;
             tableOptions.isPrev = tableOptions.currentPage > 1;
         }
-        function nextPage() { tableOptions.currentPage += 1; paginationDefault(); loadTableData(); }
-        function prevPage() { tableOptions.currentPage -= 1; paginationDefault(); loadTableData(); }
-        function currentPage() {
+        const nextPage = () => { tableOptions.currentPage += 1; paginationDefault(); loadTableData(); };
+        const prevPage = () => { tableOptions.currentPage -= 1; paginationDefault(); loadTableData(); };
+        const currentPage = () => {
             paginationDefault();
             if (tableOptions.currentPage < 1)                            alert.Error('ERROR', "The Page requested doesn't exist");
             else if (tableOptions.currentPage > tableOptions.pageLength) alert.Error('ERROR', "The Page requested doesn't exist");
             else                                                         loadTableData();
         }
-        function changePerPage(val) {
+        const changePerPage = (val) => {
             var maxPerPage = Math.ceil(tableOptions.total / val);
             if (maxPerPage < tableOptions.currentPage) tableOptions.currentPage = maxPerPage;
             tableOptions.perPage = val;
             paginationDefault();
             loadTableData();
         }
-        function sort(col) {
+        const sort = (col) => {
             if (tableOptions.orderField === col) tableOptions.orderDir = tableOptions.orderDir === 'asc' ? 'desc' : 'asc';
             else                                  tableOptions.orderField = col;
             paginationDefault();
             loadTableData();
         }
-        function applyFilter() {
+        const applyFilter = () => {
             var checkFill = 0;
             if (tableOptions.filterParam.geo_level != '') checkFill++;
             if (tableOptions.filterParam.geo_level_id != '') checkFill++;
@@ -144,7 +144,7 @@ const ReferralList = {
                 alert.Error('ERROR', 'Invalid required data');
             }
         }
-        function removeSingleFilter(column_name) {
+        const removeSingleFilter = (column_name) => {
             var fp = tableOptions.filterParam;
             if (Array.isArray(fp[column_name])) fp[column_name] = [];
             else fp[column_name] = '';
@@ -158,14 +158,12 @@ const ReferralList = {
                 fp.visitTitle = '';
                 try { $('.period').val('').trigger('change'); } catch (e) {}
             }
-            var hasActive = Object.values(fp).some(function (v) {
-                return Array.isArray(v) ? v.length > 0 : v !== '';
-            });
+            var hasActive = Object.values(fp).some(v => Array.isArray(v) ? v.length > 0 : v !== '');
             filters.value = checkIfFilterOn.value = hasActive;
             paginationDefault();
             loadTableData();
         }
-        function clearAllFilter() {
+        const clearAllFilter = () => {
             filters.value = false;
             Object.assign(tableOptions.filterParam, {
                 geo_level: '', geo_level_id: '', geo_string: '',
@@ -176,35 +174,35 @@ const ReferralList = {
             paginationDefault();
             loadTableData();
         }
-        function checkAndHideFilter(name) {
+        const checkAndHideFilter = (name) => {
             return ['periodid', 'geo_level_id', 'geo_level'].indexOf(name) === -1;
         }
-        function refreshData() { paginationDefault(); loadTableData(); }
-        function getGeoLocation() {
+        const refreshData = () => { paginationDefault(); loadTableData(); };
+        const getGeoLocation = () => {
             overlay.show();
             axios.get(common.DataService + '?qid=gen009')
-                .then(function (response) {
+                .then(response => {
                     geoData.value = (response.data && response.data.data) || [];
                     overlay.hide();
                 })
-                .catch(function (error) {
+                .catch(error => {
                     overlay.hide();
                     alert.Error('ERROR', safeMessage(error));
                 });
         }
-        function getAllPeriodLists() {
+        const getAllPeriodLists = () => {
             overlay.show();
             axios.get(common.DataService + '?qid=1004')
-                .then(function (response) {
+                .then(response => {
                     periodData.value = (response.data && response.data.data) || [];
                     overlay.hide();
                 })
-                .catch(function (error) {
+                .catch(error => {
                     overlay.hide();
                     alert.Error('ERROR', safeMessage(error));
                 });
         }
-        function setLocation(select_index) {
+        const setLocation = (select_index) => {
             var i = select_index || 0;
             var row = geoData.value[i];
             if (!row) return;
@@ -212,26 +210,24 @@ const ReferralList = {
             tableOptions.filterParam.geo_level_id = row.geo_level_id;
             tableOptions.filterParam.geo_string = row.title;
         }
-        function setPeriodTitle(event) {
+        const setPeriodTitle = (event) => {
             // multi-select. Vue's v-model on a multi-select gives an array of strings.
             var selected = Array.isArray(event) ? event : [];
             tableOptions.filterParam.periodid = [];
             var titles = [];
-            selected.forEach(function (id) {
+            selected.forEach(id => {
                 tableOptions.filterParam.periodid.push(id);
-                var period = (periodData.value || []).find(function (p) { return p.periodid == id; });
+                var period = (periodData.value || []).find(p => p.periodid == id);
                 if (period) titles.push(period.title);
             });
             tableOptions.filterParam.visitTitle = joinWithCommaAnd(titles);
         }
-        function splitWordAndCapitalize(str) {
+        const splitWordAndCapitalize = (str) => {
             var words = String(str || '').split(/(?=[A-Z])|_| /);
-            words = words.map(function (w) {
-                return w.charAt(0).toUpperCase() + w.slice(1).toLowerCase();
-            });
+            words = words.map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase());
             return words.join(' ');
         }
-        async function exportChildRefferal() {
+        const exportChildRefferal = async () => {
             var fp = tableOptions.filterParam;
             var periodIds = joinWithCommaAnd(fp.periodid, true);
             var qs = '&draw=' + tableOptions.currentPage +
@@ -273,12 +269,12 @@ const ReferralList = {
                 overlay.hide();
             }
         }
-        function convertStringNumberToFigures(d) {
+        const convertStringNumberToFigures = (d) => {
             var data = d ? parseInt(d) : 0;
             return data ? data.toLocaleString() : 0;
         }
 
-        const percentageAttended = computed(function () {
+        const percentageAttended = computed(() => {
             if (!statData.referrals) return 0;
             var p = ((statData.attended / statData.referrals) * 100).toFixed(2);
             if (p < 50)               statProgessBarStatus.value = 'progress-bar-danger';
@@ -287,7 +283,7 @@ const ReferralList = {
             return p;
         });
 
-        onMounted(function () {
+        onMounted(() => {
             getGeoLocation();
             getAllPeriodLists();
             loadTableData();

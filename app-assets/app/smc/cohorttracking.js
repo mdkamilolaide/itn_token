@@ -13,9 +13,9 @@ const { useApp, useFormat, bus, safeMessage } = window.utils;
 const PageBody = {
     setup() {
         const page = ref('list');
-        function gotoPageHandler(data) { page.value = data && data.page; }
-        onMounted(function () { bus.on('g-event-goto-page', gotoPageHandler); });
-        onBeforeUnmount(function () { bus.off('g-event-goto-page', gotoPageHandler); });
+        const gotoPageHandler = (data) => { page.value = data && data.page; };
+        onMounted(() => { bus.on('g-event-goto-page', gotoPageHandler); });
+        onBeforeUnmount(() => { bus.off('g-event-goto-page', gotoPageHandler); });
         return { page };
     },
     template: `
@@ -45,7 +45,7 @@ const ChildList = {
         const dpName = ref('');
         const selectedChild = ref({});
 
-        function loadTableData(fid, title) {
+        const loadTableData = (fid, title) => {
             var lvl = reportLevel.value;
             if (lvl == 1) {
                 filterId.value = 0;
@@ -64,7 +64,7 @@ const ChildList = {
                 loadCohortData(url.value + '?qid=1008&filterId=' + dpId.value);
             }
         }
-        async function loadCohortData(u) {
+        const loadCohortData = async (u) => {
             try {
                 overlay.show();
                 filterUrl.value = u;
@@ -82,16 +82,16 @@ const ChildList = {
                 alert.Error('ERROR', safeMessage(error));
             }
         }
-        function refreshData() { loadCohortData(filterUrl.value); }
-        function controlBreadCrum(fid, lvl, title) {
+        const refreshData = () => { loadCohortData(filterUrl.value); };
+        const controlBreadCrum = (fid, lvl, title) => {
             reportLevel.value = lvl;
             loadTableData(fid, title);
         }
-        function displayDayMonthYear(d) {
+        const displayDayMonthYear = (d) => {
             var date = new Date(d);
             return date.toLocaleString('en-us', { year: 'numeric', month: 'long', day: 'numeric' });
         }
-        async function viewChildAdminDetails(beneficiary_id, id) {
+        const viewChildAdminDetails = async (beneficiary_id, id) => {
             overlay.show();
             selectedChild.value = tableData.value[id] || {};
             try {
@@ -109,16 +109,16 @@ const ChildList = {
             $('#childAdminDetails').modal('show');
             overlay.hide();
         }
-        function hideViewChildAdminDetails() {
+        const hideViewChildAdminDetails = () => {
             overlay.show();
             selectedChild.value = {};
             $('#childAdminDetails').modal('hide');
             childDetails.value = [];
             overlay.hide();
         }
-        function checkIfEmpty(data) { return data === null || data === '' ? 'Nil' : data; }
+        const checkIfEmpty = (data) => { return data === null || data === '' ? 'Nil' : data; };
 
-        onMounted(function () { loadTableData(0, ''); });
+        onMounted(() => { loadTableData(0, ''); });
 
         return {
             url, filterUrl, tableData, childDetails, reportLevel, filterId,

@@ -12,12 +12,12 @@ const { useApp, useFormat, bus, safeMessage } = window.utils;
 
 /* Shared helpers ---------------------------------------------------- */
 const fmt = useFormat();
-function percentageUsed(total_data, used) {
+const percentageUsed = (total_data, used) => {
     var p = (parseFloat(used) / parseFloat(total_data)) * 100;
     return isNaN(p) ? 0 : p.toFixed(1);
 }
-function progressBarWidth(total_data, used) { return percentageUsed(total_data, used) + '%'; }
-function progressBarStatus(total_data, used) {
+const progressBarWidth = (total_data, used) => { return percentageUsed(total_data, used) + '%'; };
+const progressBarStatus = (total_data, used) => {
     var progress = percentageUsed(total_data, used);
     if (progress >= 90) return 'bg-success';
     if (progress >= 70) return 'bg-info';
@@ -25,16 +25,16 @@ function progressBarStatus(total_data, used) {
     if (progress > 30)  return 'bg-secondary';
     return 'bg-danger';
 }
-function fetchData(qid, query, onSuccess) {
+const fetchData = (qid, query, onSuccess) => {
     return axios.get(common.DataService + '?qid=' + qid + (query || ''))
-        .then(function (response) {
+        .then(response => {
             onSuccess((response && response.data && response.data.data) || []);
         })
-        .catch(function (error) {
+        .catch(error => {
             console.error('Error fetching qid=' + qid + ' data:', error);
         });
 }
-function sharedExports() {
+const sharedExports = () => {
     return {
         formatNumber: fmt.formatNumber,
         capitalize: fmt.capitalize,
@@ -47,9 +47,9 @@ function sharedExports() {
 const PageBody = {
     setup() {
         const page = ref('lga_summary');
-        function gotoPageHandler(data) { page.value = data && data.page; }
-        onMounted(function () { bus.on('g-event-goto-page', gotoPageHandler); });
-        onBeforeUnmount(function () { bus.off('g-event-goto-page', gotoPageHandler); });
+        const gotoPageHandler = (data) => { page.value = data && data.page; };
+        onMounted(() => { bus.on('g-event-goto-page', gotoPageHandler); });
+        onBeforeUnmount(() => { bus.off('g-event-goto-page', gotoPageHandler); });
         return { page };
     },
     template: `
@@ -75,14 +75,14 @@ const EnetcardAllStat = {
         });
         const allStatistics = ref([]);
 
-        function refreshData() {
+        const refreshData = () => {
             overlay.show();
             Promise.all([
-                fetchData('217', '', function (data) { allStatistics.value = data; }),
-            ]).finally(function () { overlay.hide(); });
+                fetchData('217', '', data => { allStatistics.value = data; }),
+            ]).finally(() => { overlay.hide(); });
         }
-        function refreshAllData() { bus.emit('g-event-refresh-page', { page: page.value }); }
-        function gotoPageHandler(data) {
+        const refreshAllData = () => { bus.emit('g-event-refresh-page', { page: page.value }); };
+        const gotoPageHandler = (data) => {
             page.value = data && data.page;
             newPageData.lgaId = data && data.lgaId;
             newPageData.lgaName = data && data.lgaName;
@@ -91,11 +91,11 @@ const EnetcardAllStat = {
             newPageData.hhmId = data && data.hhmId;
             newPageData.hhmName = data && data.hhmName;
             overlay.show();
-            setTimeout(function () { overlay.hide(); }, 1000);
+            setTimeout(() => { overlay.hide(); }, 1000);
         }
-        function refreshDataHandler() { refreshData(); }
+        const refreshDataHandler = () => { refreshData(); };
 
-        function goBack(data) {
+        const goBack = (data) => {
             page.value = data && data.page;
             newPageData.lgaId = data && data.lgaId;
             newPageData.lgaName = data && data.lgaName;
@@ -115,32 +115,32 @@ const EnetcardAllStat = {
             mobilizer_wallet:  { label: 'Mobilizer Wallet Balance',  icon: 'credit-card', colorClass: 'text-muted' },
             beneficiary:       { label: 'Beneficiaries',             icon: 'users',       colorClass: 'text-danger' },
         };
-        function buildStat(key, obj) {
+        const buildStat = (key, obj) => {
             var meta = keyLabels[key] || {};
             return {
                 key: key, label: meta.label || key, icon: meta.icon || 'info',
                 colorClass: meta.colorClass || 'text-dark', value: obj[key],
             };
         }
-        const topStats = computed(function () {
+        const topStats = computed(() => {
             var obj = allStatistics.value[0] || {};
-            return ['total', 'state', 'lga', 'ward'].map(function (k) { return buildStat(k, obj); });
+            return ['total', 'state', 'lga', 'ward'].map(k => buildStat(k, obj));
         });
-        const beneficiaryStat = computed(function () {
+        const beneficiaryStat = computed(() => {
             var obj = allStatistics.value[0] || {};
             return buildStat('beneficiary', obj);
         });
-        const mergedMobilizerStats = computed(function () {
+        const mergedMobilizerStats = computed(() => {
             var obj = allStatistics.value[0] || {};
-            return ['mobilizer_online', 'mobilizer_pending', 'mobilizer_wallet'].map(function (k) { return buildStat(k, obj); });
+            return ['mobilizer_online', 'mobilizer_pending', 'mobilizer_wallet'].map(k => buildStat(k, obj));
         });
 
-        onMounted(function () {
+        onMounted(() => {
             bus.on('g-event-goto-page', gotoPageHandler);
             bus.on('g-event-refresh-page', refreshDataHandler);
             refreshData();
         });
-        onBeforeUnmount(function () {
+        onBeforeUnmount(() => {
             bus.off('g-event-goto-page', gotoPageHandler);
             bus.off('g-event-refresh-page', refreshDataHandler);
         });
@@ -271,16 +271,16 @@ const LgaTopLevelSummary = {
         const newPageData = reactive({ lgaId: null, lgaName: null, wardId: null, wardName: null, hhmId: null, hhmName: null });
         const tableData = ref([]);
 
-        function refreshData() {
+        const refreshData = () => {
             overlay.show();
             Promise.all([
-                fetchData('218', '', function (data) { tableData.value = data; }),
-            ]).finally(function () { overlay.hide(); });
+                fetchData('218', '', data => { tableData.value = data; }),
+            ]).finally(() => { overlay.hide(); });
         }
-        function refreshDataHandler() {
+        const refreshDataHandler = () => {
             if (page.value == 'lga_summary' || page.value == '') refreshData();
         }
-        function gotoPageHandler(data) {
+        const gotoPageHandler = (data) => {
             page.value = data && data.page;
             newPageData.lgaId = data && data.lgaId;
             newPageData.lgaName = data && data.lgaName;
@@ -289,23 +289,21 @@ const LgaTopLevelSummary = {
             newPageData.hhmId = data && data.hhmId;
             newPageData.hhmName = data && data.hhmName;
             overlay.show();
-            setTimeout(function () { overlay.hide(); }, 1000);
+            setTimeout(() => { overlay.hide(); }, 1000);
         }
-        function goToWardSummaryPage(data) {
+        const goToWardSummaryPage = (data) => {
             bus.emit('g-event-goto-page', data);
             bus.emit('g-event-refresh-page', data);
         }
 
-        const sortedByLGA = computed(function () {
-            return [].concat(tableData.value).sort(function (a, b) { return a.lga.localeCompare(b.lga); });
-        });
+        const sortedByLGA = computed(() => [].concat(tableData.value).sort((a, b) => a.lga.localeCompare(b.lga)));
 
-        onMounted(function () {
+        onMounted(() => {
             bus.on('g-event-goto-page', gotoPageHandler);
             bus.on('g-event-refresh-page', refreshDataHandler);
             refreshData();
         });
-        onBeforeUnmount(function () {
+        onBeforeUnmount(() => {
             bus.off('g-event-goto-page', gotoPageHandler);
             bus.off('g-event-refresh-page', refreshDataHandler);
         });
@@ -369,17 +367,17 @@ const WardTopLevelSummary = {
         const newPageData = reactive({ lgaId: null, lgaName: null, wardId: null, wardName: null, hhmId: null, hhmName: null });
         const tableData = ref([]);
 
-        function refreshData() {
+        const refreshData = () => {
             overlay.show();
             Promise.all([
-                fetchData('219', '&lgaId=' + newPageData.lgaId, function (data) { tableData.value = data; }),
-            ]).finally(function () { overlay.hide(); });
+                fetchData('219', '&lgaId=' + newPageData.lgaId, data => { tableData.value = data; }),
+            ]).finally(() => { overlay.hide(); });
         }
-        function refreshDataHandler() {
+        const refreshDataHandler = () => {
             tableData.value = [];
             if (page.value == 'ward_summary') refreshData();
         }
-        function gotoPageHandler(data) {
+        const gotoPageHandler = (data) => {
             page.value = data && data.page;
             newPageData.lgaId = data && data.lgaId;
             newPageData.lgaName = data && data.lgaName;
@@ -387,20 +385,18 @@ const WardTopLevelSummary = {
             newPageData.wardName = data && data.wardName;
             newPageData.hhmId = data && data.hhmId;
         }
-        function goToHHMSummaryPage(data) {
+        const goToHHMSummaryPage = (data) => {
             bus.emit('g-event-goto-page', data);
             bus.emit('g-event-refresh-page', data);
         }
 
-        const sortedByWard = computed(function () {
-            return [].concat(tableData.value).sort(function (a, b) { return a.ward.localeCompare(b.ward); });
-        });
+        const sortedByWard = computed(() => [].concat(tableData.value).sort((a, b) => a.ward.localeCompare(b.ward)));
 
-        onMounted(function () {
+        onMounted(() => {
             bus.on('g-event-goto-page', gotoPageHandler);
             bus.on('g-event-refresh-page', refreshDataHandler);
         });
-        onBeforeUnmount(function () {
+        onBeforeUnmount(() => {
             bus.off('g-event-goto-page', gotoPageHandler);
             bus.off('g-event-refresh-page', refreshDataHandler);
         });
@@ -462,17 +458,17 @@ const HhmTopLevelSummary = {
         const newPageData = reactive({ lgaId: null, lgaName: null, wardId: null, wardName: null, hhmId: null, hhmName: null });
         const tableData = ref([]);
 
-        function refreshData() {
+        const refreshData = () => {
             overlay.show();
             Promise.all([
-                fetchData('220', '&wardId=' + newPageData.wardId, function (data) { tableData.value = data; }),
-            ]).finally(function () { overlay.hide(); });
+                fetchData('220', '&wardId=' + newPageData.wardId, data => { tableData.value = data; }),
+            ]).finally(() => { overlay.hide(); });
         }
-        function refreshDataHandler() {
+        const refreshDataHandler = () => {
             tableData.value = [];
             if (page.value == 'hhm_summary') refreshData();
         }
-        function gotoPageHandler(data) {
+        const gotoPageHandler = (data) => {
             page.value = data && data.page;
             newPageData.lgaId = data && data.lgaId;
             newPageData.lgaName = data && data.lgaName;
@@ -481,11 +477,11 @@ const HhmTopLevelSummary = {
             newPageData.hhmId = data && data.hhmId;
         }
 
-        onMounted(function () {
+        onMounted(() => {
             bus.on('g-event-goto-page', gotoPageHandler);
             bus.on('g-event-refresh-page', refreshDataHandler);
         });
-        onBeforeUnmount(function () {
+        onBeforeUnmount(() => {
             bus.off('g-event-goto-page', gotoPageHandler);
             bus.off('g-event-refresh-page', refreshDataHandler);
         });

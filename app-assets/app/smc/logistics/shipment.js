@@ -15,7 +15,7 @@ const appState = Vue.reactive({
     permission: (typeof getPermission === 'function')
         ? (getPermission(typeof per !== 'undefined' ? per : null, 'smc') || { permission_value: 0 })
         : { permission_value: 0 },
-    userId: (function () { var el = document.getElementById('v_g_id'); return el ? el.value : ''; })(),
+    userId: (() => { var el = document.getElementById('v_g_id'); return el ? el.value : ''; })(),
     geoLevelForm: { geoLevel: '', geoLevelId: 0 },
     defaultStateId: '',
     sysDefaultData: [],
@@ -30,7 +30,7 @@ const appState = Vue.reactive({
     statusFilter: '',
 });
 
-function displayDateLong(d, fullDate, withTime) {
+const displayDateLong = (d, fullDate, withTime) => {
     if (fullDate === undefined) fullDate = false;
     if (withTime === undefined) withTime = true;
     var date = new Date(d);
@@ -57,7 +57,7 @@ const Select2Dropdown = {
     setup(props, ctx) {
         const selectEl = ref(null);
 
-        function initialize() {
+        const initialize = () => {
             if (!selectEl.value) return;
             var $sel = $(selectEl.value);
             $sel.wrap('<div class="position-relative"></div>');
@@ -68,15 +68,15 @@ const Select2Dropdown = {
                 allowClear: props.clearable,
                 width: '100%',
                 dropdownParent: $($sel[0]).parent(),
-            }).val(props.modelValue).trigger('change').on('change', function () {
+            }).val(props.modelValue).trigger('change').on('change', () => {
                 ctx.emit('update:modelValue', $sel.val());
             });
-            nextTick(function () {
+            nextTick(() => {
                 $sel.next('.select2-container').find('.select2-selection__arrow')
                     .html('<i class="feather icon-chevron-down"></i>');
             });
         }
-        function destroy() {
+        const destroy = () => {
             try {
                 if (!selectEl.value) return;
                 var $sel = $(selectEl.value);
@@ -84,10 +84,10 @@ const Select2Dropdown = {
             } catch (e) { /* swallow */ }
         }
 
-        onMounted(function () { initialize(); });
-        onBeforeUnmount(function () { destroy(); });
+        onMounted(() => { initialize(); });
+        onBeforeUnmount(() => { destroy(); });
 
-        watch(function () { return props.modelValue; }, function (newVal) {
+        watch(() => props.modelValue, newVal => {
             if (!selectEl.value) return;
             var $sel = $(selectEl.value);
             if ($sel.val() !== newVal) $sel.val(newVal).trigger('change');
@@ -95,7 +95,7 @@ const Select2Dropdown = {
             if (newVal) $selection.removeClass('is-invalid');
             else $selection.addClass('is-invalid');
         });
-        watch(function () { return props.options; }, function () {
+        watch(() => props.options, () => {
             destroy();
             nextTick(initialize);
         }, { deep: true });
@@ -128,8 +128,8 @@ const PageShipmentPage = {
         });
         const selectedShipment = ref('');
 
-        function closeMovementModal() { $('#movementModal').modal('hide'); }
-        function resetMovementForm() {
+        const closeMovementModal = () => { $('#movementModal').modal('hide'); };
+        const resetMovementForm = () => {
             closeMovementModal();
             movementForm.movementTitle = '';
             movementForm.shipmentListIds = [];
@@ -138,17 +138,17 @@ const PageShipmentPage = {
             loadShipment();
             selectToggle();
         }
-        function removeSelectedMovement(item) {
+        const removeSelectedMovement = (item) => {
             item.pick = false;
             if (selectedID.value.length === 0) selectToggle();
             movementForm.shipmentListIds = selectedID.value;
         }
 
-        async function getTransporterAndConveyor() {
+        const getTransporterAndConveyor = async () => {
             var endpoints = [common.DataService + '?qid=gen014', common.DataService + '?qid=gen015'];
             try {
                 overlay.show();
-                var responses = await Promise.all(endpoints.map(function (e) { return axios.get(e); }));
+                var responses = await Promise.all(endpoints.map(e => axios.get(e)));
                 transporterData.value = (responses[0] && responses[0].data && responses[0].data.data) || [];
                 conveyorData.value = (responses[1] && responses[1].data && responses[1].data.data) || [];
             } catch (error) {
@@ -158,7 +158,7 @@ const PageShipmentPage = {
             }
         }
 
-        function initializeMovement() {
+        const initializeMovement = () => {
             if (totalCheckedBox.value === false) {
                 alert.Error('ERROR', 'Please select at least one Shipment item to create movement.');
                 return;
@@ -167,7 +167,7 @@ const PageShipmentPage = {
             movementForm.periodId = appState.currentPeriodId;
             $('#movementModal').modal('show');
         }
-        function validateMovementForm() {
+        const validateMovementForm = () => {
             // jQuery-validate-driven validation (preserved for compatibility).
             try {
                 return $('#createMovementForm').validate({
@@ -179,7 +179,7 @@ const PageShipmentPage = {
                 }).form();
             } catch (e) { return true; }
         }
-        function createMovement() {
+        const createMovement = () => {
             if (!validateMovementForm()) {
                 alert.Error('*Required Fields', 'All fields are required');
                 return;
@@ -193,7 +193,7 @@ const PageShipmentPage = {
             };
             overlay.show();
             axios.post(common.DataService + '?qid=1135', JSON.stringify(data))
-                .then(function (response) {
+                .then(response => {
                     overlay.hide();
                     if (response.data.result_code === 200) {
                         alert.Success('SUCCESS', response.data.message);
@@ -202,39 +202,39 @@ const PageShipmentPage = {
                         alert.Error('ERROR', response.data.message);
                     }
                 })
-                .catch(function (error) {
+                .catch(error => {
                     overlay.hide();
                     alert.Error('ERROR', safeMessage(error));
                 });
         }
 
-        function getAllPeriodLists() {
+        const getAllPeriodLists = () => {
             overlay.show();
             axios.get(common.DataService + '?qid=1004')
-                .then(function (response) {
+                .then(response => {
                     appState.periodData = (response.data && response.data.data) || [];
                     overlay.hide();
                 })
-                .catch(function (error) {
+                .catch(error => {
                     overlay.hide();
                     alert.Error('ERROR', safeMessage(error));
                 });
         }
-        function getReceiptHeader() {
+        const getReceiptHeader = () => {
             overlay.show();
             axios.get(common.DataService + '?qid=gen0013')
-                .then(function (response) {
+                .then(response => {
                     var d = response.data && response.data.data && response.data.data[0];
                     appState.receiptHeader = (d && d.logo) || '';
                     overlay.hide();
                 })
-                .catch(function (error) {
+                .catch(error => {
                     overlay.hide();
                     alert.Error('ERROR', safeMessage(error));
                 });
         }
 
-        async function loadShipment() {
+        const loadShipment = async () => {
             if (!appState.currentPeriodId) { alert.Error('ERROR', 'Please select a visit'); return; }
             var data = { periodid: appState.currentPeriodId };
             overlay.show();
@@ -252,84 +252,72 @@ const PageShipmentPage = {
             }
         }
 
-        function selectAll() {
-            (filteredStockData.value || []).forEach(function (item) {
+        const selectAll = () => {
+            (filteredStockData.value || []).forEach(item => {
                 if (item.shipment_status === 'Pending') item.pick = true;
             });
         }
-        function uncheckAll() {
-            (filteredStockData.value || []).forEach(function (item) { item.pick = false; });
+        const uncheckAll = () => {
+            (filteredStockData.value || []).forEach(item => { item.pick = false; });
         }
-        function selectToggle() {
+        const selectToggle = () => {
             if (checkToggle.value === false) { selectAll(); checkToggle.value = true; }
             else                              { uncheckAll(); checkToggle.value = false; }
         }
-        function checkedBg(p) { return p != '' ? 'bg-select' : ''; }
+        const checkedBg = (p) => { return p != '' ? 'bg-select' : ''; };
 
-        function resetCheckTable() {
+        const resetCheckTable = () => {
             appState.shipmentData = [];
             searchState.value = false;
         }
-        function resetForm() {
+        const resetForm = () => {
             resetCheckTable();
             appState.currentPeriodId = '';
             appState.currentProductCode = '';
         }
 
-        function debounce(fn, delay) {
+        const debounce = (fn, delay) => {
             var timeout;
             return function () {
                 var args = arguments;
                 clearTimeout(timeout);
-                timeout = setTimeout(function () { fn.apply(null, args); }, delay);
+                timeout = setTimeout(() => { fn.apply(null, args); }, delay);
             };
         }
-        var debouncedSearch = debounce(function (val) { appState.filterText = val; }, 300);
-        watch(searchText, function (val) { debouncedSearch(val); });
-        function toggleMovementType() {
+        var debouncedSearch = debounce(val => { appState.filterText = val; }, 300);
+        watch(searchText, val => { debouncedSearch(val); });
+        const toggleMovementType = () => {
             movementType.value = movementType.value === 'Forward' ? 'Reverse' : 'Forward';
         }
-        function filterUsingStatus(keyword) { appState.statusFilter = keyword; }
+        const filterUsingStatus = (keyword) => { appState.statusFilter = keyword; };
 
-        const filteredStockData = computed(function () {
+        const filteredStockData = computed(() => {
             var data = appState.shipmentData || [];
             var keyword = (appState.filterText || '').toLowerCase().trim();
             var status = (appState.statusFilter || '').toLowerCase().trim();
             if (status) {
-                data = data.filter(function (item) {
-                    return item.shipment_status && item.shipment_status.toLowerCase().trim().includes(status);
-                });
+                data = data.filter(item => item.shipment_status && item.shipment_status.toLowerCase().trim().includes(status));
             }
             if (keyword) {
-                data = data.filter(function (item) {
-                    return (
-                        (item.shipment_no && item.shipment_no.toLowerCase().includes(keyword)) ||
-                        (item.shipment_status && item.shipment_status.toLowerCase().includes(keyword)) ||
-                        (item.destination_location_type && item.destination_location_type.toLowerCase().includes(keyword)) ||
-                        (item.origin_string && item.origin_string.toLowerCase().includes(keyword)) ||
-                        (item.destination_string && item.destination_string.toLowerCase().includes(keyword))
-                    );
-                });
+                data = data.filter(item => (item.shipment_no && item.shipment_no.toLowerCase().includes(keyword)) ||
+                (item.shipment_status && item.shipment_status.toLowerCase().includes(keyword)) ||
+                (item.destination_location_type && item.destination_location_type.toLowerCase().includes(keyword)) ||
+                (item.origin_string && item.origin_string.toLowerCase().includes(keyword)) ||
+                (item.destination_string && item.destination_string.toLowerCase().includes(keyword)));
             }
             return data;
         });
-        const conveyorOptions = computed(function () {
-            return (conveyorData.value || []).map(function (c) {
-                return { id: c.userid, text: c.fullname + ' (' + c.loginid + ')' };
-            });
-        });
-        const transporterOptions = computed(function () {
-            return (transporterData.value || []).map(function (t) {
-                return { id: t.transporter_id, text: t.transporter + ' (' + t.poc + ')' };
-            });
-        });
-        const selectedItems = computed(function () {
-            return (filteredStockData.value || []).filter(function (i) { return i.pick; });
-        });
-        const selectedID = computed(function () {
-            return (filteredStockData.value || []).filter(function (i) { return i.pick; }).map(function (i) { return i.shipment_id; });
-        });
-        const totalCheckedBox = computed(function () {
+        const conveyorOptions = computed(() => (conveyorData.value || []).map(c => ({
+            id: c.userid,
+            text: c.fullname + ' (' + c.loginid + ')'
+        })));
+        const transporterOptions = computed(() => (transporterData.value || []).map(t => ({
+            id: t.transporter_id,
+            text: t.transporter + ' (' + t.poc + ')'
+        })));
+        const selectedItems = computed(() => (filteredStockData.value || []).filter(i => i.pick));
+        const selectedID = computed(() => (filteredStockData.value || []).filter(i => i.pick).map(i => i.shipment_id));
+        const totalCheckedBox = computed(() => {
             var total = (selectedItems.value || []).length;
             var el = document.getElementById('total-selected');
             if (el) {
@@ -342,10 +330,10 @@ const PageShipmentPage = {
             return total > 0;
         });
 
-        function getShipmentItem(shipmentId, destination, origin_string, shipmentNo, shipmentType, status, isOpen) {
+        const getShipmentItem = (shipmentId, destination, origin_string, shipmentNo, shipmentType, status, isOpen) => {
             overlay.show();
             axios.post(common.DataService + '?qid=1136', JSON.stringify({ shipmentId: shipmentId }))
-                .then(function (response) {
+                .then(response => {
                     if (response.data.result_code === 200) {
                         generateShipmentPDF(response.data.data, destination, origin_string, shipmentNo, shipmentType, status, isOpen);
                     } else {
@@ -353,12 +341,12 @@ const PageShipmentPage = {
                     }
                     overlay.hide();
                 })
-                .catch(function (error) {
+                .catch(error => {
                     overlay.hide();
                     alert.Error('ERROR', safeMessage(error));
                 });
         }
-        function generateShipmentPDF(data, destination, origin_string, shipmentNo, shipmentType, status, isOpen) {
+        const generateShipmentPDF = (data, destination, origin_string, shipmentNo, shipmentType, status, isOpen) => {
             if (!data || data.length === 0) { alert.Error('ERROR', 'No data available for PDF generation.'); return; }
             if (typeof pdfMake === 'undefined') return;
             var todayDate = displayDateLong(new Date().toLocaleDateString(), true, true);
@@ -393,12 +381,10 @@ const PageShipmentPage = {
                             widths: ['auto', '*', '*', '*', '*', '*'],
                             body: [[
                                 '#', 'Product Name', 'Product Code', 'Batch', 'Expiry', 'Quantity'
-                            ]].concat(data.map(function (item, i) {
-                                return [
-                                    i + 1, item.product_name, item.product_code, item.batch,
-                                    displayDateLong(item.expiry, false, false), item.secondary_qty,
-                                ];
-                            })),
+                            ]].concat(data.map((item, i) => [
+                                i + 1, item.product_name, item.product_code, item.batch,
+                                displayDateLong(item.expiry, false, false), item.secondary_qty,
+                            ])),
                         },
                         layout: 'lightHorizontalLines',
                         margin: [0, 0, 0, 20],
@@ -410,13 +396,13 @@ const PageShipmentPage = {
             } catch (e) { console.error('[smc/logistics/shipment] PDF render failed:', e); }
         }
 
-        onMounted(function () {
+        onMounted(() => {
             getAllPeriodLists();
             getReceiptHeader();
             getTransporterAndConveyor();
             bus.on('g-event-reset-form', resetForm);
         });
-        onBeforeUnmount(function () {
+        onBeforeUnmount(() => {
             bus.off('g-event-reset-form', resetForm);
         });
 
@@ -432,7 +418,7 @@ const PageShipmentPage = {
             resetCheckTable, resetForm, toggleMovementType, filterUsingStatus,
             getShipmentItem, generateShipmentPDF,
             capitalize: fmtUtils.capitalize,
-            displayDate: function (d, fullDate, withTime) { return displayDateLong(d, fullDate, withTime); },
+            displayDate: (d, fullDate, withTime) => { return displayDateLong(d, fullDate, withTime); },
             convertStringNumberToFigures: fmtUtils.convertStringNumberToFigures,
         };
     },

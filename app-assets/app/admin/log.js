@@ -52,7 +52,7 @@ const SampleTable = {
             },
         });
 
-        function loadTableData() {
+        const loadTableData = () => {
             overlay.show();
             var url = common.TableService;
             axios
@@ -69,66 +69,66 @@ const SampleTable = {
                         '&mod=' + tableOptions.filterParam.module +
                         '&res=' + tableOptions.filterParam.result
                 )
-                .then(function (response) {
+                .then(response => {
                     var d = response && response.data;
                     tableData.value = Array.isArray(d && d.data) ? d.data : [];
                     tableOptions.total = (d && d.recordsTotal) || 0;
                     if (tableOptions.currentPage == 1) paginationDefault();
                     overlay.hide();
                 })
-                .catch(function (error) {
+                .catch(error => {
                     overlay.hide();
                     alert.Error('ERROR', safeMessage(error));
                 });
         }
 
-        function selectAll() {
+        const selectAll = () => {
             for (var i = 0; i < tableData.value.length; i++) tableData.value[i].pick = true;
         }
-        function uncheckAll() {
+        const uncheckAll = () => {
             for (var i = 0; i < tableData.value.length; i++) tableData.value[i].pick = false;
         }
-        function selectToggle() {
+        const selectToggle = () => {
             if (checkToggle.value === false) { selectAll(); checkToggle.value = true; }
             else                              { uncheckAll(); checkToggle.value = false; }
         }
-        function checkedBg(pickOne) { return pickOne != '' ? 'bg-select' : ''; }
+        const checkedBg = (pickOne) => { return pickOne != '' ? 'bg-select' : ''; };
 
-        function toggleFilter() {
+        const toggleFilter = () => {
             if (filterState.value === false) filters.value = false;
             return (filterState.value = !filterState.value);
         }
 
-        function selectedItems() {
-            return tableData.value.filter(function (r) { return r.pick; });
+        const selectedItems = () => {
+            return tableData.value.filter(r => r.pick);
         }
-        function selectedID() {
-            return tableData.value.filter(function (r) { return r.pick; }).map(function (r) { return r.userid; });
+        const selectedID = () => {
+            return tableData.value.filter(r => r.pick).map(r => r.userid);
         }
 
-        function paginationDefault() {
+        const paginationDefault = () => {
             tableOptions.pageLength = Math.ceil(tableOptions.total / tableOptions.perPage);
             tableOptions.limitStart = Math.ceil((tableOptions.currentPage - 1) * tableOptions.perPage);
             tableOptions.isNext = tableOptions.currentPage < tableOptions.pageLength;
             tableOptions.isPrev = tableOptions.currentPage > 1;
         }
 
-        function nextPage() { tableOptions.currentPage += 1; paginationDefault(); loadTableData(); }
-        function prevPage() { tableOptions.currentPage -= 1; paginationDefault(); loadTableData(); }
-        function currentPage() {
+        const nextPage = () => { tableOptions.currentPage += 1; paginationDefault(); loadTableData(); };
+        const prevPage = () => { tableOptions.currentPage -= 1; paginationDefault(); loadTableData(); };
+        const currentPage = () => {
             paginationDefault();
             if (tableOptions.currentPage < 1)                            alert.Error('ERROR', "The Page requested doesn't exist");
             else if (tableOptions.currentPage > tableOptions.pageLength) alert.Error('ERROR', "The Page requested doesn't exist");
             else                                                         loadTableData();
         }
-        function changePerPage(val) {
+        const changePerPage = (val) => {
             var maxPerPage = Math.ceil(tableOptions.total / val);
             if (maxPerPage < tableOptions.currentPage) tableOptions.currentPage = maxPerPage;
             tableOptions.perPage = val;
             paginationDefault();
             loadTableData();
         }
-        function sort(col) {
+        const sort = (col) => {
             if (tableOptions.orderField === col) {
                 tableOptions.orderDir = tableOptions.orderDir === 'asc' ? 'desc' : 'asc';
             } else {
@@ -138,7 +138,7 @@ const SampleTable = {
             loadTableData();
         }
 
-        function applyFilter() {
+        const applyFilter = () => {
             var checkFill = 0;
             checkFill += tableOptions.filterParam.loginid  != '' ? 1 : 0;
             checkFill += tableOptions.filterParam.userid   != '' ? 1 : 0;
@@ -154,7 +154,7 @@ const SampleTable = {
                 alert.Error('ERROR', 'Invalid required data');
             }
         }
-        function removeSingleFilter(column_name) {
+        const removeSingleFilter = (column_name) => {
             tableOptions.filterParam[column_name] = '';
             var g = 0;
             for (var k in tableOptions.filterParam) {
@@ -164,7 +164,7 @@ const SampleTable = {
             paginationDefault();
             loadTableData();
         }
-        function clearAllFilter() {
+        const clearAllFilter = () => {
             filters.value = false;
             tableOptions.filterParam.loginid = '';
             tableOptions.filterParam.userid = '';
@@ -174,14 +174,14 @@ const SampleTable = {
             paginationDefault();
             loadTableData();
         }
-        function refreshData() { paginationDefault(); loadTableData(); }
+        const refreshData = () => { paginationDefault(); loadTableData(); };
 
         // Pre-existing v2 template references @focus="loadAuto()" on the
         // module input — the v2 component never defined loadAuto. Stub it
         // as a no-op so Vue 3 doesn't warn on focus.
-        function loadAuto() { /* no-op (pre-existing v2 binding without implementation) */ }
+        const loadAuto = () => { /* no-op (pre-existing v2 binding without implementation) */ };
 
-        onMounted(function () {
+        onMounted(() => {
             loadTableData();
         });
 

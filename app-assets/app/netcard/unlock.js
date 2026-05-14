@@ -12,9 +12,9 @@ const { useApp, useFormat, bus, safeMessage } = window.utils;
 const PageBody = {
     setup() {
         const page = ref('allocation');
-        function gotoPageHandler(data) { page.value = data.page; }
-        onMounted(function () { bus.on('g-event-goto-page', gotoPageHandler); });
-        onBeforeUnmount(function () { bus.off('g-event-goto-page', gotoPageHandler); });
+        const gotoPageHandler = (data) => { page.value = data.page; };
+        onMounted(() => { bus.on('g-event-goto-page', gotoPageHandler); });
+        onBeforeUnmount(() => { bus.off('g-event-goto-page', gotoPageHandler); });
         return { page };
     },
     template: `
@@ -73,10 +73,10 @@ const NecardMovement = {
             stateBalance: 0, lgaBalance: 0, wardBalance: 0, mobilizer: 0,
         });
 
-        function getsysDefaultDataSettings() {
+        const getsysDefaultDataSettings = () => {
             overlay.show();
             axios.get(common.DataService + '?qid=gen007')
-                .then(function (response) {
+                .then(response => {
                     if (response.data.data && response.data.data.length > 0) {
                         sysDefaultData.value = response.data.data[0];
                         getLgasLevel(response.data.data[0].stateid);
@@ -85,64 +85,64 @@ const NecardMovement = {
                     }
                     overlay.hide();
                 })
-                .catch(function (error) {
+                .catch(error => {
                     overlay.hide();
                     alert.Error('ERROR', safeMessage(error));
                 });
         }
-        function getLgasLevel(stateid) {
+        const getLgasLevel = (stateid) => {
             overlay.show();
             axios.post(common.DataService + '?qid=gen003', JSON.stringify(stateid))
-                .then(function (response) {
+                .then(response => {
                     lgaLevelData.value = (response.data && response.data.data) || [];
                     overlay.hide();
                 })
-                .catch(function (error) {
+                .catch(error => {
                     overlay.hide();
                     alert.Error('ERROR', safeMessage(error));
                 });
         }
-        function getLgasNetBalances() {
+        const getLgasNetBalances = () => {
             overlay.show();
             axios.post(common.DataService + '?qid=206')
-                .then(function (response) {
+                .then(response => {
                     lgaNetBalancesData.value = (response.data && response.data.data) || [];
                     overlay.hide();
                 })
-                .catch(function (error) {
+                .catch(error => {
                     overlay.hide();
                     alert.Error('ERROR', safeMessage(error));
                 });
         }
-        function getWardLevel() {
+        const getWardLevel = () => {
             overlay.show();
             wardMovementForm.wardid = '';
             axios.get(common.DataService + '?qid=gen005&e=' + wardMovementForm.lgaid)
-                .then(function (response) {
+                .then(response => {
                     wardLevelData.value = (response.data && response.data.data) || [];
                     overlay.hide();
                 })
-                .catch(function (error) {
+                .catch(error => {
                     overlay.hide();
                     alert.Error('ERROR', safeMessage(error));
                 });
         }
-        function getWardData(event) {
+        const getWardData = (event) => {
             overlay.show();
             wardMovementForm.wardid = '';
             wardMovementForm.lgaid = event.target.options[event.target.options.selectedIndex].value;
             axios.get(common.DataService + '?qid=gen005&lgaid=' + wardMovementForm.lgaid + '&e=' + wardMovementForm.lgaid)
-                .then(function (response) {
+                .then(response => {
                     wardNetBalancesData.value = (response.data && response.data.data) || [];
                     wardLevelData.value = (response.data && response.data.data) || [];
                     overlay.hide();
                 })
-                .catch(function (error) {
+                .catch(error => {
                     overlay.hide();
                     alert.Error('ERROR', safeMessage(error));
                 });
         }
-        function getHhmBalances(event) {
+        const getHhmBalances = (event) => {
             var optText = event.target.options[event.target.options.selectedIndex].text;
             var trimmed = optText.trim().replace(',', '');
             wardMovementForm.wardName = trimmed.split('-')[0];
@@ -153,24 +153,24 @@ const NecardMovement = {
             getCurrentWardBalance();
             overlay.show();
         }
-        function refreshData() {
+        const refreshData = () => {
             if (currentWardBalance.wardName != '') getHHMOfflineBalancesList();
         }
-        function getHHMOfflineBalancesList() {
+        const getHHMOfflineBalancesList = () => {
             overlay.show();
             axios.get(common.DataService + '?qid=216&wardid=' + wardMovementForm.wardid)
-                .then(function (response) {
+                .then(response => {
                     hhmBalanacesData.value = (response.data && response.data.data) || [];
                     overlay.hide();
                 })
-                .catch(function (error) {
+                .catch(error => {
                     overlay.hide();
                     alert.Error('ERROR', safeMessage(error));
                 });
         }
-        function getCurrentWardBalance() {
+        const getCurrentWardBalance = () => {
             axios.get(common.DataService + '?qid=214&wardid=' + wardMovementForm.wardid)
-                .then(function (response) {
+                .then(response => {
                     var row = (response.data && response.data.data && response.data.data[0]) || {};
                     currentWardBalance.balance = row.balance ? parseInt(row.balance) : 0;
                     wardMovementForm.wardBalance = currentWardBalance.balance;
@@ -178,13 +178,13 @@ const NecardMovement = {
                     currentWardBalance.disbursed = row.disbursed ? parseInt(row.disbursed) : 0;
                     overlay.hide();
                 })
-                .catch(function (error) {
+                .catch(error => {
                     overlay.hide();
                     alert.Error('ERROR', safeMessage(error));
                 });
         }
 
-        function scroll() {
+        const scroll = () => {
             try {
                 var sidebarMenuList = $('.main-body');
                 if ($.app && $.app.menu && !$.app.menu.is_touch_device()) {
@@ -198,12 +198,12 @@ const NecardMovement = {
                 }
             } catch (e) { /* swallow */ }
         }
-        function onlyNumber(event) {
+        const onlyNumber = (event) => {
             var keyCode = event.keyCode || event.which;
             if ((keyCode < 48 || keyCode > 57) && keyCode == 46) event.preventDefault();
         }
 
-        function unlockNetcardFromDevice(userid, device_serial, total) {
+        const unlockNetcardFromDevice = (userid, device_serial, total) => {
             var requester_userid = document.getElementById('v_g_id').value;
             if (total <= 0) {
                 alert.Error('Zero Balance', "You don't have an e-Netcard Residing on this device");
@@ -216,14 +216,14 @@ const NecardMovement = {
                     delete: {
                         text: 'Unlock e-Netcard',
                         btnClass: 'btn btn-danger mr-1 text-capitalize',
-                        action: function () {
+                        action: () => {
                             axios.post(
                                 common.DataService +
                                 '?qid=215&device_serial=' + device_serial +
                                 '&userid=' + userid +
                                 '&requester_userid=' + requester_userid
                             )
-                                .then(function (response) {
+                                .then(response => {
                                     if (response.data.result_code == '200') {
                                         refreshData();
                                         getCurrentWardBalance();
@@ -234,18 +234,18 @@ const NecardMovement = {
                                         alert.Error('Error', response.data.message);
                                     }
                                 })
-                                .catch(function (error) {
+                                .catch(error => {
                                     alert.Error('ERROR', safeMessage(error));
                                     overlay.hide();
                                 });
                         },
                     },
-                    cancel: function () { overlay.hide(); },
+                    cancel: () => { overlay.hide(); },
                 },
             });
         }
 
-        onMounted(function () {
+        onMounted(() => {
             getsysDefaultDataSettings();
             bus.on('g-event-update', refreshData);
             $('#todo-search').on('keyup', function () {
@@ -263,7 +263,7 @@ const NecardMovement = {
             try { $('[data-toggle="tooltip"]').tooltip({ container: 'body' }); } catch (e) {}
             scroll();
         });
-        onBeforeUnmount(function () {
+        onBeforeUnmount(() => {
             bus.off('g-event-update', refreshData);
         });
 

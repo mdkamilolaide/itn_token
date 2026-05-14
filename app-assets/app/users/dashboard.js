@@ -38,7 +38,7 @@ const DashboardContainer = {
 
         const fmt = utilsFmt;
 
-        function getAllStat() {
+        const getAllStat = () => {
             var url = common.DataService;
             var endpoints = [
                 url + '?qid=020', // Total Users [0]
@@ -50,8 +50,8 @@ const DashboardContainer = {
                 url + '?qid=010', // User Group Data [6]
             ];
 
-            Promise.all(endpoints.map(function (e) { return axios.get(e); })).then(
-                axios.spread(function (...allData) {
+            Promise.all(endpoints.map(e => axios.get(e))).then(
+                axios.spread((...allData) => {
                     overlay.show();
 
                     var totalUserRow = allData[0]?.data?.total_user?.[0];
@@ -62,7 +62,7 @@ const DashboardContainer = {
                     userStatus.totalInactiveUser = statusRow ? fmt(statusRow.inactive) : '0';
 
                     var geoRows = allData[2]?.data?.data || [];
-                    geoRows.forEach(function (stat) {
+                    geoRows.forEach(stat => {
                         if (stat['geo_level'] === 'state')   geoUserDistribution.state   = fmt(stat['total']);
                         if (stat['geo_level'] === 'lga')     geoUserDistribution.lga     = fmt(stat['total']);
                         if (stat['geo_level'] === 'cluster') geoUserDistribution.cluster = fmt(stat['total']);
@@ -74,7 +74,7 @@ const DashboardContainer = {
                     totalGroup.value = groupRow && groupRow.total ? fmt(groupRow.total) : 0;
 
                     var genderRows = allData[5]?.data?.data || [];
-                    genderRows.forEach(function (stat) {
+                    genderRows.forEach(stat => {
                         if (stat['gender'] == null)         gender.others = fmt(stat['total']);
                         if (stat['gender'] === 'Male')      gender.male   = fmt(stat['total']);
                         if (stat['gender'] === 'Female')    gender.female = fmt(stat['total']);
@@ -84,13 +84,13 @@ const DashboardContainer = {
 
                     overlay.hide();
                 })
-            ).catch(function (error) {
+            ).catch(error => {
                 overlay.hide();
                 console.error('[users/dashboard] getAllStat error:', error);
             });
         }
 
-        onMounted(function () {
+        onMounted(() => {
             getAllStat();
         });
 

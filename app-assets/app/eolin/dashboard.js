@@ -14,7 +14,7 @@ const { useApp, useFormat, bus, safeMessage } = window.utils;
 /* ------------------------------------------------------------------ */
 /* Shared module-local reactive state                                   */
 /* ------------------------------------------------------------------ */
-function createPageState() {
+const createPageState = () => {
     return {
         page: '',
         data: {
@@ -34,12 +34,12 @@ const appState = Vue.reactive({
 
 /* Shared formatting / progress helpers (replaces global Vue.mixin) */
 const fmt = useFormat();
-function percentageUsed(total_data, used) {
+const percentageUsed = (total_data, used) => {
     var p = (parseFloat(used) / parseFloat(total_data)) * 100;
     return isNaN(p) ? 0 : p.toFixed(1);
 }
-function progressBarWidth(total_data, used) { return percentageUsed(total_data, used) + '%'; }
-function progressBarStatus(total_data, used) {
+const progressBarWidth = (total_data, used) => { return percentageUsed(total_data, used) + '%'; };
+const progressBarStatus = (total_data, used) => {
     var progress = percentageUsed(total_data, used);
     if (progress >= 90) return 'bg-success';
     if (progress >= 70) return 'bg-info';
@@ -49,7 +49,7 @@ function progressBarStatus(total_data, used) {
 }
 
 /* Reusable shared returns (everything templates may reference) */
-function sharedExports() {
+const sharedExports = () => {
     return {
         appState,
         formatNumber: fmt.formatNumber,
@@ -59,14 +59,14 @@ function sharedExports() {
     };
 }
 
-function fetchData(qid, query, onSuccess) {
+const fetchData = (qid, query, onSuccess) => {
     var url = common.DataService + '?qid=' + qid + (query || '');
     return axios.get(url)
-        .then(function (response) {
+        .then(response => {
             var data = (response && response.data && response.data.data) || [];
             onSuccess(data);
         })
-        .catch(function (error) {
+        .catch(error => {
             console.error('Error fetching qid=' + qid + ' data:', error);
         });
 }
@@ -76,7 +76,7 @@ function fetchData(qid, query, onSuccess) {
 /* ------------------------------------------------------------------ */
 const PageBody = {
     setup() {
-        function refreshAllData() { bus.emit('g-event-refresh-page', {}); }
+        const refreshAllData = () => { bus.emit('g-event-refresh-page', {}); };
         return Object.assign({ refreshAllData }, sharedExports());
     },
     template: `
@@ -118,25 +118,25 @@ const PageBody = {
 const EolinMobAllStat = {
     setup() {
         const allStatistics = ref([]);
-        function refreshData() {
+        const refreshData = () => {
             overlay.show();
             Promise.all([
-                fetchData('1150', '', function (data) {
+                fetchData('1150', '', data => {
                     allStatistics.value = data;
                     appState.mobStatisticData = data;
                 }),
-            ]).finally(function () { overlay.hide(); });
+            ]).finally(() => { overlay.hide(); });
         }
-        function refreshDataHandler() { refreshData(); }
+        const refreshDataHandler = () => { refreshData(); };
 
         const keyLabels = {
             total_household: { label: 'HHs with Old Nets', icon: 'arrow-up-left', colorClass: 'text-success' },
             total_net:       { label: 'Old Nets Available', icon: 'trending-up', colorClass: 'text-primary' },
         };
-        const topStats = computed(function () {
+        const topStats = computed(() => {
             var keys = ['total_household', 'total_net'];
             var obj = allStatistics.value[0] || {};
-            return keys.map(function (key) {
+            return keys.map(key => {
                 var meta = keyLabels[key] || {};
                 return {
                     key: key,
@@ -148,7 +148,7 @@ const EolinMobAllStat = {
             });
         });
 
-        function goBack(data) {
+        const goBack = (data) => {
             appState.mobStates.page = data && data.page;
             appState.mobStates.lgaId = (data && data.lgaId) || '';
             appState.mobStates.lgaName = (data && data.lgaName) || '';
@@ -157,11 +157,11 @@ const EolinMobAllStat = {
             bus.emit('g-event-goto-page', data);
         }
 
-        onMounted(function () {
+        onMounted(() => {
             bus.on('g-event-refresh-page', refreshDataHandler);
             refreshData();
         });
-        onBeforeUnmount(function () {
+        onBeforeUnmount(() => {
             bus.off('g-event-refresh-page', refreshDataHandler);
         });
 
@@ -211,38 +211,36 @@ const EolinMobAllStat = {
 const EolinLgaMobTopSummary = {
     setup() {
         const tableData = ref([]);
-        function refreshData() {
+        const refreshData = () => {
             overlay.show();
             Promise.all([
-                fetchData('1151', '', function (data) { tableData.value = data; }),
-            ]).finally(function () { overlay.hide(); });
+                fetchData('1151', '', data => { tableData.value = data; }),
+            ]).finally(() => { overlay.hide(); });
         }
-        function gotoPageHandler() {
+        const gotoPageHandler = () => {
             if (appState.mobStates.page == '' &&
                 (appState.currentDrillData == 'mobilization' || appState.currentDrillData == '')) {
                 refreshData();
             }
         }
-        function refreshDataHandler() {
+        const refreshDataHandler = () => {
             if (appState.mobStates.page == '') refreshData();
         }
-        function goToWardSummaryPage(data) {
+        const goToWardSummaryPage = (data) => {
             appState.mobStates.page = data && data.page;
             appState.mobStates.lgaId = data && data.lgaId;
             appState.mobStates.lgaName = data && data.lgaName;
             appState.currentDrillData = 'mobilization';
             bus.emit('g-event-goto-page', data);
         }
-        const sortedByLGA = computed(function () {
-            return [].concat(tableData.value).sort(function (a, b) { return a.lga.localeCompare(b.lga); });
-        });
+        const sortedByLGA = computed(() => [].concat(tableData.value).sort((a, b) => a.lga.localeCompare(b.lga)));
 
-        onMounted(function () {
+        onMounted(() => {
             bus.on('g-event-goto-page', gotoPageHandler);
             bus.on('g-event-refresh-page', refreshDataHandler);
             refreshData();
         });
-        onBeforeUnmount(function () {
+        onBeforeUnmount(() => {
             bus.off('g-event-goto-page', gotoPageHandler);
             bus.off('g-event-refresh-page', refreshDataHandler);
         });
@@ -279,36 +277,34 @@ const EolinLgaMobTopSummary = {
 const EolinWardMobTopSummary = {
     setup() {
         const tableData = ref([]);
-        function refreshData() {
+        const refreshData = () => {
             overlay.show();
             Promise.all([
-                fetchData('1152', '&lgaId=' + appState.mobStates.lgaId, function (data) { tableData.value = data; }),
-            ]).finally(function () { overlay.hide(); });
+                fetchData('1152', '&lgaId=' + appState.mobStates.lgaId, data => { tableData.value = data; }),
+            ]).finally(() => { overlay.hide(); });
         }
-        function gotoPageHandler() {
+        const gotoPageHandler = () => {
             if (appState.mobStates.page == 'ward_summary' && appState.currentDrillData == 'mobilization') {
                 refreshData();
             }
         }
-        function refreshDataHandler() {
+        const refreshDataHandler = () => {
             if (appState.mobStates.page == 'ward_summary') refreshData();
         }
-        function goToDPSummaryPage(data) {
+        const goToDPSummaryPage = (data) => {
             appState.mobStates.page = data && data.page;
             appState.mobStates.wardId = data && data.wardId;
             appState.mobStates.wardName = data && data.wardName;
             appState.currentDrillData = 'mobilization';
             bus.emit('g-event-goto-page', data);
         }
-        const sortedByWard = computed(function () {
-            return [].concat(tableData.value).sort(function (a, b) { return a.ward.localeCompare(b.ward); });
-        });
+        const sortedByWard = computed(() => [].concat(tableData.value).sort((a, b) => a.ward.localeCompare(b.ward)));
 
-        onMounted(function () {
+        onMounted(() => {
             bus.on('g-event-goto-page', gotoPageHandler);
             bus.on('g-event-refresh-page', refreshDataHandler);
         });
-        onBeforeUnmount(function () {
+        onBeforeUnmount(() => {
             bus.off('g-event-goto-page', gotoPageHandler);
             bus.off('g-event-refresh-page', refreshDataHandler);
         });
@@ -345,25 +341,25 @@ const EolinWardMobTopSummary = {
 const EolinDpMobTopSummary = {
     setup() {
         const tableData = ref([]);
-        function refreshData() {
+        const refreshData = () => {
             overlay.show();
             Promise.all([
-                fetchData('1153', '&wardId=' + appState.mobStates.wardId, function (data) { tableData.value = data; }),
-            ]).finally(function () { overlay.hide(); });
+                fetchData('1153', '&wardId=' + appState.mobStates.wardId, data => { tableData.value = data; }),
+            ]).finally(() => { overlay.hide(); });
         }
-        function gotoPageHandler() {
+        const gotoPageHandler = () => {
             if (appState.mobStates.page == 'dp_summary' && appState.currentDrillData == 'mobilization') {
                 refreshData();
             }
         }
-        function refreshDataHandler() {
+        const refreshDataHandler = () => {
             if (appState.mobStates.page == 'dp_summary') refreshData();
         }
-        onMounted(function () {
+        onMounted(() => {
             bus.on('g-event-goto-page', gotoPageHandler);
             bus.on('g-event-refresh-page', refreshDataHandler);
         });
-        onBeforeUnmount(function () {
+        onBeforeUnmount(() => {
             bus.off('g-event-goto-page', gotoPageHandler);
             bus.off('g-event-refresh-page', refreshDataHandler);
         });
@@ -402,22 +398,22 @@ const EolinDpMobTopSummary = {
 const EolinDistAllStat = {
     setup() {
         const allDistributionStatistics = ref([]);
-        function refreshData() {
+        const refreshData = () => {
             overlay.show();
             Promise.all([
-                fetchData('1180', '', function (data) { allDistributionStatistics.value = data; }),
-            ]).finally(function () { overlay.hide(); });
+                fetchData('1180', '', data => { allDistributionStatistics.value = data; }),
+            ]).finally(() => { overlay.hide(); });
         }
-        function refreshDataHandler() { refreshData(); }
+        const refreshDataHandler = () => { refreshData(); };
 
         const keyLabels = {
             total_household: { label: 'HHs that Returned old Nets', icon: 'arrow-down-left', colorClass: 'text-success' },
             total_net:       { label: 'Returned old Nets',          icon: 'trending-down',  colorClass: 'text-primary' },
         };
-        const topStats = computed(function () {
+        const topStats = computed(() => {
             var keys = ['total_household', 'total_net'];
             var obj = allDistributionStatistics.value[0] || {};
-            return keys.map(function (key) {
+            return keys.map(key => {
                 var meta = keyLabels[key] || {};
                 return {
                     key: key, label: meta.label || key, icon: meta.icon || 'info',
@@ -426,15 +422,15 @@ const EolinDistAllStat = {
             });
         });
 
-        function progressTarget(index) {
+        const progressTarget = (index) => {
             var data = appState.mobStatisticData[0] || {};
             return index === 0 ? data.total_household : data.total_net;
         }
-        function showProgress(index, value) {
+        const showProgress = (index, value) => {
             return [0, 1].indexOf(index) !== -1 && !isNaN(value);
         }
 
-        function goBack(data) {
+        const goBack = (data) => {
             appState.distStates.page = data && data.page;
             appState.distStates.lgaId = (data && data.lgaId) || '';
             appState.distStates.lgaName = (data && data.lgaName) || '';
@@ -443,11 +439,11 @@ const EolinDistAllStat = {
             bus.emit('g-event-goto-page', data);
         }
 
-        onMounted(function () {
+        onMounted(() => {
             bus.on('g-event-refresh-page', refreshDataHandler);
             refreshData();
         });
-        onBeforeUnmount(function () {
+        onBeforeUnmount(() => {
             bus.off('g-event-refresh-page', refreshDataHandler);
         });
 
@@ -511,38 +507,36 @@ const EolinDistAllStat = {
 const EolinLgaDistTopSummary = {
     setup() {
         const tableData = ref([]);
-        function refreshData() {
+        const refreshData = () => {
             overlay.show();
             Promise.all([
-                fetchData('1181', '', function (data) { tableData.value = data; }),
-            ]).finally(function () { overlay.hide(); });
+                fetchData('1181', '', data => { tableData.value = data; }),
+            ]).finally(() => { overlay.hide(); });
         }
-        function gotoPageHandler() {
+        const gotoPageHandler = () => {
             if (appState.distStates.page == '' &&
                 (appState.currentDrillData == 'distribution' || appState.currentDrillData == '')) {
                 refreshData();
             }
         }
-        function refreshDataHandler() {
+        const refreshDataHandler = () => {
             if (appState.distStates.page == '') refreshData();
         }
-        function goToWardSummaryPage(data) {
+        const goToWardSummaryPage = (data) => {
             appState.distStates.page = data && data.page;
             appState.distStates.lgaId = data && data.lgaId;
             appState.distStates.lgaName = data && data.lgaName;
             appState.currentDrillData = 'distribution';
             bus.emit('g-event-goto-page', data);
         }
-        const sortedByLGA = computed(function () {
-            return [].concat(tableData.value).sort(function (a, b) { return a.lga.localeCompare(b.lga); });
-        });
+        const sortedByLGA = computed(() => [].concat(tableData.value).sort((a, b) => a.lga.localeCompare(b.lga)));
 
-        onMounted(function () {
+        onMounted(() => {
             bus.on('g-event-goto-page', gotoPageHandler);
             bus.on('g-event-refresh-page', refreshDataHandler);
             refreshData();
         });
-        onBeforeUnmount(function () {
+        onBeforeUnmount(() => {
             bus.off('g-event-goto-page', gotoPageHandler);
             bus.off('g-event-refresh-page', refreshDataHandler);
         });
@@ -579,36 +573,34 @@ const EolinLgaDistTopSummary = {
 const EolinWardDistTopSummary = {
     setup() {
         const tableData = ref([]);
-        function refreshData() {
+        const refreshData = () => {
             overlay.show();
             Promise.all([
-                fetchData('1182', '&lgaId=' + appState.distStates.lgaId, function (data) { tableData.value = data; }),
-            ]).finally(function () { overlay.hide(); });
+                fetchData('1182', '&lgaId=' + appState.distStates.lgaId, data => { tableData.value = data; }),
+            ]).finally(() => { overlay.hide(); });
         }
-        function gotoPageHandler() {
+        const gotoPageHandler = () => {
             if (appState.distStates.page == 'ward_summary' && appState.currentDrillData == 'distribution') {
                 refreshData();
             }
         }
-        function refreshDataHandler() {
+        const refreshDataHandler = () => {
             if (appState.distStates.page == 'ward_summary') refreshData();
         }
-        function goToDPSummaryPage(data) {
+        const goToDPSummaryPage = (data) => {
             appState.distStates.page = data && data.page;
             appState.distStates.wardId = data && data.wardId;
             appState.distStates.wardName = data && data.wardName;
             appState.currentDrillData = 'distribution';
             bus.emit('g-event-goto-page', data);
         }
-        const sortedByWard = computed(function () {
-            return [].concat(tableData.value).sort(function (a, b) { return a.ward.localeCompare(b.ward); });
-        });
+        const sortedByWard = computed(() => [].concat(tableData.value).sort((a, b) => a.ward.localeCompare(b.ward)));
 
-        onMounted(function () {
+        onMounted(() => {
             bus.on('g-event-goto-page', gotoPageHandler);
             bus.on('g-event-refresh-page', refreshDataHandler);
         });
-        onBeforeUnmount(function () {
+        onBeforeUnmount(() => {
             bus.off('g-event-goto-page', gotoPageHandler);
             bus.off('g-event-refresh-page', refreshDataHandler);
         });
@@ -645,25 +637,25 @@ const EolinWardDistTopSummary = {
 const EolinDpDistTopSummary = {
     setup() {
         const tableData = ref([]);
-        function refreshData() {
+        const refreshData = () => {
             overlay.show();
             Promise.all([
-                fetchData('1183', '&wardId=' + appState.distStates.wardId, function (data) { tableData.value = data; }),
-            ]).finally(function () { overlay.hide(); });
+                fetchData('1183', '&wardId=' + appState.distStates.wardId, data => { tableData.value = data; }),
+            ]).finally(() => { overlay.hide(); });
         }
-        function gotoPageHandler() {
+        const gotoPageHandler = () => {
             if (appState.distStates.page == 'dp_summary' && appState.currentDrillData == 'distribution') {
                 refreshData();
             }
         }
-        function refreshDataHandler() {
+        const refreshDataHandler = () => {
             if (appState.distStates.page == 'dp_summary') refreshData();
         }
-        onMounted(function () {
+        onMounted(() => {
             bus.on('g-event-goto-page', gotoPageHandler);
             bus.on('g-event-refresh-page', refreshDataHandler);
         });
-        onBeforeUnmount(function () {
+        onBeforeUnmount(() => {
             bus.off('g-event-goto-page', gotoPageHandler);
             bus.off('g-event-refresh-page', refreshDataHandler);
         });

@@ -47,7 +47,7 @@ const SampleTable = {
             },
         });
 
-        function loadTableData() {
+        const loadTableData = () => {
             overlay.show();
             var url = common.TableService;
             axios
@@ -59,67 +59,67 @@ const SampleTable = {
                         '&start=' + tableOptions.limitStart +
                         '&order_dir=' + tableOptions.orderDir
                 )
-                .then(function (response) {
+                .then(response => {
                     var d = response && response.data;
                     tableData.value = Array.isArray(d && d.data) ? d.data : [];
                     tableOptions.total = (d && d.recordsTotal) || 0;
                     if (tableOptions.currentPage == 1) paginationDefault();
                     overlay.hide();
                 })
-                .catch(function (error) {
+                .catch(error => {
                     overlay.hide();
                     alert.Error('ERROR', safeMessage(error));
                 });
         }
 
-        function selectAll() {
+        const selectAll = () => {
             for (var i = 0; i < tableData.value.length; i++) tableData.value[i].pick = true;
         }
-        function uncheckAll() {
+        const uncheckAll = () => {
             for (var i = 0; i < tableData.value.length; i++) tableData.value[i].pick = false;
         }
-        function selectToggle() {
+        const selectToggle = () => {
             if (checkToggle.value === false) { selectAll(); checkToggle.value = true; }
             else                              { uncheckAll(); checkToggle.value = false; }
         }
-        function checkedBg(pickOne) { return pickOne != '' ? 'bg-select' : ''; }
+        const checkedBg = (pickOne) => { return pickOne != '' ? 'bg-select' : ''; };
 
-        function toggleFilter() {
+        const toggleFilter = () => {
             if (filterState.value === false) filters.value = false;
             return (filterState.value = !filterState.value);
         }
 
-        function selectedItems() {
-            return tableData.value.filter(function (r) { return r.pick; });
+        const selectedItems = () => {
+            return tableData.value.filter(r => r.pick);
         }
-        function selectedID() {
-            return tableData.value.filter(function (r) { return r.pick; }).map(function (r) { return r.userid; });
+        const selectedID = () => {
+            return tableData.value.filter(r => r.pick).map(r => r.userid);
         }
 
-        function paginationDefault() {
+        const paginationDefault = () => {
             tableOptions.pageLength = Math.ceil(tableOptions.total / tableOptions.perPage);
             tableOptions.limitStart = Math.ceil((tableOptions.currentPage - 1) * tableOptions.perPage);
             tableOptions.isNext = (tableOptions.currentPage < tableOptions.pageLength);
             tableOptions.isPrev = (tableOptions.currentPage > 1);
         }
 
-        function nextPage() {
+        const nextPage = () => {
             tableOptions.currentPage += 1;
             paginationDefault();
             loadTableData();
         }
-        function prevPage() {
+        const prevPage = () => {
             tableOptions.currentPage -= 1;
             paginationDefault();
             loadTableData();
         }
-        function currentPage() {
+        const currentPage = () => {
             paginationDefault();
             if (tableOptions.currentPage < 1)                          alert.Error('ERROR', "The Page requested doesn't exist");
             else if (tableOptions.currentPage > tableOptions.pageLength) alert.Error('ERROR', "The Page requested doesn't exist");
             else                                                       loadTableData();
         }
-        function changePerPage(val) {
+        const changePerPage = (val) => {
             var maxPerPage = Math.ceil(tableOptions.total / val);
             if (maxPerPage < tableOptions.currentPage) tableOptions.currentPage = maxPerPage;
             tableOptions.perPage = val;
@@ -127,7 +127,7 @@ const SampleTable = {
             loadTableData();
         }
 
-        function sort(col) {
+        const sort = (col) => {
             if (tableOptions.orderField === col) {
                 tableOptions.orderDir = tableOptions.orderDir === 'asc' ? 'desc' : 'asc';
             } else {
@@ -137,7 +137,7 @@ const SampleTable = {
             loadTableData();
         }
 
-        function applyFilter() {
+        const applyFilter = () => {
             var checkFill = 0;
             checkFill += tableOptions.filterParameters.firstname != '' ? 1 : 0;
             checkFill += tableOptions.filterParameters.loginid   != '' ? 1 : 0;
@@ -149,13 +149,13 @@ const SampleTable = {
                 alert.Error('ERROR', 'Invalid required data');
             }
         }
-        function clearAllFilter() {
+        const clearAllFilter = () => {
             filters.value = false;
             tableOptions.filterParameters.loginid = '';
             tableOptions.filterParameters.firstname = '';
         }
 
-        onMounted(function () {
+        onMounted(() => {
             loadTableData();
         });
 

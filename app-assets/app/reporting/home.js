@@ -42,20 +42,20 @@ const ReportingLists = {
         const trainingListData = ref([]);
         const trainingForm = reactive({ trainingId: 0, trainingName: '' });
 
-        function getAllTrainingLists() {
+        const getAllTrainingLists = () => {
             overlay.show();
             axios.get(common.DataService + '?qid=104a&gl=' + geoIndicator.geoLevel + '&glid=' + geoIndicator.geoLevelId)
-                .then(function (response) {
+                .then(response => {
                     trainingListData.value = (response.data && response.data.data) || [];
                     overlay.hide();
                 })
-                .catch(function (error) {
+                .catch(error => {
                     overlay.hide();
                     alert.Error('ERROR', safeMessage(error));
                 });
         }
 
-        function openModal(reportType) {
+        const openModal = (reportType) => {
             switch (reportType) {
                 case 'participantList':
                     report.reportTitle = 'Filter to a <b>Specific Training</b> to Download Participants List';
@@ -157,7 +157,7 @@ const ReportingLists = {
             }
         }
 
-        async function downloadReport() {
+        const downloadReport = async () => {
             var randomInt = Math.floor(Math.random() * 100) + 1;
             var fileName, dlString;
             var geoString = '&gl=' + geoIndicator.geoLevel + '&glid=' + geoIndicator.geoLevelId;
@@ -209,17 +209,17 @@ const ReportingLists = {
             }
         }
 
-        function downloadData(dlString) {
-            return new Promise(function (resolve, reject) {
+        const downloadData = (dlString) => {
+            return new Promise((resolve, reject) => {
                 $.ajax({
                     url: common.ExportService, type: 'POST', data: dlString,
-                    success: function (data) { resolve(data); },
-                    error: function (error) { reject(error); },
+                    success: (data) => { resolve(data); },
+                    error: (error) => { reject(error); },
                 });
             });
         }
 
-        function dismissOnClick() {
+        const dismissOnClick = () => {
             trainingForm.trainingId = 0;
             trainingForm.trainingName = '';
             report.reportTitle = '';
@@ -233,24 +233,24 @@ const ReportingLists = {
             $('#trainingListModal').modal('hide');
         }
 
-        function chooseSingleDate() {
+        const chooseSingleDate = () => {
             dateTitle.value = 'Choose Date to download the Report';
             try { $('.date').flatpickr({ altInput: true, altFormat: 'F j, Y', dateFormat: 'Y-m-d' }); } catch (e) {}
         }
-        function chooseDateRange() {
+        const chooseDateRange = () => {
             dateTitle.value = 'Choose Date Range to Download the Report';
             try { $('.date').flatpickr({ altInput: true, altFormat: 'F j, Y', dateFormat: 'Y-m-d', mode: 'range' }); } catch (e) {}
         }
-        function autoUpdateTableRowNo() {
+        const autoUpdateTableRowNo = () => {
             var allTableRow = document.querySelectorAll('tr td:first-child');
-            allTableRow.forEach(function (element, i) { element.innerHTML = i + 1; });
+            allTableRow.forEach((element, i) => { element.innerHTML = i + 1; });
         }
 
-        onBeforeMount(function () {
+        onBeforeMount(() => {
             geoIndicator.geoLevel = $('#v_g_geo_level').val();
             geoIndicator.geoLevelId = $('#v_g_geo_level_id').val();
         });
-        onMounted(function () {
+        onMounted(() => {
             $('#form-search').on('keyup', function () {
                 var value = $(this).val().toLowerCase();
                 $('#dpTable tbody tr').filter(function () {

@@ -12,7 +12,7 @@ const appState = Vue.reactive({
     permission: (typeof getPermission === 'function')
         ? (getPermission(typeof per !== 'undefined' ? per : null, 'smc') || { permission_value: 0 })
         : { permission_value: 0 },
-    userId: (function () { var el = document.getElementById('v_g_id'); return el ? el.value : ''; })(),
+    userId: (() => { var el = document.getElementById('v_g_id'); return el ? el.value : ''; })(),
     geoLevelForm: { geoLevel: '', geoLevelId: 0 },
     defaultStateId: '',
     sysDefaultData: [],
@@ -28,7 +28,7 @@ const appState = Vue.reactive({
     level: 'lga',
 });
 
-function setSelectedLga() {
+const setSelectedLga = () => {
     var key = appState.selectedLgaKey;
     var selectedLga = appState.lgaData[key];
     if (!selectedLga) return;
@@ -37,7 +37,7 @@ function setSelectedLga() {
     bus.emit('g-event-reset-form');
 }
 
-function displayDateLong(d, fullDate, withTime) {
+const displayDateLong = (d, fullDate, withTime) => {
     if (fullDate === undefined) fullDate = false;
     if (withTime === undefined) withTime = true;
     var date = new Date(d);
@@ -73,8 +73,8 @@ const PageTable = {
         });
         const geoLevelData = ref([]);
 
-        function reloadTableListOnUpdate() { paginationDefault(); loadTableData(); }
-        function loadTableData() {
+        const reloadTableListOnUpdate = () => { paginationDefault(); loadTableData(); };
+        const loadTableData = () => {
             overlay.show();
             axios.get(
                 common.TableService +
@@ -86,58 +86,58 @@ const PageTable = {
                 '&gid=' + appState.currentLgaId +
                 '&glv=lga'
             )
-                .then(function (response) {
+                .then(response => {
                     var d = response && response.data;
                     tableData.value = Array.isArray(d && d.data) ? d.data : [];
                     tableOptions.total = (d && d.recordsTotal) || 0;
                     if (tableOptions.currentPage == 1) paginationDefault();
                     overlay.hide();
                 })
-                .catch(function (error) {
+                .catch(error => {
                     overlay.hide();
                     alert.Error('ERROR', safeMessage(error));
                 });
         }
-        function selectAll()  { for (var i = 0; i < tableData.value.length; i++) tableData.value[i].pick = true; }
-        function uncheckAll() { for (var i = 0; i < tableData.value.length; i++) tableData.value[i].pick = false; }
-        function selectToggle() {
+        const selectAll = () => { for (var i = 0; i < tableData.value.length; i++) tableData.value[i].pick = true; };
+        const uncheckAll = () => { for (var i = 0; i < tableData.value.length; i++) tableData.value[i].pick = false; };
+        const selectToggle = () => {
             if (checkToggle.value === false) { selectAll(); checkToggle.value = true; }
             else                              { uncheckAll(); checkToggle.value = false; }
         }
-        function checkedBg(p) { return p != '' ? 'bg-select' : ''; }
-        function toggleFilter() {
+        const checkedBg = (p) => { return p != '' ? 'bg-select' : ''; };
+        const toggleFilter = () => {
             if (filterState.value === false) filters.value = false;
             return (filterState.value = !filterState.value);
         }
-        function paginationDefault() {
+        const paginationDefault = () => {
             tableOptions.pageLength = Math.ceil(tableOptions.total / tableOptions.perPage);
             tableOptions.limitStart = Math.ceil((tableOptions.currentPage - 1) * tableOptions.perPage);
             tableOptions.isNext = tableOptions.currentPage < tableOptions.pageLength;
             tableOptions.isPrev = tableOptions.currentPage > 1;
         }
-        function resetSelected() { uncheckAll(); checkToggle.value = false; totalCheckedBox(); }
-        function nextPage() { resetSelected(); tableOptions.currentPage += 1; paginationDefault(); loadTableData(); }
-        function prevPage() { resetSelected(); tableOptions.currentPage -= 1; paginationDefault(); loadTableData(); }
-        function currentPage() {
+        const resetSelected = () => { uncheckAll(); checkToggle.value = false; totalCheckedBox(); };
+        const nextPage = () => { resetSelected(); tableOptions.currentPage += 1; paginationDefault(); loadTableData(); };
+        const prevPage = () => { resetSelected(); tableOptions.currentPage -= 1; paginationDefault(); loadTableData(); };
+        const currentPage = () => {
             paginationDefault();
             if (tableOptions.currentPage < 1)                            alert.Error('ERROR', "The Page requested doesn't exist");
             else if (tableOptions.currentPage > tableOptions.pageLength) alert.Error('ERROR', "The Page requested doesn't exist");
             else                                                         loadTableData();
         }
-        function changePerPage(val) {
+        const changePerPage = (val) => {
             resetSelected();
             tableOptions.currentPage = 1;
             tableOptions.perPage = val;
             paginationDefault();
             loadTableData();
         }
-        function sort(col) {
+        const sort = (col) => {
             if (tableOptions.orderField === col) tableOptions.orderDir = tableOptions.orderDir === 'asc' ? 'desc' : 'asc';
             else                                  tableOptions.orderField = col;
             paginationDefault();
             loadTableData();
         }
-        function applyFilter() {
+        const applyFilter = () => {
             if (appState.currentLgaId != '') {
                 tableOptions.filterParam.gid = appState.currentLgaId;
                 tableOptions.filterParam.glv = appState.level;
@@ -155,7 +155,7 @@ const PageTable = {
                 alert.Error('ERROR', 'Invalid required data');
             }
         }
-        function removeSingleFilter(column_name) {
+        const removeSingleFilter = (column_name) => {
             tableOptions.filterParam[column_name] = '';
             if (column_name == 'lga_name') {
                 tableOptions.filterParam.gid = '';
@@ -171,7 +171,7 @@ const PageTable = {
             paginationDefault();
             loadTableData();
         }
-        function clearAllFilter() {
+        const clearAllFilter = () => {
             filters.value = false;
             tableOptions.filterParam.gid = '';
             tableOptions.filterParam.level = '';
@@ -180,15 +180,15 @@ const PageTable = {
             paginationDefault();
             loadTableData();
         }
-        function refreshData() { paginationDefault(); loadTableData(); }
-        function totalCheckedBox() {
-            var total = tableData.value.filter(function (r) { return r.pick; }).length;
+        const refreshData = () => { paginationDefault(); loadTableData(); };
+        const totalCheckedBox = () => {
+            var total = tableData.value.filter(r => r.pick).length;
             var el = document.getElementById('total-selected');
             if (!el) return;
             if (total > 0) el.innerHTML = '<span class="badge badge-primary btn-icon"><span class="badge badge-success">' + total + '</span> Selected</span>';
             else el.replaceChildren();
         }
-        function goToCreateIssue() {
+        const goToCreateIssue = () => {
             appState.pageState.page = 'create-inbound';
             appState.currentPeriodId = '';
             appState.currentLgaId = '';
@@ -196,28 +196,26 @@ const PageTable = {
             appState.selectedLgaKey = '';
             bus.emit('g-event-goto-page');
         }
-        function getProductMaster() {
+        const getProductMaster = () => {
             overlay.show();
             axios.get(common.DataService + '?qid=gen011')
-                .then(function (response) {
-                    var data = ((response.data && response.data.data) || []).slice().sort(function (a, b) {
-                        return a.product_code.localeCompare(b.product_code);
-                    });
+                .then(response => {
+                    var data = ((response.data && response.data.data) || []).slice().sort((a, b) => a.product_code.localeCompare(b.product_code));
                     appState.productData = data;
                     overlay.hide();
                 })
-                .catch(function (error) {
+                .catch(error => {
                     overlay.hide();
                     alert.Error('ERROR', safeMessage(error));
                 });
         }
 
-        onMounted(function () {
+        onMounted(() => {
             getProductMaster();
             loadTableData();
             bus.on('g-event-refresh-page', reloadTableListOnUpdate);
         });
-        onBeforeUnmount(function () {
+        onBeforeUnmount(() => {
             bus.off('g-event-refresh-page', reloadTableListOnUpdate);
         });
 
@@ -231,7 +229,7 @@ const PageTable = {
             refreshData, totalCheckedBox, goToCreateIssue, getProductMaster,
             setSelectedLga,
             capitalize: fmtUtils.capitalize,
-            displayDate: function (d, fullDate, withTime) { return displayDateLong(d, fullDate, withTime); },
+            displayDate: (d, fullDate, withTime) => { return displayDateLong(d, fullDate, withTime); },
             formatNumber: fmtUtils.formatNumber,
             convertStringNumberToFigures: fmtUtils.convertStringNumberToFigures,
         };
@@ -397,10 +395,10 @@ const PageCreateIssue = {
         const expiryRefs = ref({});
         const flatpickrInstances = {};
 
-        function getSysDefaultDataSettings() {
+        const getSysDefaultDataSettings = () => {
             overlay.show();
             axios.get(common.DataService + '?qid=gen007')
-                .then(function (response) {
+                .then(response => {
                     if (response.data.data && response.data.data.length > 0) {
                         appState.sysDefaultData = response.data.data[0];
                         getAllLga(response.data.data[0].stateid);
@@ -410,24 +408,24 @@ const PageCreateIssue = {
                     }
                     overlay.hide();
                 })
-                .catch(function (error) {
+                .catch(error => {
                     overlay.hide();
                     alert.Error('ERROR', safeMessage(error));
                 });
         }
-        function getAllLga(stateid) {
+        const getAllLga = (stateid) => {
             overlay.show();
             axios.post(common.DataService + '?qid=gen003', JSON.stringify(stateid))
-                .then(function (response) {
+                .then(response => {
                     appState.lgaData = (response.data && response.data.data) || [];
                     overlay.hide();
                 })
-                .catch(function (error) {
+                .catch(error => {
                     overlay.hide();
                     alert.Error('ERROR', safeMessage(error));
                 });
         }
-        async function getCmsLocationMaster() {
+        const getCmsLocationMaster = async () => {
             overlay.show();
             try {
                 var response = await axios.post(common.DataService + '?qid=gen012');
@@ -438,27 +436,27 @@ const PageCreateIssue = {
                 overlay.hide();
             }
         }
-        function getAllPeriodLists() {
+        const getAllPeriodLists = () => {
             overlay.show();
             axios.get(common.DataService + '?qid=1004')
-                .then(function (response) {
+                .then(response => {
                     appState.periodData = (response.data && response.data.data) || [];
                     overlay.hide();
                 })
-                .catch(function (error) {
+                .catch(error => {
                     overlay.hide();
                     alert.Error('ERROR', safeMessage(error));
                 });
         }
 
-        function submitInboundCreation() {
+        const submitInboundCreation = () => {
             if (!appState.inBoundData || appState.inBoundData.length === 0) {
                 alert.Error('ERROR', 'Please add at least one inbound item.');
                 return;
             }
             overlay.show();
             axios.post(common.DataService + '?qid=1130', JSON.stringify(appState.inBoundData))
-                .then(function (response) {
+                .then(response => {
                     overlay.hide();
                     if (response.data.result_code == '200') {
                         bus.emit('g-event-refresh-page');
@@ -468,27 +466,27 @@ const PageCreateIssue = {
                         alert.Error('ERROR', response.data.message);
                     }
                 })
-                .catch(function (error) {
+                .catch(error => {
                     overlay.hide();
                     alert.Error('ERROR', safeMessage(error));
                 });
         }
-        function goToInboundTable() {
+        const goToInboundTable = () => {
             appState.pageState.page = 'table';
             appState.inBoundData = [];
         }
-        function resetForm() { facilityData.value = []; tempFacilityData.value = []; }
-        function resetInboundCreation() {
+        const resetForm = () => { facilityData.value = []; tempFacilityData.value = []; };
+        const resetInboundCreation = () => {
             facilityData.value = JSON.parse(JSON.stringify(tempFacilityData.value));
         }
-        function cancelInboundCreation() {
+        const cancelInboundCreation = () => {
             if (isUpdated.value) {
                 $.confirm({
                     title: 'WARNING!',
                     content: 'Are you sure you want to discard the changes made?',
                     buttons: {
-                        discard: { text: 'Discard', btnClass: 'btn btn-danger mr-1', action: function () { goToInboundTable(); } },
-                        cancel: function () {},
+                        discard: { text: 'Discard', btnClass: 'btn btn-danger mr-1', action: () => { goToInboundTable(); } },
+                        cancel: () => {},
                     },
                 });
             } else {
@@ -496,7 +494,7 @@ const PageCreateIssue = {
             }
         }
 
-        function addInbound() {
+        const addInbound = () => {
             appState.inBoundData.push({
                 product_code: '', product_name: '',
                 location_type: '', location_id: '',
@@ -505,52 +503,52 @@ const PageCreateIssue = {
                 primary_qty: '', secondary_qty: '',
                 userid: appState.userId,
             });
-            nextTick(function () {
+            nextTick(() => {
                 var index = appState.inBoundData.length - 1;
                 var inputEl = document.querySelector('input.expiry_date_' + index);
                 if (inputEl && typeof flatpickr === 'function') {
                     flatpickrInstances[index] = flatpickr(inputEl, {
                         altInput: true, altFormat: 'F j, Y', dateFormat: 'Y-m-d',
-                        onChange: function (selectedDates, dateStr) {
+                        onChange: (selectedDates, dateStr) => {
                             if (appState.inBoundData[index]) appState.inBoundData[index].expiry_date = dateStr;
                         },
                     });
                 }
             });
         }
-        function deleteItem(index) {
+        const deleteItem = (index) => {
             try { if (flatpickrInstances[index] && flatpickrInstances[index].destroy) flatpickrInstances[index].destroy(); } catch (e) {}
             delete flatpickrInstances[index];
             appState.inBoundData.splice(index, 1);
         }
 
-        watch(function () { return appState.inBoundData; }, function (newVal) {
+        watch(() => appState.inBoundData, newVal => {
             var packSize = 50;
-            (newVal || []).forEach(function (item) {
+            (newVal || []).forEach(item => {
                 var secondaryQty = Number(item.secondary_qty);
                 item.primary_qty = isNaN(secondaryQty) ? 0 : secondaryQty * packSize;
                 if (item.location_id && !item.location_type) {
-                    var cms = (appState.cmsLocationMaster || []).find(function (loc) { return loc.location_id === item.location_id; });
+                    var cms = (appState.cmsLocationMaster || []).find(loc => loc.location_id === item.location_id);
                     item.location_type = (cms && cms.location_type) || '';
                 }
                 if (item.product_code && !item.product_name) {
-                    var prod = (appState.productData || []).find(function (p) { return p.product_code === item.product_code; });
+                    var prod = (appState.productData || []).find(p => p.product_code === item.product_code);
                     item.product_name = (prod && prod.name) || '';
                 }
             });
         }, { deep: true });
 
-        onMounted(function () {
+        onMounted(() => {
             getSysDefaultDataSettings();
             getAllPeriodLists();
             getCmsLocationMaster();
             bus.on('g-event-reset-form', resetForm);
             bus.on('g-event-goto-page', addInbound);
         });
-        onBeforeUnmount(function () {
+        onBeforeUnmount(() => {
             bus.off('g-event-reset-form', resetForm);
             bus.off('g-event-goto-page', addInbound);
-            Object.keys(flatpickrInstances).forEach(function (k) {
+            Object.keys(flatpickrInstances).forEach(k => {
                 try { if (flatpickrInstances[k] && flatpickrInstances[k].destroy) flatpickrInstances[k].destroy(); } catch (e) {}
             });
         });
@@ -561,7 +559,7 @@ const PageCreateIssue = {
             submitInboundCreation, goToInboundTable, resetForm,
             resetInboundCreation, cancelInboundCreation, addInbound, deleteItem,
             capitalize: fmtUtils.capitalize,
-            displayDate: function (d, fullDate, withTime) { return displayDateLong(d, fullDate, withTime); },
+            displayDate: (d, fullDate, withTime) => { return displayDateLong(d, fullDate, withTime); },
             formatNumber: fmtUtils.formatNumber,
             convertStringNumberToFigures: fmtUtils.convertStringNumberToFigures,
             numbersOnlyWithoutDot: fmtUtils.numbersOnlyWithoutDot,

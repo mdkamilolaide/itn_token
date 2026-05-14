@@ -13,9 +13,9 @@ const { useApp, useFormat, bus, safeMessage } = window.utils;
 const PageBody = {
     setup() {
         const page = ref('visit');
-        function gotoPageHandler(data) { page.value = data && data.page; }
-        onMounted(function () { bus.on('g-event-goto-page', gotoPageHandler); });
-        onBeforeUnmount(function () { bus.off('g-event-goto-page', gotoPageHandler); });
+        const gotoPageHandler = (data) => { page.value = data && data.page; };
+        onMounted(() => { bus.on('g-event-goto-page', gotoPageHandler); });
+        onBeforeUnmount(() => { bus.off('g-event-goto-page', gotoPageHandler); });
         return { page };
     },
     template: `
@@ -47,24 +47,24 @@ const VisitList = {
         let startFp = null;
         let endFp = null;
 
-        function loadTableData() {
+        const loadTableData = () => {
             overlay.show();
             axios.get(common.DataService + '?qid=1004')
-                .then(function (response) {
+                .then(response => {
                     tableData.value = (response.data && response.data.data) || [];
                     overlay.hide();
                 })
-                .catch(function (error) {
+                .catch(error => {
                     overlay.hide();
                     alert.Error('ERROR', safeMessage(error));
                 });
         }
-        function displayMonthDay(d) {
+        const displayMonthDay = (d) => {
             var date = new Date(d);
             return date.toLocaleString('en-us', { year: 'numeric', month: 'long', day: 'numeric', hour12: true });
         }
 
-        function deActivateVisit(period_id, status, period_pos) {
+        const deActivateVisit = (period_id, status, period_pos) => {
             var title = (tableData.value[period_pos] || {}).title || '';
             var btn_class, response_txt, message, bnt_text;
             if (status == '1') {
@@ -83,9 +83,9 @@ const VisitList = {
                 buttons: {
                     delete: {
                         text: bnt_text, btnClass: 'btn mr-1' + btn_class,
-                        action: function () {
+                        action: () => {
                             axios.post(common.DataService + '?qid=1003&period_id=' + period_id)
-                                .then(function (response) {
+                                .then(response => {
                                     overlay.hide();
                                     if (response.data.result_code == '200') {
                                         loadTableData();
@@ -94,34 +94,34 @@ const VisitList = {
                                         alert.Error('ERROR', 'Unable to De/Activate Visit with Title: <b>' + title + '</b>');
                                     }
                                 })
-                                .catch(function (error) {
+                                .catch(error => {
                                     overlay.hide();
                                     alert.Error('ERROR', safeMessage(error));
                                 });
                         },
                     },
-                    cancel: function () { overlay.hide(); },
+                    cancel: () => { overlay.hide(); },
                 },
             });
         }
 
-        function showAddVisitModal() {
+        const showAddVisitModal = () => {
             resetVisitForm();
             $('#addNewVisit').modal('show');
             addVisitModal.value = true;
             visitBtn.value = 'Create';
         }
-        function hideAddVisitModal() {
+        const hideAddVisitModal = () => {
             resetVisitForm();
             addVisitModal.value = false;
             visitBtn.value = '';
             $('#addNewVisit').modal('hide');
         }
-        function onSubmitCreateVisit(action) {
+        const onSubmitCreateVisit = (action) => {
             if (action == 'Create') {
                 overlay.show();
                 axios.post(common.DataService + '?qid=1000', JSON.stringify(visitForm))
-                    .then(function (response) {
+                    .then(response => {
                         if (response.data.result_code == '201') {
                             resetVisitForm();
                             addVisitModal.value = false;
@@ -134,7 +134,7 @@ const VisitList = {
                             alert.Error('Error', response.data.message);
                         }
                     })
-                    .catch(function (error) {
+                    .catch(error => {
                         alert.Error('ERROR', safeMessage(error));
                         overlay.hide();
                     });
@@ -142,7 +142,7 @@ const VisitList = {
                 updateVisit();
             }
         }
-        function resetVisitForm() {
+        const resetVisitForm = () => {
             try { if (startFp && startFp.clear) startFp.clear(); } catch (e) {}
             try { if (endFp && endFp.clear) endFp.clear(); } catch (e) {}
             visitBtn.value = '';
@@ -152,8 +152,8 @@ const VisitList = {
             visitForm.period_pos = '';
             overlay.hide();
         }
-        function refreshData() { loadTableData(); }
-        function editVisit(period_id, period_pos) {
+        const refreshData = () => { loadTableData(); };
+        const editVisit = (period_id, period_pos) => {
             overlay.show();
             addVisitModal.value = true;
             visitBtn.value = 'Update';
@@ -165,7 +165,7 @@ const VisitList = {
             visitForm.period_pos = period_pos;
             overlay.hide();
         }
-        function deleteVisit(period_id, period_pos) {
+        const deleteVisit = (period_id, period_pos) => {
             var title = (tableData.value[period_pos] || {}).title || '';
             $.confirm({
                 title: 'WARNING!',
@@ -173,9 +173,9 @@ const VisitList = {
                 buttons: {
                     delete: {
                         text: 'Delete', btnClass: 'btn mr-1 btn-danger ',
-                        action: function () {
+                        action: () => {
                             axios.post(common.DataService + '?qid=1002&period_id=' + period_id)
-                                .then(function (response) {
+                                .then(response => {
                                     overlay.hide();
                                     if (response.data.result_code == '200') {
                                         loadTableData();
@@ -184,17 +184,17 @@ const VisitList = {
                                         alert.Error('ERROR', 'Unable to Delete Visit with Title <b>' + title + '</b>');
                                     }
                                 })
-                                .catch(function (error) {
+                                .catch(error => {
                                     overlay.hide();
                                     alert.Error('ERROR', safeMessage(error));
                                 });
                         },
                     },
-                    cancel: function () { overlay.hide(); },
+                    cancel: () => { overlay.hide(); },
                 },
             });
         }
-        function updateVisit() {
+        const updateVisit = () => {
             var title = (tableData.value[visitForm.period_pos] || {}).title || '';
             $.confirm({
                 title: 'WARNING!',
@@ -202,9 +202,9 @@ const VisitList = {
                 buttons: {
                     delete: {
                         text: 'Update', btnClass: 'btn btn-danger mr-1 text-capitalize',
-                        action: function () {
+                        action: () => {
                             axios.post(common.DataService + '?qid=1001', JSON.stringify(visitForm))
-                                .then(function (response) {
+                                .then(response => {
                                     if (response.data.result_code == '200') {
                                         resetVisitForm();
                                         addVisitModal.value = false;
@@ -217,13 +217,13 @@ const VisitList = {
                                         alert.Error('Error', response.data.message);
                                     }
                                 })
-                                .catch(function (error) {
+                                .catch(error => {
                                     alert.Error('ERROR', safeMessage(error));
                                     overlay.hide();
                                 });
                         },
                     },
-                    cancel: function () {
+                    cancel: () => {
                         resetVisitForm();
                         addVisitModal.value = false;
                         $('#addNewVisit').modal('hide');
@@ -233,25 +233,25 @@ const VisitList = {
             });
         }
 
-        onMounted(function () {
+        onMounted(() => {
             loadTableData();
             bus.on('g-event-update', loadTableData);
             try {
                 if ($('#start-date').length && typeof $.fn.flatpickr === 'function') {
                     startFp = $('#start-date').flatpickr({
                         altInput: true, altFormat: 'F j, Y', dateFormat: 'Y-m-d', minDate: 'today',
-                        onChange: function (d, dateStr) { visitForm.start_date = dateStr; },
+                        onChange: (d, dateStr) => { visitForm.start_date = dateStr; },
                     });
                 }
                 if ($('#end-date').length && typeof $.fn.flatpickr === 'function') {
                     endFp = $('#end-date').flatpickr({
                         altInput: true, altFormat: 'F j, Y', dateFormat: 'Y-m-d', minDate: 'today',
-                        onChange: function (d, dateStr) { visitForm.end_date = dateStr; },
+                        onChange: (d, dateStr) => { visitForm.end_date = dateStr; },
                     });
                 }
             } catch (e) {}
         });
-        onBeforeUnmount(function () {
+        onBeforeUnmount(() => {
             bus.off('g-event-update', loadTableData);
             try { if (startFp && startFp.destroy) startFp.destroy(); } catch (e) {}
             try { if (endFp && endFp.destroy) endFp.destroy(); } catch (e) {}

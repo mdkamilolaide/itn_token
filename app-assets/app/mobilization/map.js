@@ -89,7 +89,7 @@ async function runMap() {
             type: "POST",
             data: url,
             dataType: 'json',
-            success: function(data) {
+            success: (data) => {
                 loadLGA();
                 resolve(data.data)
             }
@@ -135,7 +135,7 @@ async function runMap() {
         try { addMarker(markers[a]); } catch (e) { console.warn('[map] addMarker failed:', e); }
     }
 
-    function addMarker(coords) {
+    const addMarker = (coords) => {
         var marker = new google.maps.Marker({
             position: { lat: parseFloat(coords.lat), lng: parseFloat(coords.lng) },
             map: map
@@ -146,7 +146,7 @@ async function runMap() {
             content: 'Name: <b>' + coords.household + '</b><br>Phone: <b>' + coords.hoh_phone + '</b><br>Gender: <b>' + coords.hoh_gender + '</b><br>Family size: <b>' + coords.family_size + '</b><br>Allocated Net: <b>' + coords.allocated_net + '</b><br>e-Token Serial: <b>' + coords.etoken_serial + '</b><br>HH Mobilizer: <b>' + coords.mobilizer + '</b><br>Date: <b>' + coords.collected_date + '</b> '
         });
 
-        marker.addListener('click', function() {
+        marker.addListener('click', () => {
             infoWindow.open(map, marker);
         });
     }
@@ -157,7 +157,7 @@ async function runMap() {
 async function loadLGA() {
 
     await axios.post(common.DataService + "?qid=gen003", JSON.stringify(localStorage.getItem("state_id")))
-        .then(function(response) {
+        .then(response => {
             const allLga = response.data.data;
             // Select all LGA Filters
             var select = document.querySelectorAll('.filter-lga');
@@ -170,7 +170,7 @@ async function loadLGA() {
             }
 
         })
-        .catch(function(error) {
+        .catch(error => {
             overlay.hide();
             alert.Error("ERROR", "Check your Internet, kindly Refresh your browser " + error);
         });
@@ -184,7 +184,7 @@ async function loadWard(lgaid) {
 
     await axios
         .get(url + "?qid=gen005&e=" + lgaid)
-        .then(function(response) {
+        .then(response => {
 
             const wardData = response.data.data; //All Ward Data
             // Select all Ward Filters
@@ -208,7 +208,7 @@ async function loadWard(lgaid) {
             }
             overlay.hide();
         })
-        .catch(function(error) {
+        .catch(error => {
             overlay.hide();
             alert.Error("ERROR", error);
         });
@@ -221,7 +221,7 @@ async function loadMobilizerPerWard(wardid) {
     var url = common.DataService;
     overlay.show();
     await axios.get(url + "?qid=027&wardid=" + wardid)
-        .then(function(response) {
+        .then(response => {
 
             const mobilizerData = response.data.data; //All Ward Data
 
@@ -240,7 +240,7 @@ async function loadMobilizerPerWard(wardid) {
 
             overlay.hide();
         })
-        .catch(function(error) {
+        .catch(error => {
             overlay.hide();
             alert.Error("ERROR", error);
         });
@@ -253,7 +253,7 @@ async function loadDpPerWard(wardid) {
     var url = common.DataService;
     overlay.show();
     await axios.get(url + "?qid=gen006&wardid=" + wardid)
-        .then(function(response) {
+        .then(response => {
 
             const dpData = response.data.data; //All Ward Data
             // console.log(dpData)
@@ -272,7 +272,7 @@ async function loadDpPerWard(wardid) {
 
             overlay.hide();
         })
-        .catch(function(error) {
+        .catch(error => {
             overlay.hide();
             alert.Error("ERROR", error);
         });

@@ -13,7 +13,7 @@ const appState = Vue.reactive({
     permission: (typeof getPermission === 'function')
         ? (getPermission(typeof per !== 'undefined' ? per : null, 'smc') || { permission_value: 0 })
         : { permission_value: 0 },
-    userId: (function () { var el = document.getElementById('v_g_id'); return el ? el.value : ''; })(),
+    userId: (() => { var el = document.getElementById('v_g_id'); return el ? el.value : ''; })(),
     geoLevelForm: { geoLevel: '', geoLevelId: 0 },
     defaultStateId: '',
     sysDefaultData: [],
@@ -30,40 +30,38 @@ const PageAvailabilityCheck = {
         const fmtUtils = useFormat();
         const searchState = ref(false);
 
-        function getAllPeriodLists() {
+        const getAllPeriodLists = () => {
             overlay.show();
             axios.get(common.DataService + '?qid=1004')
-                .then(function (response) {
+                .then(response => {
                     appState.periodData = (response.data && response.data.data) || [];
                     overlay.hide();
                 })
-                .catch(function (error) {
+                .catch(error => {
                     overlay.hide();
                     alert.Error('ERROR', safeMessage(error));
                 });
         }
-        function getProductMaster() {
+        const getProductMaster = () => {
             overlay.show();
             axios.get(common.DataService + '?qid=gen011')
-                .then(function (response) {
-                    var data = ((response.data && response.data.data) || []).slice().sort(function (a, b) {
-                        return a.product_code.localeCompare(b.product_code);
-                    });
+                .then(response => {
+                    var data = ((response.data && response.data.data) || []).slice().sort((a, b) => a.product_code.localeCompare(b.product_code));
                     appState.productData = data;
                     overlay.hide();
                 })
-                .catch(function (error) {
+                .catch(error => {
                     overlay.hide();
                     alert.Error('ERROR', safeMessage(error));
                 });
         }
-        function checkProductAvailability() {
+        const checkProductAvailability = () => {
             if (appState.currentPeriodId == '') { alert.Error('ERROR', 'Please select a visit'); return; }
             if (appState.currentProductCode == '') { alert.Error('ERROR', 'Please select a product'); return; }
             var data = { periodid: appState.currentPeriodId, product_code: appState.currentProductCode };
             overlay.show();
             axios.post(common.DataService + '?qid=1131', JSON.stringify(data))
-                .then(function (response) {
+                .then(response => {
                     overlay.hide();
                     if (response.data.result_code == '200') {
                         appState.checkData = response.data.data || [];
@@ -72,24 +70,24 @@ const PageAvailabilityCheck = {
                         alert.Error('ERROR', response.data.message);
                     }
                 })
-                .catch(function (error) {
+                .catch(error => {
                     overlay.hide();
                     alert.Error('ERROR', safeMessage(error));
                 });
         }
-        function resetCheckTable() {
+        const resetCheckTable = () => {
             appState.checkData = [];
             searchState.value = false;
         }
-        function resetForm() {
+        const resetForm = () => {
             resetCheckTable();
             appState.currentPeriodId = '';
             appState.currentProductCode = '';
         }
 
-        const validitySummary = computed(function () {
+        const validitySummary = computed(() => {
             var pass = 0, fail = 0;
-            (appState.checkData || []).forEach(function (item) {
+            (appState.checkData || []).forEach(item => {
                 if (item.status === 'pass') pass++;
                 else if (item.status === 'fail') fail++;
             });
@@ -98,12 +96,12 @@ const PageAvailabilityCheck = {
             return { pass: pass, fail: fail, total: total, passPercentage: passPercentage };
         });
 
-        onMounted(function () {
+        onMounted(() => {
             getAllPeriodLists();
             getProductMaster();
             bus.on('g-event-reset-form', resetForm);
         });
-        onBeforeUnmount(function () {
+        onBeforeUnmount(() => {
             bus.off('g-event-reset-form', resetForm);
         });
 

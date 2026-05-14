@@ -42,8 +42,8 @@ function GoBack() {
   window.history.back();
 }
 
-(function (overlay) {
-  function show() {
+(overlay => {
+  const show = () => {
     $.blockUI({
       message: '<div class="spinner-border text-white" role="status"></div>',
       css: {
@@ -56,7 +56,7 @@ function GoBack() {
     });
   }
 
-  function hide() {
+  const hide = () => {
     $.unblockUI();
   }
   //
@@ -64,7 +64,7 @@ function GoBack() {
   overlay.hide = hide;
 })(window.overlay);
 
-(function (common) {
+(common => {
   //
   //  Common Properties
   //
@@ -82,15 +82,15 @@ function GoBack() {
   //
   //  Common Methods
   //
-  function GoToUrl(a) {
+  const GoToUrl = (a) => {
     location.href = a;
   }
 
-  function GoToPage(page) {
+  const GoToPage = (page) => {
     location.href = page;
   }
 
-  function Pad(str, max) {
+  const Pad = (str, max) => {
     str = str.toString();
     return str.length < max ? Pad("0" + str, max) : str;
   }
@@ -122,8 +122,8 @@ function GoBack() {
   common.ExportDownloadLimit = ExportDownloadLimit;
 })(window.common);
 
-(function (alert) {
-  function Success(title, msg) {
+(alert => {
+  const Success = (title, msg) => {
     toastr.success(msg, title, {
       positionClass: "toast-top-right",
       containerId: "toast-top-right",
@@ -133,7 +133,7 @@ function GoBack() {
     });
   }
 
-  function Error(title, msg) {
+  const Error = (title, msg) => {
     toastr.error(msg, title, {
       positionClass: "toast-top-right",
       containerId: "toast-top-right",
@@ -143,7 +143,7 @@ function GoBack() {
     });
   }
 
-  function Info(title, msg) {
+  const Info = (title, msg) => {
     toastr.info(msg, title, {
       positionClass: "toast-top-right",
       containerId: "toast-top-right",
@@ -153,7 +153,7 @@ function GoBack() {
     });
   }
 
-  function Warning(title, msg) {
+  const Warning = (title, msg) => {
     toastr.warning(msg, title, {
       positionClass: "toast-top-right",
       containerId: "toast-top-right",
@@ -163,7 +163,7 @@ function GoBack() {
     });
   }
 
-  function Delete(page) {
+  const Delete = (page) => {
     $.confirm({
       theme: "light", //   supervan
       title: "Confirm Delete",
@@ -178,12 +178,12 @@ function GoBack() {
           text: "Delete",
           btnClass: "btn-red",
           keys: ["enter", "shift"],
-          action: function () {
+          action: () => {
             //  goto page
             GoToPage(page);
           },
         },
-        Cancel: function () {
+        Cancel: () => {
           //  Do nothing here
         },
       },
@@ -205,8 +205,8 @@ function GoBack() {
     // whatever
     }, 30000 );
  */
-$(window).ready(function () {
-  setTimeout(function () {
+$(window).ready(() => {
+  setTimeout(() => {
     overlay.hide();
   }, 1000);
 });

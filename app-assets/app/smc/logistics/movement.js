@@ -15,7 +15,7 @@ const appState = Vue.reactive({
     permission: (typeof getPermission === 'function')
         ? (getPermission(typeof per !== 'undefined' ? per : null, 'smc') || { permission_value: 0 })
         : { permission_value: 0 },
-    userId: (function () { var el = document.getElementById('v_g_id'); return el ? el.value : ''; })(),
+    userId: (() => { var el = document.getElementById('v_g_id'); return el ? el.value : ''; })(),
     geoLevelForm: { geoLevel: '', geoLevelId: 0 },
     defaultStateId: '',
     sysDefaultData: [],
@@ -30,7 +30,7 @@ const appState = Vue.reactive({
     statusFilter: '',
 });
 
-function displayDateLong(d, fullDate, withTime) {
+const displayDateLong = (d, fullDate, withTime) => {
     if (fullDate === undefined) fullDate = false;
     if (withTime === undefined) withTime = true;
     var date = new Date(d);
@@ -59,8 +59,8 @@ const PageMovementPage = {
         });
         const movementItemDetails = ref([]);
 
-        function closeMovementModal() { $('#movementModal').modal('hide'); }
-        function resetMovementForm() {
+        const closeMovementModal = () => { $('#movementModal').modal('hide'); };
+        const resetMovementForm = () => {
             closeMovementModal();
             movementForm.movementTitle = '';
             movementForm.shipmentListIds = [];
@@ -70,11 +70,11 @@ const PageMovementPage = {
             selectToggle();
         }
 
-        async function getTransporterAndConveyor() {
+        const getTransporterAndConveyor = async () => {
             var endpoints = [common.DataService + '?qid=gen014', common.DataService + '?qid=gen015'];
             try {
                 overlay.show();
-                var responses = await Promise.all(endpoints.map(function (e) { return axios.get(e); }));
+                var responses = await Promise.all(endpoints.map(e => axios.get(e)));
                 transporterData.value = (responses[0] && responses[0].data && responses[0].data.data) || [];
                 conveyorData.value = (responses[1] && responses[1].data && responses[1].data.data) || [];
             } catch (error) {
@@ -84,41 +84,41 @@ const PageMovementPage = {
             }
         }
 
-        function getAllPeriodLists() {
+        const getAllPeriodLists = () => {
             overlay.show();
             axios.get(common.DataService + '?qid=1004')
-                .then(function (response) {
+                .then(response => {
                     appState.periodData = (response.data && response.data.data) || [];
                     getActivePeriodId(appState.periodData);
                     overlay.hide();
                 })
-                .catch(function (error) {
+                .catch(error => {
                     overlay.hide();
                     alert.Error('ERROR', safeMessage(error));
                 });
         }
-        function getReceiptHeader() {
+        const getReceiptHeader = () => {
             overlay.show();
             axios.get(common.DataService + '?qid=gen0013')
-                .then(function (response) {
+                .then(response => {
                     var d = response.data && response.data.data && response.data.data[0];
                     appState.receiptHeader = (d && d.logo) || '';
                     overlay.hide();
                 })
-                .catch(function (error) {
+                .catch(error => {
                     overlay.hide();
                     alert.Error('ERROR', safeMessage(error));
                 });
         }
-        function getActivePeriodId(periodData) {
-            var active = (periodData || []).find(function (p) { return p.active === 1; });
+        const getActivePeriodId = (periodData) => {
+            var active = (periodData || []).find(p => p.active === 1);
             if (active) {
                 appState.currentPeriodId = active.periodid;
                 loadMovement();
             }
         }
 
-        async function loadMovement() {
+        const loadMovement = async () => {
             if (!appState.currentPeriodId) { alert.Error('ERROR', 'Please select a visit'); return; }
             var data = { periodId: appState.currentPeriodId };
             overlay.show();
@@ -137,78 +137,66 @@ const PageMovementPage = {
             }
         }
 
-        function selectAll() {
-            (filteredMovementData.value || []).forEach(function (item) {
+        const selectAll = () => {
+            (filteredMovementData.value || []).forEach(item => {
                 if (item.shipment_status === 'Pending') item.pick = true;
             });
         }
-        function uncheckAll() {
-            (filteredMovementData.value || []).forEach(function (item) { item.pick = false; });
+        const uncheckAll = () => {
+            (filteredMovementData.value || []).forEach(item => { item.pick = false; });
         }
-        function selectToggle() {
+        const selectToggle = () => {
             if (checkToggle.value === false) { selectAll(); checkToggle.value = true; }
             else                              { uncheckAll(); checkToggle.value = false; }
         }
-        function checkedBg(p) { return p != '' ? 'bg-select' : ''; }
+        const checkedBg = (p) => { return p != '' ? 'bg-select' : ''; };
 
-        function resetCheckTable() {
+        const resetCheckTable = () => {
             appState.movementData = [];
             searchState.value = false;
         }
-        function resetForm() {
+        const resetForm = () => {
             resetCheckTable();
             appState.currentPeriodId = '';
             appState.currentProductCode = '';
         }
 
-        function debounce(fn, delay) {
+        const debounce = (fn, delay) => {
             var timeout;
             return function () {
                 var args = arguments;
                 clearTimeout(timeout);
-                timeout = setTimeout(function () { fn.apply(null, args); }, delay);
+                timeout = setTimeout(() => { fn.apply(null, args); }, delay);
             };
         }
-        var debouncedSearch = debounce(function (val) { appState.filterText = val; }, 300);
-        var debouncedStatusFilter = debounce(function (val) { appState.statusFilter = val; }, 1);
-        watch(searchText, function (val) { debouncedSearch(val); });
-        function filterUsingStatus(keyword) { appState.statusFilter = keyword; }
+        var debouncedSearch = debounce(val => { appState.filterText = val; }, 300);
+        var debouncedStatusFilter = debounce(val => { appState.statusFilter = val; }, 1);
+        watch(searchText, val => { debouncedSearch(val); });
+        const filterUsingStatus = (keyword) => { appState.statusFilter = keyword; };
 
-        const filteredMovementData = computed(function () {
+        const filteredMovementData = computed(() => {
             var data = appState.movementData || [];
             var keyword = (appState.filterText || '').toLowerCase().trim();
             var status = (appState.statusFilter || '').toLowerCase().trim();
             if (status) {
-                data = data.filter(function (item) {
-                    return item.shipment_status && item.shipment_status.toLowerCase().trim().includes(status);
-                });
+                data = data.filter(item => item.shipment_status && item.shipment_status.toLowerCase().trim().includes(status));
             }
             if (keyword) {
-                data = data.filter(function (item) {
-                    return (
-                        (item.title && item.title.toLowerCase().includes(keyword)) ||
-                        (item.transporter && item.transporter.toLowerCase().includes(keyword)) ||
-                        (item.transporter_phone && item.transporter_phone.toLowerCase().includes(keyword)) ||
-                        (item.entered_by && item.entered_by.toLowerCase().includes(keyword)) ||
-                        (item.entered_by_loginid && item.entered_by_loginid.toLowerCase().includes(keyword)) ||
-                        (item.conveyor_loginid && item.conveyor_loginid.toLowerCase().includes(keyword)) ||
-                        (item.conveyor_fullname && item.conveyor_fullname.toLowerCase().includes(keyword)) ||
-                        (item.conveyor_phone && item.conveyor_phone.toLowerCase().includes(keyword)) ||
-                        (item.updated && item.updated.toLowerCase().includes(keyword))
-                    );
-                });
+                data = data.filter(item => (item.title && item.title.toLowerCase().includes(keyword)) ||
+                (item.transporter && item.transporter.toLowerCase().includes(keyword)) ||
+                (item.transporter_phone && item.transporter_phone.toLowerCase().includes(keyword)) ||
+                (item.entered_by && item.entered_by.toLowerCase().includes(keyword)) ||
+                (item.entered_by_loginid && item.entered_by_loginid.toLowerCase().includes(keyword)) ||
+                (item.conveyor_loginid && item.conveyor_loginid.toLowerCase().includes(keyword)) ||
+                (item.conveyor_fullname && item.conveyor_fullname.toLowerCase().includes(keyword)) ||
+                (item.conveyor_phone && item.conveyor_phone.toLowerCase().includes(keyword)) ||
+                (item.updated && item.updated.toLowerCase().includes(keyword)));
             }
-            return data.slice().sort(function (a, b) {
-                return new Date(b.updated || 0) - new Date(a.updated || 0);
-            });
+            return data.slice().sort((a, b) => new Date(b.updated || 0) - new Date(a.updated || 0));
         });
-        const selectedItems = computed(function () {
-            return (filteredMovementData.value || []).filter(function (i) { return i.pick; });
-        });
-        const selectedID = computed(function () {
-            return (filteredMovementData.value || []).filter(function (i) { return i.pick; }).map(function (i) { return i.shipment_id; });
-        });
-        const totalCheckedBox = computed(function () {
+        const selectedItems = computed(() => (filteredMovementData.value || []).filter(i => i.pick));
+        const selectedID = computed(() => (filteredMovementData.value || []).filter(i => i.pick).map(i => i.shipment_id));
+        const totalCheckedBox = computed(() => {
             var total = (selectedItems.value || []).length;
             var el = document.getElementById('total-selected');
             if (el) {
@@ -221,10 +209,10 @@ const PageMovementPage = {
             return total > 0;
         });
 
-        function getMovementDetails(movementId) {
+        const getMovementDetails = (movementId) => {
             overlay.show();
             axios.post(common.DataService + '?qid=1138', JSON.stringify({ movementId: movementId }))
-                .then(function (response) {
+                .then(response => {
                     overlay.hide();
                     if (response.data.result_code === 200) {
                         movementItemDetails.value = response.data.data || [];
@@ -233,15 +221,15 @@ const PageMovementPage = {
                         alert.Error('ERROR', response.data.message);
                     }
                 })
-                .catch(function (error) {
+                .catch(error => {
                     overlay.hide();
                     alert.Error('ERROR', safeMessage(error));
                 });
         }
-        function getShipmentItem(shipmentId, preview) {
+        const getShipmentItem = (shipmentId, preview) => {
             overlay.show();
             axios.post(common.DataService + '?qid=1136a', JSON.stringify({ shipmentId: shipmentId }))
-                .then(function (response) {
+                .then(response => {
                     overlay.hide();
                     if (response.data.result_code === 200) {
                         generateShipmentPDF(response.data.data, preview);
@@ -249,13 +237,13 @@ const PageMovementPage = {
                         alert.Error('ERROR', response.data.message);
                     }
                 })
-                .catch(function (error) {
+                .catch(error => {
                     overlay.hide();
                     alert.Error('ERROR', safeMessage(error));
                 });
         }
 
-        function generateShipmentPDF(data, options) {
+        const generateShipmentPDF = (data, options) => {
             options = options || { preview: true };
             var shipment = data && data.shipment && data.shipment[0];
             var items = (data && data.items) || [];
@@ -281,24 +269,22 @@ const PageMovementPage = {
                             widths: ['auto', '*', '*', 'auto', 'auto', 'auto', 'auto'],
                             body: [[
                                 '#', 'Product Name', 'Product Code', 'Batch', 'Expiry', 'Unit', 'Quantity'
-                            ]].concat(items.map(function (item, i) {
-                                return [
-                                    i + 1, item.product_name, item.product_code, item.batch,
-                                    displayDateLong(item.expiry, false, false), item.unit, item.secondary_qty,
-                                ];
-                            })),
+                            ]].concat(items.map((item, i) => [
+                                i + 1, item.product_name, item.product_code, item.batch,
+                                displayDateLong(item.expiry, false, false), item.unit, item.secondary_qty,
+                            ])),
                         },
                     },
                 ],
             };
             try {
                 if (options.preview) {
-                    pdfMake.createPdf(docDefinition).getBlob(function (blob) {
+                    pdfMake.createPdf(docDefinition).getBlob(blob => {
                         var url = URL.createObjectURL(blob);
                         var a = document.createElement('a');
                         a.href = url; a.target = '_blank'; a.rel = 'noopener noreferrer';
                         a.click();
-                        setTimeout(function () { URL.revokeObjectURL(url); }, 10000);
+                        setTimeout(() => { URL.revokeObjectURL(url); }, 10000);
                     });
                 } else {
                     pdfMake.createPdf(docDefinition).download('ePod_' + destString + '_' + todayDate + '.pdf');
@@ -306,13 +292,13 @@ const PageMovementPage = {
             } catch (e) { console.error('[smc/logistics/movement] PDF render failed:', e); }
         }
 
-        onMounted(function () {
+        onMounted(() => {
             getAllPeriodLists();
             getReceiptHeader();
             getTransporterAndConveyor();
             bus.on('g-event-reset-form', resetForm);
         });
-        onBeforeUnmount(function () {
+        onBeforeUnmount(() => {
             bus.off('g-event-reset-form', resetForm);
         });
 
@@ -328,7 +314,7 @@ const PageMovementPage = {
             filterUsingStatus, getMovementDetails, getShipmentItem,
             generateShipmentPDF,
             capitalize: fmtUtils.capitalize,
-            displayDate: function (d, fullDate, withTime) { return displayDateLong(d, fullDate, withTime); },
+            displayDate: (d, fullDate, withTime) => { return displayDateLong(d, fullDate, withTime); },
             convertStringNumberToFigures: fmtUtils.convertStringNumberToFigures,
         };
     },

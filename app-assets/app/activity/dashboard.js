@@ -31,7 +31,7 @@ const DashboardContainer = {
 
         const fmt = utilsFmt;
 
-        function getAllStat() {
+        const getAllStat = () => {
             var url = common.DataService;
             var endpoints = [
                 url + '?qid=111', // Total Training [0]
@@ -39,8 +39,8 @@ const DashboardContainer = {
                 url + '?qid=113', // Geo Statistics distribution of users [2]
             ];
 
-            Promise.all(endpoints.map(function (e) { return axios.get(e); })).then(
-                axios.spread(function (...allData) {
+            Promise.all(endpoints.map(e => axios.get(e))).then(
+                axios.spread((...allData) => {
                     overlay.show();
 
                     var totalRow = allData[0]?.data?.data?.[0];
@@ -55,13 +55,13 @@ const DashboardContainer = {
 
                     overlay.hide();
                 })
-            ).catch(function (error) {
+            ).catch(error => {
                 overlay.hide();
                 console.error('[activity/dashboard] getAllStat error:', error);
             });
         }
 
-        onMounted(function () {
+        onMounted(() => {
             getAllStat();
         });
 

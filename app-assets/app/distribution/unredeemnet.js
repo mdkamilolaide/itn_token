@@ -18,9 +18,9 @@ const PageBody = {
                 ? (getPermission(typeof per !== 'undefined' ? per : null, 'distribution') || { permission_value: 0 })
                 : { permission_value: 0 }
         );
-        function gotoPageHandler(data) { page.value = data && data.page; }
-        onMounted(function () { bus.on('g-event-goto-page', gotoPageHandler); });
-        onBeforeUnmount(function () { bus.off('g-event-goto-page', gotoPageHandler); });
+        const gotoPageHandler = (data) => { page.value = data && data.page; };
+        onMounted(() => { bus.on('g-event-goto-page', gotoPageHandler); });
+        onBeforeUnmount(() => { bus.off('g-event-goto-page', gotoPageHandler); });
         return { page, permission };
     },
     template: `
@@ -72,8 +72,8 @@ const UnredeemedSearch = {
             },
         });
 
-        function reloadUserListOnUpdate() { paginationDefault(); loadTableData(); }
-        function loadTableData() {
+        const reloadUserListOnUpdate = () => { paginationDefault(); loadTableData(); };
+        const loadTableData = () => {
             overlay.show();
             axios.get(
                 common.TableService +
@@ -90,27 +90,27 @@ const UnredeemedSearch = {
                 '&ets=' + tableOptions.filterParam.etoken_serial +
                 '&etp=' + tableOptions.filterParam.etoken_pin
             )
-                .then(function (response) {
+                .then(response => {
                     var d = response && response.data;
                     tableData.value = Array.isArray(d && d.data) ? d.data : [];
                     tableOptions.total = (d && d.recordsTotal) || 0;
                     if (tableOptions.currentPage == 1) paginationDefault();
                     overlay.hide();
                 })
-                .catch(function (error) {
+                .catch(error => {
                     overlay.hide();
                     alert.Error('ERROR', safeMessage(error));
                 });
         }
 
-        function selectAll()  { for (var i = 0; i < tableData.value.length; i++) tableData.value[i].pick = true; }
-        function uncheckAll() { for (var i = 0; i < tableData.value.length; i++) tableData.value[i].pick = false; }
-        function selectToggle() {
+        const selectAll = () => { for (var i = 0; i < tableData.value.length; i++) tableData.value[i].pick = true; };
+        const uncheckAll = () => { for (var i = 0; i < tableData.value.length; i++) tableData.value[i].pick = false; };
+        const selectToggle = () => {
             if (checkToggle.value === false) { selectAll(); checkToggle.value = true; }
             else                              { uncheckAll(); checkToggle.value = false; }
         }
-        function checkedBg(p) { return p != '' ? 'bg-select' : ''; }
-        function toggleFilter() {
+        const checkedBg = (p) => { return p != '' ? 'bg-select' : ''; };
+        const toggleFilter = () => {
             if (filterState.value === false) {
                 filters.value = false;
                 try {
@@ -119,34 +119,34 @@ const UnredeemedSearch = {
             }
             return (filterState.value = !filterState.value);
         }
-        function paginationDefault() {
+        const paginationDefault = () => {
             tableOptions.pageLength = Math.ceil(tableOptions.total / tableOptions.perPage);
             tableOptions.limitStart = Math.ceil((tableOptions.currentPage - 1) * tableOptions.perPage);
             tableOptions.isNext = tableOptions.currentPage < tableOptions.pageLength;
             tableOptions.isPrev = tableOptions.currentPage > 1;
         }
-        function nextPage() { tableOptions.currentPage += 1; paginationDefault(); loadTableData(); }
-        function prevPage() { tableOptions.currentPage -= 1; paginationDefault(); loadTableData(); }
-        function currentPage() {
+        const nextPage = () => { tableOptions.currentPage += 1; paginationDefault(); loadTableData(); };
+        const prevPage = () => { tableOptions.currentPage -= 1; paginationDefault(); loadTableData(); };
+        const currentPage = () => {
             paginationDefault();
             if (tableOptions.currentPage < 1)                            alert.Error('ERROR', "The Page requested doesn't exist");
             else if (tableOptions.currentPage > tableOptions.pageLength) alert.Error('ERROR', "The Page requested doesn't exist");
             else                                                         loadTableData();
         }
-        function changePerPage(val) {
+        const changePerPage = (val) => {
             var maxPerPage = Math.ceil(tableOptions.total / val);
             if (maxPerPage < tableOptions.currentPage) tableOptions.currentPage = maxPerPage;
             tableOptions.perPage = val;
             paginationDefault();
             loadTableData();
         }
-        function sort(col) {
+        const sort = (col) => {
             if (tableOptions.orderField === col) tableOptions.orderDir = tableOptions.orderDir === 'asc' ? 'desc' : 'asc';
             else                                  tableOptions.orderField = col;
             paginationDefault();
             loadTableData();
         }
-        function applyFilter() {
+        const applyFilter = () => {
             var checkFill = 0;
             checkFill += tableOptions.filterParam.loginid != '' ? 1 : 0;
             checkFill += tableOptions.filterParam.mobilization_date != '' ? 1 : 0;
@@ -164,7 +164,7 @@ const UnredeemedSearch = {
                 alert.Error('ERROR', 'Invalid required data');
             }
         }
-        function removeSingleFilter(column_name) {
+        const removeSingleFilter = (column_name) => {
             tableOptions.filterParam[column_name] = '';
             if (column_name == 'geo_level' || column_name == 'geo_level_id') {
                 tableOptions.filterParam.geo_level = '';
@@ -181,7 +181,7 @@ const UnredeemedSearch = {
             paginationDefault();
             loadTableData();
         }
-        function clearAllFilter() {
+        const clearAllFilter = () => {
             try { $('#mobilization_date').flatpickr({ altInput: true, altFormat: 'F j, Y', dateFormat: 'Y-m-d' }).clear(); } catch (e) {}
             filters.value = false;
             tableOptions.filterParam.mobilization_date = '';
@@ -191,20 +191,20 @@ const UnredeemedSearch = {
             paginationDefault();
             loadTableData();
         }
-        function refreshData() { paginationDefault(); loadTableData(); }
-        function getGeoLocation() {
+        const refreshData = () => { paginationDefault(); loadTableData(); };
+        const getGeoLocation = () => {
             overlay.show();
             axios.get(common.DataService + '?qid=gen009')
-                .then(function (response) {
+                .then(response => {
                     geoData.value = (response.data && response.data.data) || [];
                     overlay.hide();
                 })
-                .catch(function (error) {
+                .catch(error => {
                     overlay.hide();
                     alert.Error('ERROR', safeMessage(error));
                 });
         }
-        function setLocation(select_index) {
+        const setLocation = (select_index) => {
             var i = select_index || 0;
             var row = geoData.value[i];
             if (!row) return;
@@ -213,7 +213,7 @@ const UnredeemedSearch = {
             tableOptions.filterParam.geo_string = row.title;
         }
 
-        async function exportMobilization() {
+        const exportMobilization = async () => {
             var qs =
                 'qid=402&draw=' + tableOptions.currentPage +
                 '&order_column=' + tableOptions.orderField +
@@ -233,10 +233,10 @@ const UnredeemedSearch = {
                 ' Mobilization List';
             overlay.show();
 
-            var count = await new Promise(function (resolve) {
+            var count = await new Promise(resolve => {
                 $.ajax({
                     url: common.DataService, type: 'POST', data: qs, dataType: 'json',
-                    success: function (data) { resolve(data.total); },
+                    success: (data) => { resolve(data.total); },
                 });
             });
             var downloadMax = (window.common && window.common.ExportDownloadLimit) || 25000;
@@ -246,10 +246,10 @@ const UnredeemedSearch = {
                 alert.Error('Download Error', 'No data found');
             } else {
                 alert.Info('DOWNLOADING...', 'Downloading ' + count + ' record(s)');
-                var outcome = await new Promise(function (resolve) {
+                var outcome = await new Promise(resolve => {
                     $.ajax({
                         url: common.ExportService, type: 'POST', data: qs,
-                        success: function (data) { resolve(data); },
+                        success: (data) => { resolve(data); },
                     });
                 });
                 var exportData = JSON.parse(outcome);
@@ -260,7 +260,7 @@ const UnredeemedSearch = {
             overlay.hide();
         }
 
-        function showdistributionDetailsModal(i) {
+        const showdistributionDetailsModal = (i) => {
             overlay.show();
             var row = tableData.value[i] || {};
             tableDetails.geo_string = row.geo_string;
@@ -282,13 +282,13 @@ const UnredeemedSearch = {
             $('#distributionDetails').modal('show');
             overlay.hide();
         }
-        function hidedistributionDetailsModal() {
+        const hidedistributionDetailsModal = () => {
             overlay.show();
             $('#distributionDetails').modal('hide');
             for (var k in tableDetails) tableDetails[k] = '';
             overlay.hide();
         }
-        function checkIfEmpty(data) { return data === null || data === '' ? 'Nil' : data; }
+        const checkIfEmpty = (data) => { return data === null || data === '' ? 'Nil' : data; };
 
         // Kick off data fetches in setup rather than onMounted — the
         // <unredeemed_search v-if="permission.permission_value > 1"> wrap
@@ -299,7 +299,7 @@ const UnredeemedSearch = {
         getGeoLocation();
         loadTableData();
 
-        onMounted(function () {
+        onMounted(() => {
             bus.on('g-event-update-user', reloadUserListOnUpdate);
             try {
                 var select = $('.select2');
@@ -315,7 +315,7 @@ const UnredeemedSearch = {
                 $('.date').flatpickr({ altInput: true, altFormat: 'F j, Y', dateFormat: 'Y-m-d' });
             } catch (e) {}
         });
-        onBeforeUnmount(function () {
+        onBeforeUnmount(() => {
             bus.off('g-event-update-user', reloadUserListOnUpdate);
         });
 

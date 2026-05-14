@@ -33,10 +33,10 @@ const DashboardContainer = {
         const tableData = ref([]);
         const bulkUserForm = reactive({ geoLevel: '', geoLevelId: 0 });
 
-        function getsysDefaultDataSettings() {
+        const getsysDefaultDataSettings = () => {
             overlay.show();
             axios.get(common.DataService + '?qid=gen007')
-                .then(function (response) {
+                .then(response => {
                     if (response.data.data && response.data.data.length > 0) {
                         sysDefaultData.value = response.data.data[0];
                         getLgasLevel(response.data.data[0].stateid);
@@ -45,24 +45,24 @@ const DashboardContainer = {
                     }
                     overlay.hide();
                 })
-                .catch(function (error) {
+                .catch(error => {
                     overlay.hide();
                     alert.Error('ERROR', safeMessage(error));
                 });
         }
-        function getLgasLevel(stateid) {
+        const getLgasLevel = (stateid) => {
             overlay.show();
             axios.post(common.DataService + '?qid=gen003', JSON.stringify(stateid))
-                .then(function (response) {
+                .then(response => {
                     lgaLevelData.value = (response.data && response.data.data) || [];
                     overlay.hide();
                 })
-                .catch(function (error) {
+                .catch(error => {
                     overlay.hide();
                     alert.Error('ERROR', safeMessage(error));
                 });
         }
-        function getAllStat() {
+        const getAllStat = () => {
             overlay.show();
             if (geoIndicator.lga == '') {
                 overlay.hide();
@@ -70,18 +70,18 @@ const DashboardContainer = {
                 return;
             }
             var endpoints = [common.DataService + '?qid=303&lgaid=' + geoIndicator.lga];
-            Promise.all(endpoints.map(function (e) { return axios.get(e); })).then(
-                axios.spread(function (...allData) {
+            Promise.all(endpoints.map(e => axios.get(e))).then(
+                axios.spread((...allData) => {
                     tableData.value = (allData[0] && allData[0].data && allData[0].data.data) || [];
                     overlay.hide();
                 })
-            ).catch(function (error) {
+            ).catch(error => {
                 overlay.hide();
                 alert.Error('ERROR', safeMessage(error));
             });
         }
 
-        async function exportMicroPosition() {
+        const exportMicroPosition = async () => {
             if (geoIndicator.lga == '') {
                 overlay.hide();
                 alert.Error('Error', 'No LGA was Selected');
@@ -99,10 +99,10 @@ const DashboardContainer = {
             var filename = geoIndicator.lgaName + ' Micro Positioning List (' + date + ' ' + time + ')';
             overlay.show();
 
-            var count = await new Promise(function (resolve) {
+            var count = await new Promise(resolve => {
                 $.ajax({
                     url: common.DataService, type: 'POST', data: veriUrl, dataType: 'json',
-                    success: function (data) { resolve(data.total); },
+                    success: (data) => { resolve(data.total); },
                 });
             });
             var downloadMax = (window.common && window.common.ExportDownloadLimit) || 25000;
@@ -112,10 +112,10 @@ const DashboardContainer = {
                 alert.Error('Download Error', 'No data found');
             } else {
                 alert.Info('DOWNLOADING...', 'Downloading ' + count + ' record(s)');
-                var outcome = await new Promise(function (resolve) {
+                var outcome = await new Promise(resolve => {
                     $.ajax({
                         url: common.DataService, type: 'POST', data: dlString,
-                        success: function (data) { resolve(data); },
+                        success: (data) => { resolve(data); },
                     });
                 });
                 var exportData = JSON.parse(outcome);
@@ -126,11 +126,11 @@ const DashboardContainer = {
             overlay.hide();
         }
 
-        function setLgaName(event) {
+        const setLgaName = (event) => {
             geoIndicator.lgaName = event.target.options[event.target.options.selectedIndex].text;
         }
 
-        onMounted(function () {
+        onMounted(() => {
             getsysDefaultDataSettings();
             $('#dp-search').on('keyup', function () {
                 var value = $(this).val().toLowerCase();

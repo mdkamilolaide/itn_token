@@ -14,9 +14,9 @@ const { useApp, useFormat, bus, safeMessage } = window.utils;
 const PageBody = {
     setup() {
         const page = ref('list');
-        function gotoPageHandler(data) { page.value = data && data.page; }
-        onMounted(function () { bus.on('g-event-goto-page', gotoPageHandler); });
-        onBeforeUnmount(function () { bus.off('g-event-goto-page', gotoPageHandler); });
+        const gotoPageHandler = (data) => { page.value = data && data.page; };
+        onMounted(() => { bus.on('g-event-goto-page', gotoPageHandler); });
+        onBeforeUnmount(() => { bus.off('g-event-goto-page', gotoPageHandler); });
         return { page };
     },
     template: `
@@ -57,7 +57,7 @@ const IccList = {
             },
         });
 
-        function joinWithCommaAnd(array, status) {
+        const joinWithCommaAnd = (array, status) => {
             if (!array || array.length === 0) return '';
             if (array.length === 1) return array[0];
             var copy = array.slice();
@@ -65,7 +65,7 @@ const IccList = {
             return status ? copy.join(',') + ',' + lastElement : copy.join(', ') + ' and ' + lastElement;
         }
 
-        function setStickyOffsets() {
+        const setStickyOffsets = () => {
             var table = document.getElementById('fixed-table');
             if (!table) return;
             var th1 = table.querySelector('th.col-1');
@@ -74,11 +74,11 @@ const IccList = {
             var col2Width = (th2 && th2.offsetWidth) || 0;
             var col2Left = col1Width;
             var col3Left = col1Width + col2Width;
-            table.querySelectorAll('.col-2').forEach(function (el) { el.style.left = col2Left + 'px'; });
-            table.querySelectorAll('.col-3').forEach(function (el) { el.style.left = col3Left + 'px'; });
+            table.querySelectorAll('.col-2').forEach(el => { el.style.left = col2Left + 'px'; });
+            table.querySelectorAll('.col-3').forEach(el => { el.style.left = col3Left + 'px'; });
         }
 
-        async function loadTableData() {
+        const loadTableData = async () => {
             overlay.show();
             var fp = tableOptions.filterParam;
             fp.globalPeriod = joinWithCommaAnd(fp.periodid, true);
@@ -101,38 +101,38 @@ const IccList = {
                 overlay.hide();
             }
         }
-        function toggleFilter() {
+        const toggleFilter = () => {
             if (!filterState.value && !checkIfFilterOn.value) filters.value = false;
             return (filterState.value = !filterState.value);
         }
-        function paginationDefault() {
+        const paginationDefault = () => {
             tableOptions.pageLength = Math.ceil(tableOptions.total / tableOptions.perPage);
             tableOptions.limitStart = Math.ceil((tableOptions.currentPage - 1) * tableOptions.perPage);
             tableOptions.isNext = tableOptions.currentPage < tableOptions.pageLength;
             tableOptions.isPrev = tableOptions.currentPage > 1;
         }
-        function nextPage() { tableOptions.currentPage += 1; paginationDefault(); loadTableData(); }
-        function prevPage() { tableOptions.currentPage -= 1; paginationDefault(); loadTableData(); }
-        function currentPage() {
+        const nextPage = () => { tableOptions.currentPage += 1; paginationDefault(); loadTableData(); };
+        const prevPage = () => { tableOptions.currentPage -= 1; paginationDefault(); loadTableData(); };
+        const currentPage = () => {
             paginationDefault();
             if (tableOptions.currentPage < 1)                            alert.Error('ERROR', "The Page requested doesn't exist");
             else if (tableOptions.currentPage > tableOptions.pageLength) alert.Error('ERROR', "The Page requested doesn't exist");
             else                                                         loadTableData();
         }
-        function changePerPage(val) {
+        const changePerPage = (val) => {
             var maxPerPage = Math.ceil(tableOptions.total / val);
             if (maxPerPage < tableOptions.currentPage) tableOptions.currentPage = maxPerPage;
             tableOptions.perPage = val;
             paginationDefault();
             loadTableData();
         }
-        function sort(col) {
+        const sort = (col) => {
             if (tableOptions.orderField === col) tableOptions.orderDir = tableOptions.orderDir === 'asc' ? 'desc' : 'asc';
             else                                  tableOptions.orderField = col;
             paginationDefault();
             loadTableData();
         }
-        function applyFilter() {
+        const applyFilter = () => {
             var checkFill = 0;
             if (tableOptions.filterParam.geo_level != '') checkFill++;
             if (tableOptions.filterParam.geo_level_id != '') checkFill++;
@@ -146,7 +146,7 @@ const IccList = {
                 alert.Error('ERROR', 'Invalid required data');
             }
         }
-        function removeSingleFilter(column_name) {
+        const removeSingleFilter = (column_name) => {
             var fp = tableOptions.filterParam;
             if (Array.isArray(fp[column_name])) fp[column_name] = [];
             else fp[column_name] = '';
@@ -161,14 +161,12 @@ const IccList = {
                 fp.globalPeriod = '';
                 try { $('.period').val('').trigger('change'); } catch (e) {}
             }
-            var hasActive = Object.values(fp).some(function (v) {
-                return Array.isArray(v) ? v.length > 0 : v !== '';
-            });
+            var hasActive = Object.values(fp).some(v => Array.isArray(v) ? v.length > 0 : v !== '');
             filters.value = checkIfFilterOn.value = hasActive;
             paginationDefault();
             loadTableData();
         }
-        function clearAllFilter() {
+        const clearAllFilter = () => {
             filters.value = false;
             Object.assign(tableOptions.filterParam, {
                 geo_level: '', geo_level_id: '', geo_string: '',
@@ -179,10 +177,10 @@ const IccList = {
             paginationDefault();
             loadTableData();
         }
-        function checkAndHideFilter(name) {
+        const checkAndHideFilter = (name) => {
             return ['periodid', 'geo_level_id', 'geo_level', 'globalPeriod'].indexOf(name) === -1;
         }
-        async function GetIccFlowDetailByCdd(cddid, id) {
+        const GetIccFlowDetailByCdd = async (cddid, id) => {
             overlay.show();
             selectedICCDetails.value = tableData.value[id] || {};
             var periodIds = tableOptions.filterParam.globalPeriod;
@@ -201,40 +199,40 @@ const IccList = {
                 overlay.hide();
             }
         }
-        function hideGetIccFlowDetailByCdd() {
+        const hideGetIccFlowDetailByCdd = () => {
             overlay.show();
             selectedICCDetails.value = {};
             $('#iccDetailsModal').modal('hide');
             iccIssuedReconcileDetails.value = [];
             overlay.hide();
         }
-        function checkIfEmpty(data) { return data === null || data === '' ? 'Nil' : data; }
-        function refreshData() { paginationDefault(); loadTableData(); }
-        function getGeoLocation() {
+        const checkIfEmpty = (data) => { return data === null || data === '' ? 'Nil' : data; };
+        const refreshData = () => { paginationDefault(); loadTableData(); };
+        const getGeoLocation = () => {
             overlay.show();
             axios.get(common.DataService + '?qid=gen009')
-                .then(function (response) {
+                .then(response => {
                     geoData.value = (response.data && response.data.data) || [];
                     overlay.hide();
                 })
-                .catch(function (error) {
+                .catch(error => {
                     overlay.hide();
                     alert.Error('ERROR', safeMessage(error));
                 });
         }
-        function getAllPeriodLists() {
+        const getAllPeriodLists = () => {
             overlay.show();
             axios.get(common.DataService + '?qid=1004')
-                .then(function (response) {
+                .then(response => {
                     periodData.value = (response.data && response.data.data) || [];
                     overlay.hide();
                 })
-                .catch(function (error) {
+                .catch(error => {
                     overlay.hide();
                     alert.Error('ERROR', safeMessage(error));
                 });
         }
-        function setLocation(select_index) {
+        const setLocation = (select_index) => {
             var i = select_index || 0;
             var row = geoData.value[i];
             if (!row) return;
@@ -242,22 +240,22 @@ const IccList = {
             tableOptions.filterParam.geo_level_id = row.geo_level_id;
             tableOptions.filterParam.geo_string = row.title;
         }
-        function setPeriodTitle(event) {
+        const setPeriodTitle = (event) => {
             var selected = Array.isArray(event) ? event : [];
             tableOptions.filterParam.periodid = [];
             var titles = [];
-            selected.forEach(function (id) {
+            selected.forEach(id => {
                 tableOptions.filterParam.periodid.push(id);
-                var period = (periodData.value || []).find(function (p) { return p.periodid == id; });
+                var period = (periodData.value || []).find(p => p.periodid == id);
                 if (period) titles.push(period.title);
             });
             tableOptions.filterParam.visitTitle = joinWithCommaAnd(titles);
         }
-        function splitWordAndCapitalize(str) {
+        const splitWordAndCapitalize = (str) => {
             var words = String(str || '').split(/(?=[A-Z])|_| /);
-            return words.map(function (w) { return w.charAt(0).toUpperCase() + w.slice(1).toLowerCase(); }).join(' ');
+            return words.map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
         }
-        function displayDayMonthYearTime(d) {
+        const displayDayMonthYearTime = (d) => {
             if (!d) return '';
             var date = new Date(d);
             return date.toLocaleString('en-us', {
@@ -265,11 +263,11 @@ const IccList = {
                 hour12: true, hour: '2-digit', minute: '2-digit',
             });
         }
-        function convertStringNumberToFigures(d) {
+        const convertStringNumberToFigures = (d) => {
             var data = d ? parseInt(d) : 0;
             return data ? data.toLocaleString() : 0;
         }
-        async function exportIcc() {
+        const exportIcc = async () => {
             var fp = tableOptions.filterParam;
             var periodIds = joinWithCommaAnd(fp.periodid, true);
             fp.globalPeriod = periodIds;
@@ -313,7 +311,7 @@ const IccList = {
             }
         }
 
-        onMounted(function () {
+        onMounted(() => {
             getGeoLocation();
             getAllPeriodLists();
             loadTableData();
@@ -339,7 +337,7 @@ const IccList = {
             } catch (e) {}
             nextTick(setStickyOffsets);
         });
-        onUpdated(function () { nextTick(setStickyOffsets); });
+        onUpdated(() => { nextTick(setStickyOffsets); });
 
         return {
             url, permission, tableData, selectedICCDetails, iccIssuedReconcileDetails,

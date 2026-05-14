@@ -16,11 +16,11 @@ const { useApp, useFormat, bus, safeMessage } = window.utils;
 const PageBody = {
     setup() {
         const page = ref('dashboard');
-        function gotoPageHandler(data) { page.value = data.page; }
-        onMounted(function () {
+        const gotoPageHandler = (data) => { page.value = data.page; };
+        onMounted(() => {
             const containers = document.querySelectorAll('.lgaAggregate');
             if (containers && typeof PerfectScrollbar !== 'undefined') {
-                containers.forEach(function (el) { new PerfectScrollbar(el); });
+                containers.forEach(el => { new PerfectScrollbar(el); });
             }
             bus.on('g-event-goto-page', gotoPageHandler);
         });
@@ -61,31 +61,29 @@ const MobilizationDashboard = {
         const allChartData = ref([]);
         const chartOptions = ref({ xaxis: { title: { text: '' } } });
 
-        function convertStringNumberToFigures(d) {
+        const convertStringNumberToFigures = (d) => {
             var data = d ? parseInt(d) : 0;
             return data ? data.toLocaleString() : 0;
         }
-        function convertToDateMonthDay(date) {
+        const convertToDateMonthDay = (date) => {
             return new Date(date).toLocaleDateString('en-US', { month: 'short', day: '2-digit' });
         }
-        function checkIfDateIsToday(date) {
+        const checkIfDateIsToday = (date) => {
             var today = new Date().toISOString().slice(0, 10);
             if (date === today) return 'Today';
             var parsed = new Date(date);
             return parsed.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: '2-digit' });
         }
-        function isValidDate(dateString) {
+        const isValidDate = (dateString) => {
             var regex = /^\d{4}-\d{2}-\d{2}$/;
             return regex.test(dateString) ? convertToDateMonthDay(dateString) : dateString;
         }
-        function capitalizeWords(str) {
+        const capitalizeWords = (str) => {
             if (typeof str !== 'string') return '';
-            return str.toLowerCase().split(' ').map(function (w) {
-                return w.charAt(0).toUpperCase() + w.slice(1);
-            }).join(' ');
+            return str.toLowerCase().split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
         }
 
-        async function getTopListStatistics() {
+        const getTopListStatistics = async () => {
             overlay.show();
             try {
                 var response = await axios.get(common.DataService + '?qid=750');
@@ -100,7 +98,7 @@ const MobilizationDashboard = {
             }
         }
 
-        async function getDailyTopSummary() {
+        const getDailyTopSummary = async () => {
             overlay.show();
             try {
                 var response = await axios.get(common.DataService + '?qid=751');
@@ -111,9 +109,7 @@ const MobilizationDashboard = {
                 statData.chartData.xAxisLabel = 'Days';
                 chartFilter.chartLevel = allData.level || 0;
                 if (Array.isArray(statData.chartData[1])) {
-                    statData.chartData[1] = statData.chartData[1].map(function (item) {
-                        return convertToDateMonthDay(item);
-                    });
+                    statData.chartData[1] = statData.chartData[1].map(item => convertToDateMonthDay(item));
                 }
                 try { plotChart(); } catch (e) { console.error('plotChart failed:', e); }
             } catch (error) {
@@ -123,7 +119,7 @@ const MobilizationDashboard = {
             }
         }
 
-        function plotChart() {
+        const plotChart = () => {
             var yAxislabel = (statData.chartData[0] && statData.chartData[0][chartCurrentTab.value] && statData.chartData[0][chartCurrentTab.value].name) || '';
             var xAxisLabel = statData.chartData.xAxisLabel;
             chartOptions.value = {
@@ -135,12 +131,12 @@ const MobilizationDashboard = {
                 },
                 yaxis: {
                     title: { text: yAxislabel, style: { color: '#6e6b7b', fontWeight: 'bold' } },
-                    labels: { formatter: function (val) { return parseInt(val).toLocaleString(); } },
+                    labels: { formatter: (val) => { return parseInt(val).toLocaleString(); } },
                 },
                 plotOptions: { bar: { dataLabels: { position: 'top' } } },
                 dataLabels: {
                     enabled: true,
-                    formatter: function (val) { return parseInt(val).toLocaleString(); },
+                    formatter: (val) => { return parseInt(val).toLocaleString(); },
                     offsetY: -20,
                     style: { fontSize: '12px', colors: ['#000'] },
                 },
@@ -153,12 +149,12 @@ const MobilizationDashboard = {
             series.value = statData.chartData[0] ? [statData.chartData[0][chartCurrentTab.value]] : [];
         }
 
-        function loadNewChart(d) {
+        const loadNewChart = (d) => {
             chartCurrentTab.value = d;
             plotChart();
         }
 
-        function generateStatData(i) {
+        const generateStatData = (i) => {
             if (i === undefined) i = '';
             getTopListStatistics();
             statData.dataIndex = i;
@@ -187,7 +183,7 @@ const MobilizationDashboard = {
             }
         }
 
-        function refresh() {
+        const refresh = () => {
             getTopListStatistics();
             if (chartFilter.chartLevel == 0) getDailyTopSummary();
             else if (chartFilter.chartLevel == 1) getDailySummaryPerDate();
@@ -196,7 +192,7 @@ const MobilizationDashboard = {
             else getDailyTopSummary();
         }
 
-        function dailyStatBreadCrum(state) {
+        const dailyStatBreadCrum = (state) => {
             var sel = document.querySelector('.data-index-' + state);
             statData.dataIndex = sel ? sel.getAttribute('data-index') : '';
             if (state == 1) {
@@ -214,21 +210,21 @@ const MobilizationDashboard = {
             }
         }
 
-        async function getDailySummaryPerDate() {
+        const getDailySummaryPerDate = async () => {
             await fetchData('753', { date: chartFilter.date, xAxisLabel: 'LGAS' });
             var list = document.querySelector('.data-index-1');
             if (list) list.setAttribute('data-index', statData.dataIndex);
         }
-        async function getDailySummaryPerWard() {
+        const getDailySummaryPerWard = async () => {
             await fetchData('754', { date: chartFilter.date, lgaid: chartFilter.lgaid, xAxisLabel: 'Wards' });
             var list = document.querySelector('.data-index-2');
             if (list) list.setAttribute('data-index', statData.dataIndex);
         }
-        async function getDailySummaryPerDatePerDp() {
+        const getDailySummaryPerDatePerDp = async () => {
             await fetchData('755', { date: chartFilter.date, wardid: chartFilter.wardid, xAxisLabel: 'DPs' });
         }
 
-        async function fetchData(queryId, params) {
+        const fetchData = async (queryId, params) => {
             overlay.show();
             try {
                 var response = await axios.get(common.DataService + '?qid=' + queryId, { params: params });
@@ -246,8 +242,8 @@ const MobilizationDashboard = {
             }
         }
 
-        onBeforeMount(function () { getDailyTopSummary(); });
-        onMounted(function () { getTopListStatistics(); });
+        onBeforeMount(() => { getDailyTopSummary(); });
+        onMounted(() => { getTopListStatistics(); });
 
         return {
             topMobilizationStat, statData, chartStates, chartCurrentTab, chartFilter,
@@ -408,18 +404,16 @@ const LgaAggregateMobilizationDashboard = {
         const allChartData = ref([]);
         const chartOptions = ref({ xaxis: { title: { text: '' } } });
 
-        function convertStringNumberToFigures(d) {
+        const convertStringNumberToFigures = (d) => {
             var data = d ? parseInt(d) : 0;
             return data ? data.toLocaleString() : 0;
         }
-        function capitalizeWords(str) {
+        const capitalizeWords = (str) => {
             if (typeof str !== 'string') return '';
-            return str.toLowerCase().split(' ').map(function (w) {
-                return w.charAt(0).toUpperCase() + w.slice(1);
-            }).join(' ');
+            return str.toLowerCase().split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
         }
 
-        async function getAggregateByLocation() {
+        const getAggregateByLocation = async () => {
             overlay.show();
             try {
                 var response = await axios.get(common.DataService + '?qid=752');
@@ -437,7 +431,7 @@ const LgaAggregateMobilizationDashboard = {
             }
         }
 
-        function plotAggregateChart() {
+        const plotAggregateChart = () => {
             var yAxislabel = (statData.chartData[0] && statData.chartData[0][chartCurrentTab.value] && statData.chartData[0][chartCurrentTab.value].name) || '';
             var xAxisLabel = statData.chartData.xAxisLabel;
             chartOptions.value = {
@@ -449,12 +443,12 @@ const LgaAggregateMobilizationDashboard = {
                 },
                 yaxis: {
                     title: { text: yAxislabel, style: { color: '#6e6b7b', fontWeight: 'bold' } },
-                    labels: { formatter: function (val) { return parseInt(val).toLocaleString(); } },
+                    labels: { formatter: (val) => { return parseInt(val).toLocaleString(); } },
                 },
                 plotOptions: { bar: { dataLabels: { position: 'top' } } },
                 dataLabels: {
                     enabled: true,
-                    formatter: function (val) { return parseInt(val).toLocaleString(); },
+                    formatter: (val) => { return parseInt(val).toLocaleString(); },
                     offsetY: -20,
                     style: { fontSize: '12px', colors: ['#000'] },
                 },
@@ -467,12 +461,12 @@ const LgaAggregateMobilizationDashboard = {
             series.value = statData.chartData[0] ? [statData.chartData[0][chartCurrentTab.value]] : [];
         }
 
-        function loadAggregateNewChart(d) {
+        const loadAggregateNewChart = (d) => {
             chartCurrentTab.value = d;
             plotAggregateChart();
         }
 
-        function generateAggregateStatData(i) {
+        const generateAggregateStatData = (i) => {
             if (i === undefined) i = '';
             statData.dataIndex = i;
             var lgaid = chartFilter.lgaid, wardid = chartFilter.wardid, dpid = chartFilter.dpid;
@@ -498,14 +492,14 @@ const LgaAggregateMobilizationDashboard = {
             }
         }
 
-        function refreshAggregatePage() {
+        const refreshAggregatePage = () => {
             if (chartFilter.chartLevel == 0) getAggregateByLocation();
             else if (chartFilter.chartLevel == 1) getAggregateSummaryPerWard();
             else if (chartFilter.chartLevel == 2) getAggregateSummaryPerDp();
             else getAggregateByLocation();
         }
 
-        function aggregateStatBreadCrum(state) {
+        const aggregateStatBreadCrum = (state) => {
             var sel = document.querySelector('.data-index-' + state);
             statData.dataIndex = sel ? sel.getAttribute('data-index') : '';
             if (state == 1) {
@@ -520,16 +514,16 @@ const LgaAggregateMobilizationDashboard = {
             }
         }
 
-        async function getAggregateSummaryPerWard() {
+        const getAggregateSummaryPerWard = async () => {
             await fetchData('756', { lgaid: chartFilter.lgaid, xAxisLabel: 'Wards' });
             var list = document.querySelector('.data-index-1');
             if (list) list.setAttribute('data-index', statData.dataIndex);
         }
-        async function getAggregateSummaryPerDp() {
+        const getAggregateSummaryPerDp = async () => {
             await fetchData('757', { wardid: chartFilter.wardid, xAxisLabel: 'DPs' });
         }
 
-        async function fetchData(queryId, params) {
+        const fetchData = async (queryId, params) => {
             overlay.show();
             try {
                 var response = await axios.get(common.DataService + '?qid=' + queryId, { params: params });
@@ -549,7 +543,7 @@ const LgaAggregateMobilizationDashboard = {
 
         // Single mount call — the legacy v2 code fired both beforeMount AND
         // mounted, which double-counted overlay.show(); collapsed to one.
-        onMounted(function () { getAggregateByLocation(); });
+        onMounted(() => { getAggregateByLocation(); });
 
         return {
             statData, chartCurrentTab, chartFilter, series, allChartData, chartOptions,

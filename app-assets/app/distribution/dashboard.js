@@ -21,7 +21,7 @@ const appState = Vue.reactive({
 
 const PageBody = {
     setup() {
-        function refreshAllData() { bus.emit('g-event-refresh-page', { page: '', distributionPage: '' }); }
+        const refreshAllData = () => { bus.emit('g-event-refresh-page', { page: '', distributionPage: '' }); };
         return { appState, refreshAllData };
     },
     template: `
@@ -53,33 +53,33 @@ const DistributionGeneralStats = {
         const fmtUtils = useFormat();
         const allStatistics = ref({});
 
-        function refreshData() {
+        const refreshData = () => {
             overlay.show();
             Promise.all([
-                fetchData('403', function (data) { allStatistics.value = data || {}; }),
-            ]).finally(function () { overlay.hide(); });
+                fetchData('403', data => { allStatistics.value = data || {}; }),
+            ]).finally(() => { overlay.hide(); });
         }
-        function fetchData(qid, onSuccess) {
+        const fetchData = (qid, onSuccess) => {
             return axios.get(common.DataService + '?qid=' + qid)
-                .then(function (response) {
+                .then(response => {
                     var data = (response.data && response.data.data && response.data.data[0]) || {};
                     onSuccess(data);
                 })
-                .catch(function (error) { console.error('Error fetching qid=' + qid + ' data:', error); });
+                .catch(error => { console.error('Error fetching qid=' + qid + ' data:', error); });
         }
-        function refreshDataHandler() { refreshData(); }
-        function goBack(data) {
+        const refreshDataHandler = () => { refreshData(); };
+        const goBack = (data) => {
             appState.currentDrillData = 'aggregate_lga';
             appState.aggregate.title = data && data.title;
             appState.aggregate.page = data && data.page;
             bus.emit('g-event-goto-page', data);
         }
 
-        onMounted(function () {
+        onMounted(() => {
             bus.on('g-event-refresh-page', refreshDataHandler);
             refreshData();
         });
-        onBeforeUnmount(function () {
+        onBeforeUnmount(() => {
             bus.off('g-event-refresh-page', refreshDataHandler);
         });
 
@@ -232,42 +232,42 @@ const DistributionLgaAggregateTable = {
         const tableData = ref([]);
         var psInstances = [];
 
-        function fetchData(qid, onSuccess) {
+        const fetchData = (qid, onSuccess) => {
             return axios.get(common.DataService + '?qid=' + qid)
-                .then(function (response) {
+                .then(response => {
                     onSuccess((response.data && response.data.data) || []);
                 })
-                .catch(function (error) { console.error('Error fetching qid=' + qid + ' data:', error); });
+                .catch(error => { console.error('Error fetching qid=' + qid + ' data:', error); });
         }
-        function refreshData() {
+        const refreshData = () => {
             overlay.show();
             var qid = '';
             if (appState.aggregate.title === 'LGA' || appState.aggregate.title === '') qid = '404a';
             else if (appState.aggregate.title === 'Ward') qid = '404b&lgaId=' + appState.aggregate.lgaId;
             else if (appState.aggregate.title === 'DP') qid = '404c&wardId=' + appState.aggregate.wardId;
             Promise.all([
-                fetchData(qid, function (data) { tableData.value = data; }),
-            ]).finally(function () { overlay.hide(); });
+                fetchData(qid, data => { tableData.value = data; }),
+            ]).finally(() => { overlay.hide(); });
         }
-        function refreshDataHandler() { refreshData(); }
-        function gotoPageHandler() {
+        const refreshDataHandler = () => { refreshData(); };
+        const gotoPageHandler = () => {
             if (appState.currentDrillData == 'aggregate_lga') refreshData();
         }
-        function goToWardSummaryPage(data) {
+        const goToWardSummaryPage = (data) => {
             appState.aggregate.title = 'Ward';
             appState.aggregate.lgaId = data && data.lgaId;
             appState.aggregate.lgaName = data && data.lgaName;
             appState.aggregate.page = data && data.page;
             refreshData();
         }
-        function goToDPSummaryPage(data) {
+        const goToDPSummaryPage = (data) => {
             appState.aggregate.title = 'DP';
             appState.aggregate.wardId = data && data.wardId;
             appState.aggregate.wardName = data && data.wardName;
             appState.aggregate.page = data && data.page;
             refreshData();
         }
-        function handleRowClick(g) {
+        const handleRowClick = (g) => {
             appState.currentDrillData = 'aggregate_lga';
             if (appState.aggregate.title === 'LGA') {
                 goToWardSummaryPage({ lgaId: g.id, lgaName: g.title, page: 'ward_summary' });
@@ -276,20 +276,20 @@ const DistributionLgaAggregateTable = {
             }
         }
 
-        onMounted(function () {
+        onMounted(() => {
             bus.on('g-event-goto-page', gotoPageHandler);
             bus.on('g-event-refresh-page', refreshDataHandler);
             try {
                 var containers = document.querySelectorAll('.distribution-lga-perfect-scroll-grid');
-                containers.forEach(function (el) { psInstances.push(new PerfectScrollbar(el)); });
+                containers.forEach(el => { psInstances.push(new PerfectScrollbar(el)); });
             } catch (e) {}
             appState.aggregate.title = 'LGA';
             refreshData();
         });
-        onBeforeUnmount(function () {
+        onBeforeUnmount(() => {
             bus.off('g-event-goto-page', gotoPageHandler);
             bus.off('g-event-refresh-page', refreshDataHandler);
-            psInstances.forEach(function (ps) { try { ps.destroy(); } catch (e) {} });
+            psInstances.forEach(ps => { try { ps.destroy(); } catch (e) {} });
             psInstances = [];
         });
 
@@ -363,12 +363,12 @@ const DailyAggregateTable = {
         const chartData = ref([]);
         var psInstances = [];
 
-        function fetchData(qid, onSuccess) {
+        const fetchData = (qid, onSuccess) => {
             return axios.get(common.DataService + '?qid=' + qid)
-                .then(function (response) { onSuccess(response.data || []); })
-                .catch(function (error) { console.error('Error fetching qid=' + qid + ' data:', error); });
+                .then(response => { onSuccess(response.data || []); })
+                .catch(error => { console.error('Error fetching qid=' + qid + ' data:', error); });
         }
-        function refreshData() {
+        const refreshData = () => {
             isLoading.value = true;
             overlay.show();
             var title = appState.dailyAggregate.title;
@@ -382,29 +382,29 @@ const DailyAggregateTable = {
                 case 'LGA':  qid = '405b&date=' + date; break;
                 default:     qid = '405a';
             }
-            fetchData(qid, function (data) {
+            fetchData(qid, data => {
                 tableData.value = (data && data.data) || [];
                 chartData.value = (data && data.chart) || [];
-            }).catch(function (error) {
+            }).catch(error => {
                 alert.Error('ERROR', safeMessage(error));
-            }).finally(function () {
+            }).finally(() => {
                 isLoading.value = false;
                 overlay.hide();
             });
         }
-        function refreshDataHandler() { refreshData(); }
-        function gotoPageHandler() {
+        const refreshDataHandler = () => { refreshData(); };
+        const gotoPageHandler = () => {
             if (appState.currentDrillData == 'dailyAggregate_lga') refreshData();
         }
 
-        function goToTopSummaryPage(data) {
+        const goToTopSummaryPage = (data) => {
             appState.dailyAggregate.title = 'LGA';
             appState.dailyAggregate.date = data && data.date;
             appState.dailyAggregate.page = data && data.page;
             appState.dailyAggregate.chartTitle = fmtUtils.displayDate(data && data.date) + ' Summary';
             refreshData();
         }
-        function goToLGASummaryPage(data) {
+        const goToLGASummaryPage = (data) => {
             appState.dailyAggregate.title = 'Ward';
             appState.dailyAggregate.lgaId = data && data.lgaId;
             appState.dailyAggregate.lgaName = data && data.lgaName;
@@ -412,7 +412,7 @@ const DailyAggregateTable = {
             appState.dailyAggregate.chartTitle = (data && data.lgaName) + ' Summary';
             refreshData();
         }
-        function goToWardSummaryPage(data) {
+        const goToWardSummaryPage = (data) => {
             appState.dailyAggregate.title = 'Dp';
             appState.dailyAggregate.wardId = data && data.wardId;
             appState.dailyAggregate.wardName = data && data.wardName;
@@ -420,14 +420,14 @@ const DailyAggregateTable = {
             appState.dailyAggregate.chartTitle = (data && data.wardName) + ' Summary';
             refreshData();
         }
-        function handleRowClick(g) {
+        const handleRowClick = (g) => {
             appState.currentDrillData = 'dailyAggregate_lga';
             var title = appState.dailyAggregate.title;
             if (title === 'Date') goToTopSummaryPage({ date: g.title, page: 'top_summary' });
             else if (title === 'LGA') goToLGASummaryPage({ lgaId: g.id, lgaName: g.title, page: 'lga_summary' });
             else if (title === 'Ward') goToWardSummaryPage({ wardId: g.id, wardName: g.title, lgaId: g.id, lgaName: g.title, page: 'ward_summary' });
         }
-        function goBack(data) {
+        const goBack = (data) => {
             appState.dailyAggregate.title = data && data.title;
             appState.dailyAggregate.page = data && data.page;
             appState.dailyAggregate.chartTitle = data && data.chartTitle;
@@ -435,10 +435,8 @@ const DailyAggregateTable = {
             bus.emit('g-event-goto-page', data);
         }
 
-        const series = computed(function () {
-            return chartData.value && chartData.value[0] ? chartData.value[0] : [];
-        });
-        const chartOptions = computed(function () {
+        const series = computed(() => chartData.value && chartData.value[0] ? chartData.value[0] : []);
+        const chartOptions = computed(() => {
             var categories = (chartData.value && chartData.value[1]) || [];
             var isDark = document.documentElement.classList.contains('dark-layout');
             var color = isDark ? '#d0d2d6' : '#212121';
@@ -459,12 +457,12 @@ const DailyAggregateTable = {
                     axisBorder: { show: false },
                     axisTicks: { show: false },
                     title: { style: { color: '#6e6b7b', fontWeight: 'bold' } },
-                    labels: { formatter: function (val) { return parseInt(val).toLocaleString(); }, show: false },
+                    labels: { formatter: (val) => { return parseInt(val).toLocaleString(); }, show: false },
                 },
                 plotOptions: { bar: { dataLabels: { position: 'top' } } },
                 dataLabels: {
                     enabled: true,
-                    formatter: function (val) { return parseInt(val).toLocaleString(); },
+                    formatter: (val) => { return parseInt(val).toLocaleString(); },
                     distributed: true, offsetY: -20,
                     style: { fontSize: '12px', colors: [color] },
                 },
@@ -477,21 +475,21 @@ const DailyAggregateTable = {
             };
         });
 
-        onMounted(function () {
+        onMounted(() => {
             bus.on('g-event-goto-page', gotoPageHandler);
             bus.on('g-event-refresh-page', refreshDataHandler);
             try {
                 var containers = document.querySelectorAll('.daily-aggregate-perfect-scroll-grid');
-                containers.forEach(function (el) { psInstances.push(new PerfectScrollbar(el)); });
+                containers.forEach(el => { psInstances.push(new PerfectScrollbar(el)); });
             } catch (e) {}
             appState.dailyAggregate.title = 'Date';
             appState.dailyAggregate.chartTitle = 'Daily Summary';
             refreshData();
         });
-        onBeforeUnmount(function () {
+        onBeforeUnmount(() => {
             bus.off('g-event-goto-page', gotoPageHandler);
             bus.off('g-event-refresh-page', refreshDataHandler);
-            psInstances.forEach(function (ps) { try { ps.destroy(); } catch (e) {} });
+            psInstances.forEach(ps => { try { ps.destroy(); } catch (e) {} });
             psInstances = [];
         });
 

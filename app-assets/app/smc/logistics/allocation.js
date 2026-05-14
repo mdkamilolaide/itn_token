@@ -12,7 +12,7 @@ const appState = Vue.reactive({
     permission: (typeof getPermission === 'function')
         ? (getPermission(typeof per !== 'undefined' ? per : null, 'smc') || { permission_value: 0 })
         : { permission_value: 0 },
-    userId: (function () { var el = document.getElementById('v_g_id'); return el ? el.value : ''; })(),
+    userId: (() => { var el = document.getElementById('v_g_id'); return el ? el.value : ''; })(),
     geoLevelForm: { geoLevel: '', geoLevelId: 0 },
     defaultStateId: '',
     sysDefaultData: [],
@@ -26,7 +26,7 @@ const appState = Vue.reactive({
     level: 'lga',
 });
 
-function setSelectedLga() {
+const setSelectedLga = () => {
     var key = appState.selectedLgaKey;
     var selectedLga = appState.lgaData[key];
     if (!selectedLga) return;
@@ -58,8 +58,8 @@ const PageTable = {
         });
         const geoLevelData = ref([]);
 
-        function reloadTableListOnUpdate() { paginationDefault(); loadTableData(); }
-        function loadTableData() {
+        const reloadTableListOnUpdate = () => { paginationDefault(); loadTableData(); };
+        const loadTableData = () => {
             overlay.show();
             axios.get(
                 common.TableService +
@@ -71,58 +71,58 @@ const PageTable = {
                 '&gid=' + appState.currentLgaId +
                 '&glv=lga'
             )
-                .then(function (response) {
+                .then(response => {
                     var d = response && response.data;
                     tableData.value = Array.isArray(d && d.data) ? d.data : [];
                     tableOptions.total = (d && d.recordsTotal) || 0;
                     if (tableOptions.currentPage == 1) paginationDefault();
                     overlay.hide();
                 })
-                .catch(function (error) {
+                .catch(error => {
                     overlay.hide();
                     alert.Error('ERROR', safeMessage(error));
                 });
         }
-        function selectAll()  { for (var i = 0; i < tableData.value.length; i++) tableData.value[i].pick = true; }
-        function uncheckAll() { for (var i = 0; i < tableData.value.length; i++) tableData.value[i].pick = false; }
-        function selectToggle() {
+        const selectAll = () => { for (var i = 0; i < tableData.value.length; i++) tableData.value[i].pick = true; };
+        const uncheckAll = () => { for (var i = 0; i < tableData.value.length; i++) tableData.value[i].pick = false; };
+        const selectToggle = () => {
             if (checkToggle.value === false) { selectAll(); checkToggle.value = true; }
             else                              { uncheckAll(); checkToggle.value = false; }
         }
-        function checkedBg(p) { return p != '' ? 'bg-select' : ''; }
-        function toggleFilter() {
+        const checkedBg = (p) => { return p != '' ? 'bg-select' : ''; };
+        const toggleFilter = () => {
             if (filterState.value === false) filters.value = false;
             return (filterState.value = !filterState.value);
         }
-        function paginationDefault() {
+        const paginationDefault = () => {
             tableOptions.pageLength = Math.ceil(tableOptions.total / tableOptions.perPage);
             tableOptions.limitStart = Math.ceil((tableOptions.currentPage - 1) * tableOptions.perPage);
             tableOptions.isNext = tableOptions.currentPage < tableOptions.pageLength;
             tableOptions.isPrev = tableOptions.currentPage > 1;
         }
-        function resetSelected() { uncheckAll(); checkToggle.value = false; totalCheckedBox(); }
-        function nextPage() { resetSelected(); tableOptions.currentPage += 1; paginationDefault(); loadTableData(); }
-        function prevPage() { resetSelected(); tableOptions.currentPage -= 1; paginationDefault(); loadTableData(); }
-        function currentPage() {
+        const resetSelected = () => { uncheckAll(); checkToggle.value = false; totalCheckedBox(); };
+        const nextPage = () => { resetSelected(); tableOptions.currentPage += 1; paginationDefault(); loadTableData(); };
+        const prevPage = () => { resetSelected(); tableOptions.currentPage -= 1; paginationDefault(); loadTableData(); };
+        const currentPage = () => {
             paginationDefault();
             if (tableOptions.currentPage < 1)                            alert.Error('ERROR', "The Page requested doesn't exist");
             else if (tableOptions.currentPage > tableOptions.pageLength) alert.Error('ERROR', "The Page requested doesn't exist");
             else                                                         loadTableData();
         }
-        function changePerPage(val) {
+        const changePerPage = (val) => {
             resetSelected();
             tableOptions.currentPage = 1;
             tableOptions.perPage = val;
             paginationDefault();
             loadTableData();
         }
-        function sort(col) {
+        const sort = (col) => {
             if (tableOptions.orderField === col) tableOptions.orderDir = tableOptions.orderDir === 'asc' ? 'desc' : 'asc';
             else                                  tableOptions.orderField = col;
             paginationDefault();
             loadTableData();
         }
-        function applyFilter() {
+        const applyFilter = () => {
             if (appState.currentLgaId != '') {
                 tableOptions.filterParam.gid = appState.currentLgaId;
                 tableOptions.filterParam.glv = appState.level;
@@ -140,7 +140,7 @@ const PageTable = {
                 alert.Error('ERROR', 'Invalid required data');
             }
         }
-        function removeSingleFilter(column_name) {
+        const removeSingleFilter = (column_name) => {
             tableOptions.filterParam[column_name] = '';
             if (column_name == 'lga_name') {
                 tableOptions.filterParam.gid = '';
@@ -156,7 +156,7 @@ const PageTable = {
             paginationDefault();
             loadTableData();
         }
-        function clearAllFilter() {
+        const clearAllFilter = () => {
             filters.value = false;
             tableOptions.filterParam.gid = '';
             tableOptions.filterParam.level = '';
@@ -165,19 +165,19 @@ const PageTable = {
             paginationDefault();
             loadTableData();
         }
-        function getGeoLocation() {
+        const getGeoLocation = () => {
             overlay.show();
             axios.get(common.DataService + '?qid=gen009')
-                .then(function (response) {
+                .then(response => {
                     geoData.value = (response.data && response.data.data) || [];
                     overlay.hide();
                 })
-                .catch(function (error) {
+                .catch(error => {
                     overlay.hide();
                     alert.Error('ERROR', safeMessage(error));
                 });
         }
-        function setLocation(select_index) {
+        const setLocation = (select_index) => {
             var i = select_index || 0;
             var row = geoData.value[i];
             if (!row) return;
@@ -185,38 +185,36 @@ const PageTable = {
             tableOptions.filterParam.geo_level_id = row.geo_level_id;
             tableOptions.filterParam.geo_string = row.geo_string;
         }
-        function refreshData() { paginationDefault(); loadTableData(); }
-        function totalCheckedBox() {
-            var total = tableData.value.filter(function (r) { return r.pick; }).length;
+        const refreshData = () => { paginationDefault(); loadTableData(); };
+        const totalCheckedBox = () => {
+            var total = tableData.value.filter(r => r.pick).length;
             var el = document.getElementById('total-selected');
             if (!el) return;
             if (total > 0) el.innerHTML = '<span class="badge badge-primary btn-icon"><span class="badge badge-success">' + total + '</span> Selected</span>';
             else el.replaceChildren();
         }
-        function goToCreateIssue() {
+        const goToCreateIssue = () => {
             appState.pageState.page = 'create-issues';
             appState.currentPeriodId = '';
             appState.currentLgaId = '';
             appState.facilityTitles = '';
             appState.selectedLgaKey = '';
         }
-        function getProductMaster() {
+        const getProductMaster = () => {
             overlay.show();
             axios.get(common.DataService + '?qid=gen011')
-                .then(function (response) {
-                    var data = ((response.data && response.data.data) || []).slice().sort(function (a, b) {
-                        return a.product_code.localeCompare(b.product_code);
-                    });
+                .then(response => {
+                    var data = ((response.data && response.data.data) || []).slice().sort((a, b) => a.product_code.localeCompare(b.product_code));
                     appState.productData = data;
                     overlay.hide();
                 })
-                .catch(function (error) {
+                .catch(error => {
                     overlay.hide();
                     alert.Error('ERROR', safeMessage(error));
                 });
         }
 
-        onMounted(function () {
+        onMounted(() => {
             getProductMaster();
             getGeoLocation();
             try {
@@ -234,7 +232,7 @@ const PageTable = {
             loadTableData();
             bus.on('g-event-refresh-page', reloadTableListOnUpdate);
         });
-        onBeforeUnmount(function () {
+        onBeforeUnmount(() => {
             bus.off('g-event-refresh-page', reloadTableListOnUpdate);
         });
 
@@ -384,10 +382,10 @@ const PageCreateIssue = {
         const facilityName = ref(null);
         const product = ref(null);
 
-        function getSysDefaultDataSettings() {
+        const getSysDefaultDataSettings = () => {
             overlay.show();
             axios.get(common.DataService + '?qid=gen007')
-                .then(function (response) {
+                .then(response => {
                     if (response.data.data && response.data.data.length > 0) {
                         appState.sysDefaultData = response.data.data[0];
                         getAllLga(response.data.data[0].stateid);
@@ -397,50 +395,50 @@ const PageCreateIssue = {
                     }
                     overlay.hide();
                 })
-                .catch(function (error) {
+                .catch(error => {
                     overlay.hide();
                     alert.Error('ERROR', safeMessage(error));
                 });
         }
-        function getAllLga(stateid) {
+        const getAllLga = (stateid) => {
             overlay.show();
             axios.post(common.DataService + '?qid=gen003', JSON.stringify(stateid))
-                .then(function (response) {
+                .then(response => {
                     appState.lgaData = (response.data && response.data.data) || [];
                     overlay.hide();
                 })
-                .catch(function (error) {
+                .catch(error => {
                     overlay.hide();
                     alert.Error('ERROR', safeMessage(error));
                 });
         }
-        function getAllPeriodLists() {
+        const getAllPeriodLists = () => {
             overlay.show();
             axios.get(common.DataService + '?qid=1004')
-                .then(function (response) {
+                .then(response => {
                     appState.periodData = (response.data && response.data.data) || [];
                     overlay.hide();
                 })
-                .catch(function (error) {
+                .catch(error => {
                     overlay.hide();
                     alert.Error('ERROR', safeMessage(error));
                 });
         }
 
-        function groupAndFillMissingProducts(data, masterProductData) {
+        const groupAndFillMissingProducts = (data, masterProductData) => {
             var grouped = {};
-            function sanitize(obj) {
+            const sanitize = (obj) => {
                 var clean = {};
                 for (var key in obj) {
                     clean[key] = obj[key] === null || obj[key] === undefined ? '' : obj[key];
                 }
                 return clean;
             }
-            data.forEach(function (item) {
+            data.forEach(item => {
                 var key = item.geo_string;
                 if (!grouped[key]) grouped[key] = [];
                 if (!item.product_code) {
-                    masterProductData.forEach(function (prod) {
+                    masterProductData.forEach(prod => {
                         grouped[key].push(sanitize(Object.assign({}, item, {
                             product_code: prod.product_code,
                             product_name: prod.name,
@@ -452,9 +450,9 @@ const PageCreateIssue = {
             });
             for (var key in grouped) {
                 var entries = grouped[key];
-                var existingCodes = new Set(entries.map(function (i) { return i.product_code; }));
+                var existingCodes = new Set(entries.map(i => i.product_code));
                 var baseDPID = (entries[0] && entries[0].dpid) || '';
-                masterProductData.forEach(function (prod) {
+                masterProductData.forEach(prod => {
                     if (!existingCodes.has(prod.product_code)) {
                         entries.push(sanitize({
                             geo_string: key, dpid: baseDPID, issue_id: '',
@@ -465,12 +463,12 @@ const PageCreateIssue = {
                         }));
                     }
                 });
-                entries.sort(function (a, b) { return a.product_code.localeCompare(b.product_code); });
+                entries.sort((a, b) => a.product_code.localeCompare(b.product_code));
             }
             return grouped;
         }
 
-        async function getFacilityIssueByPeriod() {
+        const getFacilityIssueByPeriod = async () => {
             var currentLgaId = appState.currentLgaId;
             var currentPeriodId = appState.currentPeriodId;
             var productData = appState.productData;
@@ -495,18 +493,18 @@ const PageCreateIssue = {
             }
         }
 
-        function isEditing(rowIndex, productCode) {
+        const isEditing = (rowIndex, productCode) => {
             return editingCell.rowIndex === rowIndex && editingCell.productCode === productCode;
         }
-        function stopEdit() { editingCell.rowIndex = null; editingCell.productCode = null; }
+        const stopEdit = () => { editingCell.rowIndex = null; editingCell.productCode = null; };
 
-        function prepareIssues(fd) {
+        const prepareIssues = (fd) => {
             var packSize = 50;
             var periodId = appState.currentPeriodId || null;
             var result = [];
             if (!fd || typeof fd !== 'object') return result;
-            Object.values(fd).forEach(function (entries) {
-                (entries || []).forEach(function (entry) {
+            Object.values(fd).forEach(entries => {
+                (entries || []).forEach(entry => {
                     if (!entry) return;
                     var secondaryQty = Number(entry.secondary_qty);
                     if (!isNaN(secondaryQty) && secondaryQty > 0) {
@@ -524,12 +522,12 @@ const PageCreateIssue = {
             });
             return result;
         }
-        function submitIssues() {
+        const submitIssues = () => {
             if (appState.currentPeriodId == '') { alert.Error('ERROR', 'Please select a visit'); return; }
             var data = prepareIssues(facilityData.value);
             overlay.show();
             axios.post(common.DataService + '?qid=1129', JSON.stringify(data))
-                .then(function (response) {
+                .then(response => {
                     overlay.hide();
                     if (response.data.result_code == '200') {
                         bus.emit('g-event-refresh-page');
@@ -539,12 +537,12 @@ const PageCreateIssue = {
                         alert.Error('ERROR', response.data.message);
                     }
                 })
-                .catch(function (error) {
+                .catch(error => {
                     overlay.hide();
                     alert.Error('ERROR', safeMessage(error));
                 });
         }
-        function goToIssueTable() {
+        const goToIssueTable = () => {
             appState.pageState.page = 'table';
             facilityData.value = {};
             tempFacilityData.value = {};
@@ -553,16 +551,16 @@ const PageCreateIssue = {
             appState.facilityTitles = '';
             appState.selectedLgaKey = '';
         }
-        function resetForm() { facilityData.value = {}; tempFacilityData.value = {}; }
+        const resetForm = () => { facilityData.value = {}; tempFacilityData.value = {}; };
 
-        function startDrag(rowIndex, field, fName, prod) {
+        const startDrag = (rowIndex, field, fName, prod) => {
             dragStart.value = rowIndex;
             dragField.value = field;
             facilityName.value = fName;
             product.value = prod;
             window.addEventListener('mouseup', finishDrag);
         }
-        function onDragOver(currentRow, fName, field) {
+        const onDragOver = (currentRow, fName, field) => {
             if (dragStart.value !== null && dragField.value !== null) {
                 var startRow = Math.min(dragStart.value, currentRow);
                 var endRow = Math.max(dragStart.value, currentRow);
@@ -570,9 +568,7 @@ const PageCreateIssue = {
                 var currentField = field;
                 var updated = fName;
                 var valueToFill = product.value && product.value.secondary_qty;
-                var allProductCodes = (facilityData.value[updated] || []).map(function (item) {
-                    return item.product_code && item.product_code.toUpperCase();
-                });
+                var allProductCodes = (facilityData.value[updated] || []).map(item => item.product_code && item.product_code.toUpperCase());
                 var startColIndex = allProductCodes.indexOf(startField && startField.toUpperCase());
                 var endColIndex = allProductCodes.indexOf(currentField && currentField.toUpperCase());
                 if (startColIndex === -1 || endColIndex === -1) return;
@@ -581,9 +577,7 @@ const PageCreateIssue = {
                 for (var i = startRow; i <= endRow; i++) {
                     for (var j = minCol; j <= maxCol; j++) {
                         var targetCode = allProductCodes[j];
-                        var position = (facilityData.value[updated] || []).findIndex(function (item) {
-                            return item.product_code && item.product_code.toUpperCase() === targetCode;
-                        });
+                        var position = (facilityData.value[updated] || []).findIndex(item => item.product_code && item.product_code.toUpperCase() === targetCode);
                         if (position !== -1) {
                             facilityData.value[updated][position]['secondary_qty'] = valueToFill;
                         }
@@ -591,25 +585,25 @@ const PageCreateIssue = {
                 }
             }
         }
-        function finishDrag() {
+        const finishDrag = () => {
             dragStart.value = null;
             dragField.value = null;
             facilityName.value = null;
             product.value = null;
             window.removeEventListener('mouseup', finishDrag);
         }
-        function getCellClass(rowIndex) {
+        const getCellClass = (rowIndex) => {
             return { 'drag-target': dragStart.value !== null && rowIndex !== dragStart.value };
         }
-        function resetIssues() { facilityData.value = JSON.parse(JSON.stringify(tempFacilityData.value)); }
-        function cancelIssue() {
+        const resetIssues = () => { facilityData.value = JSON.parse(JSON.stringify(tempFacilityData.value)); };
+        const cancelIssue = () => {
             if (isUpdated.value) {
                 $.confirm({
                     title: 'WARNING!',
                     content: 'Are you sure you want to discard the changes made?',
                     buttons: {
-                        discard: { text: 'Discard', btnClass: 'btn btn-danger mr-1', action: function () { goToIssueTable(); } },
-                        cancel: function () {},
+                        discard: { text: 'Discard', btnClass: 'btn btn-danger mr-1', action: () => { goToIssueTable(); } },
+                        cancel: () => {},
                     },
                 });
             } else {
@@ -617,34 +611,32 @@ const PageCreateIssue = {
             }
         }
 
-        const groupedProductSummary = computed(function () {
+        const groupedProductSummary = computed(() => {
             var totals = {};
-            Object.values(facilityData.value || {}).forEach(function (records) {
-                (records || []).forEach(function (r) {
+            Object.values(facilityData.value || {}).forEach(records => {
+                (records || []).forEach(r => {
                     var code = r && r.product_code && r.product_code.toUpperCase();
                     if (!code) return;
                     totals[code] = (totals[code] || 0) + (Number(r.secondary_qty) || 0);
                 });
             });
-            return (appState.productData || []).map(function (p) {
+            return (appState.productData || []).map(p => {
                 var code = p.product_code && p.product_code.toUpperCase();
                 return { product_code: code, total: totals[code] || 0 };
             });
         });
-        const hasFacilityData = computed(function () {
-            return facilityData.value && Object.values(facilityData.value).flat().length > 0;
-        });
+        const hasFacilityData = computed(() => facilityData.value && Object.values(facilityData.value).flat().length > 0);
 
-        watch(facilityData, function () {
+        watch(facilityData, () => {
             isUpdated.value = JSON.stringify(facilityData.value) !== JSON.stringify(tempFacilityData.value);
         }, { deep: true });
 
-        onMounted(function () {
+        onMounted(() => {
             getSysDefaultDataSettings();
             getAllPeriodLists();
             bus.on('g-event-reset-form', resetForm);
         });
-        onBeforeUnmount(function () {
+        onBeforeUnmount(() => {
             bus.off('g-event-reset-form', resetForm);
         });
 
