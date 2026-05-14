@@ -15,71 +15,81 @@ const { useApp, useFormat, bus, safeMessage } = window.utils;
 /* Shared module-local reactive state                                   */
 /* ------------------------------------------------------------------ */
 const createPageState = () => {
-    return {
-        page: '',
-        data: {
-            lgaId: null, lgaName: null,
-            wardId: null, wardName: null,
-            hhmId: null, hhmName: null,
-        },
-    };
-}
+  return {
+    page: "",
+    data: {
+      lgaId: null,
+      lgaName: null,
+      wardId: null,
+      wardName: null,
+      hhmId: null,
+      hhmName: null,
+    },
+  };
+};
 
 const appState = Vue.reactive({
-    mobStates: createPageState(),
-    mobStatisticData: [],
-    distStates: createPageState(),
-    currentDrillData: '',
+  mobStates: createPageState(),
+  mobStatisticData: [],
+  distStates: createPageState(),
+  currentDrillData: "",
 });
 
 /* Shared formatting / progress helpers (replaces global Vue.mixin) */
 const fmt = useFormat();
 const percentageUsed = (total_data, used) => {
-    var p = (parseFloat(used) / parseFloat(total_data)) * 100;
-    return isNaN(p) ? 0 : p.toFixed(1);
-}
-const progressBarWidth = (total_data, used) => { return percentageUsed(total_data, used) + '%'; };
+  var p = (parseFloat(used) / parseFloat(total_data)) * 100;
+  return isNaN(p) ? 0 : p.toFixed(1);
+};
+const progressBarWidth = (total_data, used) => {
+  return percentageUsed(total_data, used) + "%";
+};
 const progressBarStatus = (total_data, used) => {
-    var progress = percentageUsed(total_data, used);
-    if (progress >= 90) return 'bg-success';
-    if (progress >= 70) return 'bg-info';
-    if (progress >= 40) return 'bg-warning';
-    if (progress > 30)  return 'bg-secondary';
-    return 'bg-danger';
-}
+  var progress = percentageUsed(total_data, used);
+  if (progress >= 90) return "bg-success";
+  if (progress >= 70) return "bg-info";
+  if (progress >= 40) return "bg-warning";
+  if (progress > 30) return "bg-secondary";
+  return "bg-danger";
+};
 
 /* Reusable shared returns (everything templates may reference) */
 const sharedExports = () => {
-    return {
-        appState,
-        formatNumber: fmt.formatNumber,
-        capitalize: fmt.capitalize,
-        displayDate: fmt.displayDate,
-        percentageUsed, progressBarWidth, progressBarStatus,
-    };
-}
+  return {
+    appState,
+    formatNumber: fmt.formatNumber,
+    capitalize: fmt.capitalize,
+    displayDate: fmt.displayDate,
+    percentageUsed,
+    progressBarWidth,
+    progressBarStatus,
+  };
+};
 
 const fetchData = (qid, query, onSuccess) => {
-    var url = common.DataService + '?qid=' + qid + (query || '');
-    return axios.get(url)
-        .then(response => {
-            var data = (response && response.data && response.data.data) || [];
-            onSuccess(data);
-        })
-        .catch(error => {
-            console.error('Error fetching qid=' + qid + ' data:', error);
-        });
-}
+  var url = common.DataService + "?qid=" + qid + (query || "");
+  return axios
+    .get(url)
+    .then((response) => {
+      var data = (response && response.data && response.data.data) || [];
+      onSuccess(data);
+    })
+    .catch((error) => {
+      console.error("Error fetching qid=" + qid + " data:", error);
+    });
+};
 
 /* ------------------------------------------------------------------ */
 /* page-body                                                            */
 /* ------------------------------------------------------------------ */
 const PageBody = {
-    setup() {
-        const refreshAllData = () => { bus.emit('g-event-refresh-page', {}); };
-        return Object.assign({ refreshAllData }, sharedExports());
-    },
-    template: `
+  setup() {
+    const refreshAllData = () => {
+      bus.emit("g-event-refresh-page", {});
+    };
+    return Object.assign({ refreshAllData }, sharedExports());
+  },
+  template: `
         <div class="content-header row" id="basic-statistics">
             <div class="content-header-left col-sm-8 col-md-9 col-8 mb-2">
                 <div class="row breadcrumbs-top">
@@ -116,60 +126,78 @@ const PageBody = {
 /* Mobilization stat tile (top of left column)                          */
 /* ------------------------------------------------------------------ */
 const EolinMobAllStat = {
-    setup() {
-        const allStatistics = ref([]);
-        const refreshData = () => {
-            overlay.show();
-            Promise.all([
-                fetchData('1150', '', data => {
-                    allStatistics.value = data;
-                    appState.mobStatisticData = data;
-                }),
-            ]).finally(() => { overlay.hide(); });
-        }
-        const refreshDataHandler = () => { refreshData(); };
+  setup() {
+    const allStatistics = ref([]);
+    const refreshData = () => {
+      overlay.show();
+      Promise.all([
+        fetchData("1150", "", (data) => {
+          allStatistics.value = data;
+          appState.mobStatisticData = data;
+        }),
+      ]).finally(() => {
+        overlay.hide();
+      });
+    };
+    const refreshDataHandler = () => {
+      refreshData();
+    };
 
-        const keyLabels = {
-            total_household: { label: 'HHs with Old Nets', icon: 'arrow-up-left', colorClass: 'text-success' },
-            total_net:       { label: 'Old Nets Available', icon: 'trending-up', colorClass: 'text-primary' },
+    const keyLabels = {
+      total_household: {
+        label: "HHs with Old Nets",
+        icon: "arrow-up-left",
+        colorClass: "text-success",
+      },
+      total_net: {
+        label: "Old Nets Available",
+        icon: "trending-up",
+        colorClass: "text-primary",
+      },
+    };
+    const topStats = computed(() => {
+      var keys = ["total_household", "total_net"];
+      var obj = allStatistics.value[0] || {};
+      return keys.map((key) => {
+        var meta = keyLabels[key] || {};
+        return {
+          key: key,
+          label: meta.label || key,
+          icon: meta.icon || "info",
+          colorClass: meta.colorClass || "text-dark",
+          value: obj[key],
         };
-        const topStats = computed(() => {
-            var keys = ['total_household', 'total_net'];
-            var obj = allStatistics.value[0] || {};
-            return keys.map(key => {
-                var meta = keyLabels[key] || {};
-                return {
-                    key: key,
-                    label: meta.label || key,
-                    icon: meta.icon || 'info',
-                    colorClass: meta.colorClass || 'text-dark',
-                    value: obj[key],
-                };
-            });
-        });
+      });
+    });
 
-        const goBack = (data) => {
-            appState.mobStates.page = data && data.page;
-            appState.mobStates.lgaId = (data && data.lgaId) || '';
-            appState.mobStates.lgaName = (data && data.lgaName) || '';
-            appState.mobStates.wardId = (data && data.wardId) || '';
-            appState.mobStates.wardName = (data && data.wardName) || '';
-            bus.emit('g-event-goto-page', data);
-        }
+    const goBack = (data) => {
+      appState.mobStates.page = data && data.page;
+      appState.mobStates.lgaId = (data && data.lgaId) || "";
+      appState.mobStates.lgaName = (data && data.lgaName) || "";
+      appState.mobStates.wardId = (data && data.wardId) || "";
+      appState.mobStates.wardName = (data && data.wardName) || "";
+      bus.emit("g-event-goto-page", data);
+    };
 
-        onMounted(() => {
-            bus.on('g-event-refresh-page', refreshDataHandler);
-            refreshData();
-        });
-        onBeforeUnmount(() => {
-            bus.off('g-event-refresh-page', refreshDataHandler);
-        });
+    onMounted(() => {
+      bus.on("g-event-refresh-page", refreshDataHandler);
+      refreshData();
+    });
+    onBeforeUnmount(() => {
+      bus.off("g-event-refresh-page", refreshDataHandler);
+    });
 
-        return Object.assign({
-            allStatistics, topStats, refreshData, goBack,
-        }, sharedExports());
-    },
-    template: `
+    return Object.assign(
+      {
+        allStatistics,
+        topStats,
+        refreshData,
+        goBack,
+      },
+      sharedExports(),
+    );
+  },
+  template: `
         <div class="content-header row">
             <div class="col-lg-6 col-sm-6 col-12" v-for="g in topStats" :key="g.key">
                 <div class="card">
@@ -209,45 +237,57 @@ const EolinMobAllStat = {
 /* Mobilization LGA / Ward / DP top summaries                           */
 /* ------------------------------------------------------------------ */
 const EolinLgaMobTopSummary = {
-    setup() {
-        const tableData = ref([]);
-        const refreshData = () => {
-            overlay.show();
-            Promise.all([
-                fetchData('1151', '', data => { tableData.value = data; }),
-            ]).finally(() => { overlay.hide(); });
-        }
-        const gotoPageHandler = () => {
-            if (appState.mobStates.page == '' &&
-                (appState.currentDrillData == 'mobilization' || appState.currentDrillData == '')) {
-                refreshData();
-            }
-        }
-        const refreshDataHandler = () => {
-            if (appState.mobStates.page == '') refreshData();
-        }
-        const goToWardSummaryPage = (data) => {
-            appState.mobStates.page = data && data.page;
-            appState.mobStates.lgaId = data && data.lgaId;
-            appState.mobStates.lgaName = data && data.lgaName;
-            appState.currentDrillData = 'mobilization';
-            bus.emit('g-event-goto-page', data);
-        }
-        const sortedByLGA = computed(() => [].concat(tableData.value).sort((a, b) => a.lga.localeCompare(b.lga)));
+  setup() {
+    const tableData = ref([]);
+    const refreshData = () => {
+      overlay.show();
+      Promise.all([
+        fetchData("1151", "", (data) => {
+          tableData.value = data;
+        }),
+      ]).finally(() => {
+        overlay.hide();
+      });
+    };
+    const gotoPageHandler = () => {
+      if (
+        appState.mobStates.page == "" &&
+        (appState.currentDrillData == "mobilization" ||
+          appState.currentDrillData == "")
+      ) {
+        refreshData();
+      }
+    };
+    const refreshDataHandler = () => {
+      if (appState.mobStates.page == "") refreshData();
+    };
+    const goToWardSummaryPage = (data) => {
+      appState.mobStates.page = data && data.page;
+      appState.mobStates.lgaId = data && data.lgaId;
+      appState.mobStates.lgaName = data && data.lgaName;
+      appState.currentDrillData = "mobilization";
+      bus.emit("g-event-goto-page", data);
+    };
+    const sortedByLGA = computed(() =>
+      [].concat(tableData.value).sort((a, b) => a.lga.localeCompare(b.lga)),
+    );
 
-        onMounted(() => {
-            bus.on('g-event-goto-page', gotoPageHandler);
-            bus.on('g-event-refresh-page', refreshDataHandler);
-            refreshData();
-        });
-        onBeforeUnmount(() => {
-            bus.off('g-event-goto-page', gotoPageHandler);
-            bus.off('g-event-refresh-page', refreshDataHandler);
-        });
+    onMounted(() => {
+      bus.on("g-event-goto-page", gotoPageHandler);
+      bus.on("g-event-refresh-page", refreshDataHandler);
+      refreshData();
+    });
+    onBeforeUnmount(() => {
+      bus.off("g-event-goto-page", gotoPageHandler);
+      bus.off("g-event-refresh-page", refreshDataHandler);
+    });
 
-        return Object.assign({ tableData, sortedByLGA, goToWardSummaryPage }, sharedExports());
-    },
-    template: `
+    return Object.assign(
+      { tableData, sortedByLGA, goToWardSummaryPage },
+      sharedExports(),
+    );
+  },
+  template: `
         <div class="content-header row" id="basic-table" v-cloak>
             <div class="col-12 mb-1">
                 <div class="card" style="height: 350px !important;">
@@ -275,43 +315,55 @@ const EolinLgaMobTopSummary = {
 };
 
 const EolinWardMobTopSummary = {
-    setup() {
-        const tableData = ref([]);
-        const refreshData = () => {
-            overlay.show();
-            Promise.all([
-                fetchData('1152', '&lgaId=' + appState.mobStates.lgaId, data => { tableData.value = data; }),
-            ]).finally(() => { overlay.hide(); });
-        }
-        const gotoPageHandler = () => {
-            if (appState.mobStates.page == 'ward_summary' && appState.currentDrillData == 'mobilization') {
-                refreshData();
-            }
-        }
-        const refreshDataHandler = () => {
-            if (appState.mobStates.page == 'ward_summary') refreshData();
-        }
-        const goToDPSummaryPage = (data) => {
-            appState.mobStates.page = data && data.page;
-            appState.mobStates.wardId = data && data.wardId;
-            appState.mobStates.wardName = data && data.wardName;
-            appState.currentDrillData = 'mobilization';
-            bus.emit('g-event-goto-page', data);
-        }
-        const sortedByWard = computed(() => [].concat(tableData.value).sort((a, b) => a.ward.localeCompare(b.ward)));
+  setup() {
+    const tableData = ref([]);
+    const refreshData = () => {
+      overlay.show();
+      Promise.all([
+        fetchData("1152", "&lgaId=" + appState.mobStates.lgaId, (data) => {
+          tableData.value = data;
+        }),
+      ]).finally(() => {
+        overlay.hide();
+      });
+    };
+    const gotoPageHandler = () => {
+      if (
+        appState.mobStates.page == "ward_summary" &&
+        appState.currentDrillData == "mobilization"
+      ) {
+        refreshData();
+      }
+    };
+    const refreshDataHandler = () => {
+      if (appState.mobStates.page == "ward_summary") refreshData();
+    };
+    const goToDPSummaryPage = (data) => {
+      appState.mobStates.page = data && data.page;
+      appState.mobStates.wardId = data && data.wardId;
+      appState.mobStates.wardName = data && data.wardName;
+      appState.currentDrillData = "mobilization";
+      bus.emit("g-event-goto-page", data);
+    };
+    const sortedByWard = computed(() =>
+      [].concat(tableData.value).sort((a, b) => a.ward.localeCompare(b.ward)),
+    );
 
-        onMounted(() => {
-            bus.on('g-event-goto-page', gotoPageHandler);
-            bus.on('g-event-refresh-page', refreshDataHandler);
-        });
-        onBeforeUnmount(() => {
-            bus.off('g-event-goto-page', gotoPageHandler);
-            bus.off('g-event-refresh-page', refreshDataHandler);
-        });
+    onMounted(() => {
+      bus.on("g-event-goto-page", gotoPageHandler);
+      bus.on("g-event-refresh-page", refreshDataHandler);
+    });
+    onBeforeUnmount(() => {
+      bus.off("g-event-goto-page", gotoPageHandler);
+      bus.off("g-event-refresh-page", refreshDataHandler);
+    });
 
-        return Object.assign({ tableData, sortedByWard, goToDPSummaryPage }, sharedExports());
-    },
-    template: `
+    return Object.assign(
+      { tableData, sortedByWard, goToDPSummaryPage },
+      sharedExports(),
+    );
+  },
+  template: `
         <div class="content-header row" id="basic-table" v-cloak>
             <div class="col-12 mb-1">
                 <div class="card" style="height: 350px !important;">
@@ -339,33 +391,40 @@ const EolinWardMobTopSummary = {
 };
 
 const EolinDpMobTopSummary = {
-    setup() {
-        const tableData = ref([]);
-        const refreshData = () => {
-            overlay.show();
-            Promise.all([
-                fetchData('1153', '&wardId=' + appState.mobStates.wardId, data => { tableData.value = data; }),
-            ]).finally(() => { overlay.hide(); });
-        }
-        const gotoPageHandler = () => {
-            if (appState.mobStates.page == 'dp_summary' && appState.currentDrillData == 'mobilization') {
-                refreshData();
-            }
-        }
-        const refreshDataHandler = () => {
-            if (appState.mobStates.page == 'dp_summary') refreshData();
-        }
-        onMounted(() => {
-            bus.on('g-event-goto-page', gotoPageHandler);
-            bus.on('g-event-refresh-page', refreshDataHandler);
-        });
-        onBeforeUnmount(() => {
-            bus.off('g-event-goto-page', gotoPageHandler);
-            bus.off('g-event-refresh-page', refreshDataHandler);
-        });
-        return Object.assign({ tableData }, sharedExports());
-    },
-    template: `
+  setup() {
+    const tableData = ref([]);
+    const refreshData = () => {
+      overlay.show();
+      Promise.all([
+        fetchData("1153", "&wardId=" + appState.mobStates.wardId, (data) => {
+          tableData.value = data;
+        }),
+      ]).finally(() => {
+        overlay.hide();
+      });
+    };
+    const gotoPageHandler = () => {
+      if (
+        appState.mobStates.page == "dp_summary" &&
+        appState.currentDrillData == "mobilization"
+      ) {
+        refreshData();
+      }
+    };
+    const refreshDataHandler = () => {
+      if (appState.mobStates.page == "dp_summary") refreshData();
+    };
+    onMounted(() => {
+      bus.on("g-event-goto-page", gotoPageHandler);
+      bus.on("g-event-refresh-page", refreshDataHandler);
+    });
+    onBeforeUnmount(() => {
+      bus.off("g-event-goto-page", gotoPageHandler);
+      bus.off("g-event-refresh-page", refreshDataHandler);
+    });
+    return Object.assign({ tableData }, sharedExports());
+  },
+  template: `
         <div class="content-header row" id="basic-table" v-cloak>
             <div class="col-12 mb-1">
                 <div class="card" style="height: 350px !important;">
@@ -396,63 +455,86 @@ const EolinDpMobTopSummary = {
 /* Distribution stat tile + LGA / Ward / DP top summaries               */
 /* ------------------------------------------------------------------ */
 const EolinDistAllStat = {
-    setup() {
-        const allDistributionStatistics = ref([]);
-        const refreshData = () => {
-            overlay.show();
-            Promise.all([
-                fetchData('1180', '', data => { allDistributionStatistics.value = data; }),
-            ]).finally(() => { overlay.hide(); });
-        }
-        const refreshDataHandler = () => { refreshData(); };
+  setup() {
+    const allDistributionStatistics = ref([]);
+    const refreshData = () => {
+      overlay.show();
+      Promise.all([
+        fetchData("1180", "", (data) => {
+          allDistributionStatistics.value = data;
+        }),
+      ]).finally(() => {
+        overlay.hide();
+      });
+    };
+    const refreshDataHandler = () => {
+      refreshData();
+    };
 
-        const keyLabels = {
-            total_household: { label: 'HHs that Returned old Nets', icon: 'arrow-down-left', colorClass: 'text-success' },
-            total_net:       { label: 'Returned old Nets',          icon: 'trending-down',  colorClass: 'text-primary' },
+    const keyLabels = {
+      total_household: {
+        label: "HHs that Returned old Nets",
+        icon: "arrow-down-left",
+        colorClass: "text-success",
+      },
+      total_net: {
+        label: "Returned old Nets",
+        icon: "trending-down",
+        colorClass: "text-primary",
+      },
+    };
+    const topStats = computed(() => {
+      var keys = ["total_household", "total_net"];
+      var obj = allDistributionStatistics.value[0] || {};
+      return keys.map((key) => {
+        var meta = keyLabels[key] || {};
+        return {
+          key: key,
+          label: meta.label || key,
+          icon: meta.icon || "info",
+          colorClass: meta.colorClass || "text-dark",
+          value: obj[key],
         };
-        const topStats = computed(() => {
-            var keys = ['total_household', 'total_net'];
-            var obj = allDistributionStatistics.value[0] || {};
-            return keys.map(key => {
-                var meta = keyLabels[key] || {};
-                return {
-                    key: key, label: meta.label || key, icon: meta.icon || 'info',
-                    colorClass: meta.colorClass || 'text-dark', value: obj[key],
-                };
-            });
-        });
+      });
+    });
 
-        const progressTarget = (index) => {
-            var data = appState.mobStatisticData[0] || {};
-            return index === 0 ? data.total_household : data.total_net;
-        }
-        const showProgress = (index, value) => {
-            return [0, 1].indexOf(index) !== -1 && !isNaN(value);
-        }
+    const progressTarget = (index) => {
+      var data = appState.mobStatisticData[0] || {};
+      return index === 0 ? data.total_household : data.total_net;
+    };
+    const showProgress = (index, value) => {
+      return [0, 1].indexOf(index) !== -1 && !isNaN(value);
+    };
 
-        const goBack = (data) => {
-            appState.distStates.page = data && data.page;
-            appState.distStates.lgaId = (data && data.lgaId) || '';
-            appState.distStates.lgaName = (data && data.lgaName) || '';
-            appState.distStates.wardId = (data && data.wardId) || '';
-            appState.distStates.wardName = (data && data.wardName) || '';
-            bus.emit('g-event-goto-page', data);
-        }
+    const goBack = (data) => {
+      appState.distStates.page = data && data.page;
+      appState.distStates.lgaId = (data && data.lgaId) || "";
+      appState.distStates.lgaName = (data && data.lgaName) || "";
+      appState.distStates.wardId = (data && data.wardId) || "";
+      appState.distStates.wardName = (data && data.wardName) || "";
+      bus.emit("g-event-goto-page", data);
+    };
 
-        onMounted(() => {
-            bus.on('g-event-refresh-page', refreshDataHandler);
-            refreshData();
-        });
-        onBeforeUnmount(() => {
-            bus.off('g-event-refresh-page', refreshDataHandler);
-        });
+    onMounted(() => {
+      bus.on("g-event-refresh-page", refreshDataHandler);
+      refreshData();
+    });
+    onBeforeUnmount(() => {
+      bus.off("g-event-refresh-page", refreshDataHandler);
+    });
 
-        return Object.assign({
-            allDistributionStatistics, topStats,
-            progressTarget, showProgress, goBack,
-        }, sharedExports());
-    },
-    template: `
+    return Object.assign(
+      {
+        allDistributionStatistics,
+        topStats,
+        progressTarget,
+        showProgress,
+        goBack,
+      },
+      sharedExports(),
+    );
+  },
+  template: `
         <div class="content-header row">
             <div class="col-lg-6 col-sm-6 col-12" v-for="(g, i) in topStats" :key="g.key">
                 <div class="card">
@@ -505,45 +587,57 @@ const EolinDistAllStat = {
 };
 
 const EolinLgaDistTopSummary = {
-    setup() {
-        const tableData = ref([]);
-        const refreshData = () => {
-            overlay.show();
-            Promise.all([
-                fetchData('1181', '', data => { tableData.value = data; }),
-            ]).finally(() => { overlay.hide(); });
-        }
-        const gotoPageHandler = () => {
-            if (appState.distStates.page == '' &&
-                (appState.currentDrillData == 'distribution' || appState.currentDrillData == '')) {
-                refreshData();
-            }
-        }
-        const refreshDataHandler = () => {
-            if (appState.distStates.page == '') refreshData();
-        }
-        const goToWardSummaryPage = (data) => {
-            appState.distStates.page = data && data.page;
-            appState.distStates.lgaId = data && data.lgaId;
-            appState.distStates.lgaName = data && data.lgaName;
-            appState.currentDrillData = 'distribution';
-            bus.emit('g-event-goto-page', data);
-        }
-        const sortedByLGA = computed(() => [].concat(tableData.value).sort((a, b) => a.lga.localeCompare(b.lga)));
+  setup() {
+    const tableData = ref([]);
+    const refreshData = () => {
+      overlay.show();
+      Promise.all([
+        fetchData("1181", "", (data) => {
+          tableData.value = data;
+        }),
+      ]).finally(() => {
+        overlay.hide();
+      });
+    };
+    const gotoPageHandler = () => {
+      if (
+        appState.distStates.page == "" &&
+        (appState.currentDrillData == "distribution" ||
+          appState.currentDrillData == "")
+      ) {
+        refreshData();
+      }
+    };
+    const refreshDataHandler = () => {
+      if (appState.distStates.page == "") refreshData();
+    };
+    const goToWardSummaryPage = (data) => {
+      appState.distStates.page = data && data.page;
+      appState.distStates.lgaId = data && data.lgaId;
+      appState.distStates.lgaName = data && data.lgaName;
+      appState.currentDrillData = "distribution";
+      bus.emit("g-event-goto-page", data);
+    };
+    const sortedByLGA = computed(() =>
+      [].concat(tableData.value).sort((a, b) => a.lga.localeCompare(b.lga)),
+    );
 
-        onMounted(() => {
-            bus.on('g-event-goto-page', gotoPageHandler);
-            bus.on('g-event-refresh-page', refreshDataHandler);
-            refreshData();
-        });
-        onBeforeUnmount(() => {
-            bus.off('g-event-goto-page', gotoPageHandler);
-            bus.off('g-event-refresh-page', refreshDataHandler);
-        });
+    onMounted(() => {
+      bus.on("g-event-goto-page", gotoPageHandler);
+      bus.on("g-event-refresh-page", refreshDataHandler);
+      refreshData();
+    });
+    onBeforeUnmount(() => {
+      bus.off("g-event-goto-page", gotoPageHandler);
+      bus.off("g-event-refresh-page", refreshDataHandler);
+    });
 
-        return Object.assign({ tableData, sortedByLGA, goToWardSummaryPage }, sharedExports());
-    },
-    template: `
+    return Object.assign(
+      { tableData, sortedByLGA, goToWardSummaryPage },
+      sharedExports(),
+    );
+  },
+  template: `
         <div class="content-header row" id="basic-table" v-cloak>
             <div class="col-12 mb-1">
                 <div class="card" style="height: 350px !important;">
@@ -571,43 +665,55 @@ const EolinLgaDistTopSummary = {
 };
 
 const EolinWardDistTopSummary = {
-    setup() {
-        const tableData = ref([]);
-        const refreshData = () => {
-            overlay.show();
-            Promise.all([
-                fetchData('1182', '&lgaId=' + appState.distStates.lgaId, data => { tableData.value = data; }),
-            ]).finally(() => { overlay.hide(); });
-        }
-        const gotoPageHandler = () => {
-            if (appState.distStates.page == 'ward_summary' && appState.currentDrillData == 'distribution') {
-                refreshData();
-            }
-        }
-        const refreshDataHandler = () => {
-            if (appState.distStates.page == 'ward_summary') refreshData();
-        }
-        const goToDPSummaryPage = (data) => {
-            appState.distStates.page = data && data.page;
-            appState.distStates.wardId = data && data.wardId;
-            appState.distStates.wardName = data && data.wardName;
-            appState.currentDrillData = 'distribution';
-            bus.emit('g-event-goto-page', data);
-        }
-        const sortedByWard = computed(() => [].concat(tableData.value).sort((a, b) => a.ward.localeCompare(b.ward)));
+  setup() {
+    const tableData = ref([]);
+    const refreshData = () => {
+      overlay.show();
+      Promise.all([
+        fetchData("1182", "&lgaId=" + appState.distStates.lgaId, (data) => {
+          tableData.value = data;
+        }),
+      ]).finally(() => {
+        overlay.hide();
+      });
+    };
+    const gotoPageHandler = () => {
+      if (
+        appState.distStates.page == "ward_summary" &&
+        appState.currentDrillData == "distribution"
+      ) {
+        refreshData();
+      }
+    };
+    const refreshDataHandler = () => {
+      if (appState.distStates.page == "ward_summary") refreshData();
+    };
+    const goToDPSummaryPage = (data) => {
+      appState.distStates.page = data && data.page;
+      appState.distStates.wardId = data && data.wardId;
+      appState.distStates.wardName = data && data.wardName;
+      appState.currentDrillData = "distribution";
+      bus.emit("g-event-goto-page", data);
+    };
+    const sortedByWard = computed(() =>
+      [].concat(tableData.value).sort((a, b) => a.ward.localeCompare(b.ward)),
+    );
 
-        onMounted(() => {
-            bus.on('g-event-goto-page', gotoPageHandler);
-            bus.on('g-event-refresh-page', refreshDataHandler);
-        });
-        onBeforeUnmount(() => {
-            bus.off('g-event-goto-page', gotoPageHandler);
-            bus.off('g-event-refresh-page', refreshDataHandler);
-        });
+    onMounted(() => {
+      bus.on("g-event-goto-page", gotoPageHandler);
+      bus.on("g-event-refresh-page", refreshDataHandler);
+    });
+    onBeforeUnmount(() => {
+      bus.off("g-event-goto-page", gotoPageHandler);
+      bus.off("g-event-refresh-page", refreshDataHandler);
+    });
 
-        return Object.assign({ tableData, sortedByWard, goToDPSummaryPage }, sharedExports());
-    },
-    template: `
+    return Object.assign(
+      { tableData, sortedByWard, goToDPSummaryPage },
+      sharedExports(),
+    );
+  },
+  template: `
         <div class="content-header row" id="basic-table" v-cloak>
             <div class="col-12 mb-1">
                 <div class="card" style="height: 350px !important;">
@@ -635,33 +741,40 @@ const EolinWardDistTopSummary = {
 };
 
 const EolinDpDistTopSummary = {
-    setup() {
-        const tableData = ref([]);
-        const refreshData = () => {
-            overlay.show();
-            Promise.all([
-                fetchData('1183', '&wardId=' + appState.distStates.wardId, data => { tableData.value = data; }),
-            ]).finally(() => { overlay.hide(); });
-        }
-        const gotoPageHandler = () => {
-            if (appState.distStates.page == 'dp_summary' && appState.currentDrillData == 'distribution') {
-                refreshData();
-            }
-        }
-        const refreshDataHandler = () => {
-            if (appState.distStates.page == 'dp_summary') refreshData();
-        }
-        onMounted(() => {
-            bus.on('g-event-goto-page', gotoPageHandler);
-            bus.on('g-event-refresh-page', refreshDataHandler);
-        });
-        onBeforeUnmount(() => {
-            bus.off('g-event-goto-page', gotoPageHandler);
-            bus.off('g-event-refresh-page', refreshDataHandler);
-        });
-        return Object.assign({ tableData }, sharedExports());
-    },
-    template: `
+  setup() {
+    const tableData = ref([]);
+    const refreshData = () => {
+      overlay.show();
+      Promise.all([
+        fetchData("1183", "&wardId=" + appState.distStates.wardId, (data) => {
+          tableData.value = data;
+        }),
+      ]).finally(() => {
+        overlay.hide();
+      });
+    };
+    const gotoPageHandler = () => {
+      if (
+        appState.distStates.page == "dp_summary" &&
+        appState.currentDrillData == "distribution"
+      ) {
+        refreshData();
+      }
+    };
+    const refreshDataHandler = () => {
+      if (appState.distStates.page == "dp_summary") refreshData();
+    };
+    onMounted(() => {
+      bus.on("g-event-goto-page", gotoPageHandler);
+      bus.on("g-event-refresh-page", refreshDataHandler);
+    });
+    onBeforeUnmount(() => {
+      bus.off("g-event-goto-page", gotoPageHandler);
+      bus.off("g-event-refresh-page", refreshDataHandler);
+    });
+    return Object.assign({ tableData }, sharedExports());
+  },
+  template: `
         <div class="content-header row" v-cloak>
             <div class="col-12 mb-1">
                 <div class="card" style="height: 350px !important;">
@@ -689,13 +802,13 @@ const EolinDpDistTopSummary = {
 };
 
 useApp({ template: `<div><page-body/></div>` })
-    .component('page-body', PageBody)
-    .component('eolin_mob_all_stat_component', EolinMobAllStat)
-    .component('eolin_lga_mob_top_summary_component', EolinLgaMobTopSummary)
-    .component('eolin_ward_mob_top_summary_component', EolinWardMobTopSummary)
-    .component('eolin_dp_mob_top_summary_component', EolinDpMobTopSummary)
-    .component('eolin_dist_all_stat_component', EolinDistAllStat)
-    .component('eolin_lga_dist_top_summary_component', EolinLgaDistTopSummary)
-    .component('eolin_ward_dist_top_summary_component', EolinWardDistTopSummary)
-    .component('eolin_dp_dist_top_summary_component', EolinDpDistTopSummary)
-    .mount('#app');
+  .component("page-body", PageBody)
+  .component("eolin_mob_all_stat_component", EolinMobAllStat)
+  .component("eolin_lga_mob_top_summary_component", EolinLgaMobTopSummary)
+  .component("eolin_ward_mob_top_summary_component", EolinWardMobTopSummary)
+  .component("eolin_dp_mob_top_summary_component", EolinDpMobTopSummary)
+  .component("eolin_dist_all_stat_component", EolinDistAllStat)
+  .component("eolin_lga_dist_top_summary_component", EolinLgaDistTopSummary)
+  .component("eolin_ward_dist_top_summary_component", EolinWardDistTopSummary)
+  .component("eolin_dp_dist_top_summary_component", EolinDpDistTopSummary)
+  .mount("#app");

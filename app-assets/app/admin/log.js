@@ -8,11 +8,11 @@ const { useApp, useFormat, safeMessage } = window.utils;
 
 /* ------------------------------------------------------------------ */
 const PageBody = {
-    setup() {
-        const page = ref('home');
-        return { page };
-    },
-    template: `
+  setup() {
+    const page = ref("home");
+    return { page };
+  },
+  template: `
         <div>
             <div class="content-body">
                 <sample_table/>
@@ -23,185 +23,244 @@ const PageBody = {
 
 /* ------------------------------------------------------------------ */
 const SampleTable = {
-    setup() {
-        const fmtUtils = useFormat();
+  setup() {
+    const fmtUtils = useFormat();
 
-        const tableData = ref([]);
-        const checkToggle = ref(false);
-        const filterState = ref(false);
-        const filters = ref(false);
-        const userGroup = ref([]);
+    const tableData = ref([]);
+    const checkToggle = ref(false);
+    const filterState = ref(false);
+    const filters = ref(false);
+    const userGroup = ref([]);
 
-        const tableOptions = reactive({
-            total: 1,
-            pageLength: 1,
-            perPage: 10,
-            currentPage: 1,
-            orderDir: 'desc',
-            orderField: 0,
-            limitStart: 0,
-            isNext: false,
-            isPrev: false,
-            aLength: [10, 20, 50, 100],
-            filterParam: {
-                userid: '',
-                loginid: '',
-                platform: '',
-                module: '',
-                result: '',
-            },
+    const tableOptions = reactive({
+      total: 1,
+      pageLength: 1,
+      perPage: 10,
+      currentPage: 1,
+      orderDir: "desc",
+      orderField: 0,
+      limitStart: 0,
+      isNext: false,
+      isPrev: false,
+      aLength: [10, 20, 50, 100],
+      filterParam: {
+        userid: "",
+        loginid: "",
+        platform: "",
+        module: "",
+        result: "",
+      },
+    });
+
+    const loadTableData = () => {
+      overlay.show();
+      var url = common.TableService;
+      axios
+        .get(
+          url +
+            "?qid=501&draw=" +
+            tableOptions.currentPage +
+            "&order_column=" +
+            tableOptions.orderField +
+            "&length=" +
+            tableOptions.perPage +
+            "&start=" +
+            tableOptions.limitStart +
+            "&order_dir=" +
+            tableOptions.orderDir +
+            "&uid=" +
+            tableOptions.filterParam.userid +
+            "&lid=" +
+            tableOptions.filterParam.loginid +
+            "&pla=" +
+            tableOptions.filterParam.platform +
+            "&mod=" +
+            tableOptions.filterParam.module +
+            "&res=" +
+            tableOptions.filterParam.result,
+        )
+        .then((response) => {
+          var d = response && response.data;
+          tableData.value = Array.isArray(d && d.data) ? d.data : [];
+          tableOptions.total = (d && d.recordsTotal) || 0;
+          if (tableOptions.currentPage == 1) paginationDefault();
+          overlay.hide();
+        })
+        .catch((error) => {
+          overlay.hide();
+          alert.Error("ERROR", safeMessage(error));
         });
+    };
 
-        const loadTableData = () => {
-            overlay.show();
-            var url = common.TableService;
-            axios
-                .get(
-                    url +
-                        '?qid=501&draw=' + tableOptions.currentPage +
-                        '&order_column=' + tableOptions.orderField +
-                        '&length=' + tableOptions.perPage +
-                        '&start=' + tableOptions.limitStart +
-                        '&order_dir=' + tableOptions.orderDir +
-                        '&uid=' + tableOptions.filterParam.userid +
-                        '&lid=' + tableOptions.filterParam.loginid +
-                        '&pla=' + tableOptions.filterParam.platform +
-                        '&mod=' + tableOptions.filterParam.module +
-                        '&res=' + tableOptions.filterParam.result
-                )
-                .then(response => {
-                    var d = response && response.data;
-                    tableData.value = Array.isArray(d && d.data) ? d.data : [];
-                    tableOptions.total = (d && d.recordsTotal) || 0;
-                    if (tableOptions.currentPage == 1) paginationDefault();
-                    overlay.hide();
-                })
-                .catch(error => {
-                    overlay.hide();
-                    alert.Error('ERROR', safeMessage(error));
-                });
-        }
+    const selectAll = () => {
+      for (var i = 0; i < tableData.value.length; i++)
+        tableData.value[i].pick = true;
+    };
+    const uncheckAll = () => {
+      for (var i = 0; i < tableData.value.length; i++)
+        tableData.value[i].pick = false;
+    };
+    const selectToggle = () => {
+      if (checkToggle.value === false) {
+        selectAll();
+        checkToggle.value = true;
+      } else {
+        uncheckAll();
+        checkToggle.value = false;
+      }
+    };
+    const checkedBg = (pickOne) => {
+      return pickOne != "" ? "bg-select" : "";
+    };
 
-        const selectAll = () => {
-            for (var i = 0; i < tableData.value.length; i++) tableData.value[i].pick = true;
-        }
-        const uncheckAll = () => {
-            for (var i = 0; i < tableData.value.length; i++) tableData.value[i].pick = false;
-        }
-        const selectToggle = () => {
-            if (checkToggle.value === false) { selectAll(); checkToggle.value = true; }
-            else                              { uncheckAll(); checkToggle.value = false; }
-        }
-        const checkedBg = (pickOne) => { return pickOne != '' ? 'bg-select' : ''; };
+    const toggleFilter = () => {
+      if (filterState.value === false) filters.value = false;
+      return (filterState.value = !filterState.value);
+    };
 
-        const toggleFilter = () => {
-            if (filterState.value === false) filters.value = false;
-            return (filterState.value = !filterState.value);
-        }
+    const selectedItems = () => {
+      return tableData.value.filter((r) => r.pick);
+    };
+    const selectedID = () => {
+      return tableData.value.filter((r) => r.pick).map((r) => r.userid);
+    };
 
-        const selectedItems = () => {
-            return tableData.value.filter(r => r.pick);
-        }
-        const selectedID = () => {
-            return tableData.value.filter(r => r.pick).map(r => r.userid);
-        }
+    const paginationDefault = () => {
+      tableOptions.pageLength = Math.ceil(
+        tableOptions.total / tableOptions.perPage,
+      );
+      tableOptions.limitStart = Math.ceil(
+        (tableOptions.currentPage - 1) * tableOptions.perPage,
+      );
+      tableOptions.isNext = tableOptions.currentPage < tableOptions.pageLength;
+      tableOptions.isPrev = tableOptions.currentPage > 1;
+    };
 
-        const paginationDefault = () => {
-            tableOptions.pageLength = Math.ceil(tableOptions.total / tableOptions.perPage);
-            tableOptions.limitStart = Math.ceil((tableOptions.currentPage - 1) * tableOptions.perPage);
-            tableOptions.isNext = tableOptions.currentPage < tableOptions.pageLength;
-            tableOptions.isPrev = tableOptions.currentPage > 1;
-        }
+    const nextPage = () => {
+      tableOptions.currentPage += 1;
+      paginationDefault();
+      loadTableData();
+    };
+    const prevPage = () => {
+      tableOptions.currentPage -= 1;
+      paginationDefault();
+      loadTableData();
+    };
+    const currentPage = () => {
+      paginationDefault();
+      if (tableOptions.currentPage < 1)
+        alert.Error("ERROR", "The Page requested doesn't exist");
+      else if (tableOptions.currentPage > tableOptions.pageLength)
+        alert.Error("ERROR", "The Page requested doesn't exist");
+      else loadTableData();
+    };
+    const changePerPage = (val) => {
+      var maxPerPage = Math.ceil(tableOptions.total / val);
+      if (maxPerPage < tableOptions.currentPage)
+        tableOptions.currentPage = maxPerPage;
+      tableOptions.perPage = val;
+      paginationDefault();
+      loadTableData();
+    };
+    const sort = (col) => {
+      if (tableOptions.orderField === col) {
+        tableOptions.orderDir =
+          tableOptions.orderDir === "asc" ? "desc" : "asc";
+      } else {
+        tableOptions.orderField = col;
+      }
+      paginationDefault();
+      loadTableData();
+    };
 
-        const nextPage = () => { tableOptions.currentPage += 1; paginationDefault(); loadTableData(); };
-        const prevPage = () => { tableOptions.currentPage -= 1; paginationDefault(); loadTableData(); };
-        const currentPage = () => {
-            paginationDefault();
-            if (tableOptions.currentPage < 1)                            alert.Error('ERROR', "The Page requested doesn't exist");
-            else if (tableOptions.currentPage > tableOptions.pageLength) alert.Error('ERROR', "The Page requested doesn't exist");
-            else                                                         loadTableData();
-        }
-        const changePerPage = (val) => {
-            var maxPerPage = Math.ceil(tableOptions.total / val);
-            if (maxPerPage < tableOptions.currentPage) tableOptions.currentPage = maxPerPage;
-            tableOptions.perPage = val;
-            paginationDefault();
-            loadTableData();
-        }
-        const sort = (col) => {
-            if (tableOptions.orderField === col) {
-                tableOptions.orderDir = tableOptions.orderDir === 'asc' ? 'desc' : 'asc';
-            } else {
-                tableOptions.orderField = col;
-            }
-            paginationDefault();
-            loadTableData();
-        }
+    const applyFilter = () => {
+      var checkFill = 0;
+      checkFill += tableOptions.filterParam.loginid != "" ? 1 : 0;
+      checkFill += tableOptions.filterParam.userid != "" ? 1 : 0;
+      checkFill += tableOptions.filterParam.platform != "" ? 1 : 0;
+      checkFill += tableOptions.filterParam.module != "" ? 1 : 0;
+      checkFill += tableOptions.filterParam.result != "" ? 1 : 0;
+      if (checkFill > 0) {
+        toggleFilter();
+        filters.value = true;
+        paginationDefault();
+        loadTableData();
+      } else {
+        alert.Error("ERROR", "Invalid required data");
+      }
+    };
+    const removeSingleFilter = (column_name) => {
+      tableOptions.filterParam[column_name] = "";
+      var g = 0;
+      for (var k in tableOptions.filterParam) {
+        if (tableOptions.filterParam[k] != "") g++;
+      }
+      if (g == 0) filters.value = false;
+      paginationDefault();
+      loadTableData();
+    };
+    const clearAllFilter = () => {
+      filters.value = false;
+      tableOptions.filterParam.loginid = "";
+      tableOptions.filterParam.userid = "";
+      tableOptions.filterParam.platform = "";
+      tableOptions.filterParam.module = "";
+      tableOptions.filterParam.result = "";
+      paginationDefault();
+      loadTableData();
+    };
+    const refreshData = () => {
+      paginationDefault();
+      loadTableData();
+    };
 
-        const applyFilter = () => {
-            var checkFill = 0;
-            checkFill += tableOptions.filterParam.loginid  != '' ? 1 : 0;
-            checkFill += tableOptions.filterParam.userid   != '' ? 1 : 0;
-            checkFill += tableOptions.filterParam.platform != '' ? 1 : 0;
-            checkFill += tableOptions.filterParam.module   != '' ? 1 : 0;
-            checkFill += tableOptions.filterParam.result   != '' ? 1 : 0;
-            if (checkFill > 0) {
-                toggleFilter();
-                filters.value = true;
-                paginationDefault();
-                loadTableData();
-            } else {
-                alert.Error('ERROR', 'Invalid required data');
-            }
-        }
-        const removeSingleFilter = (column_name) => {
-            tableOptions.filterParam[column_name] = '';
-            var g = 0;
-            for (var k in tableOptions.filterParam) {
-                if (tableOptions.filterParam[k] != '') g++;
-            }
-            if (g == 0) filters.value = false;
-            paginationDefault();
-            loadTableData();
-        }
-        const clearAllFilter = () => {
-            filters.value = false;
-            tableOptions.filterParam.loginid = '';
-            tableOptions.filterParam.userid = '';
-            tableOptions.filterParam.platform = '';
-            tableOptions.filterParam.module = '';
-            tableOptions.filterParam.result = '';
-            paginationDefault();
-            loadTableData();
-        }
-        const refreshData = () => { paginationDefault(); loadTableData(); };
+    // Pre-existing v2 template references @focus="loadAuto()" on the
+    // module input — the v2 component never defined loadAuto. Stub it
+    // as a no-op so Vue 3 doesn't warn on focus.
+    const loadAuto = () => {
+      /* no-op (pre-existing v2 binding without implementation) */
+    };
 
-        // Pre-existing v2 template references @focus="loadAuto()" on the
-        // module input — the v2 component never defined loadAuto. Stub it
-        // as a no-op so Vue 3 doesn't warn on focus.
-        const loadAuto = () => { /* no-op (pre-existing v2 binding without implementation) */ };
+    onMounted(() => {
+      loadTableData();
+    });
 
-        onMounted(() => {
-            loadTableData();
-        });
-
-        return {
-            // state
-            tableData, checkToggle, filterState, filters, userGroup, tableOptions,
-            // methods
-            loadTableData, selectAll, uncheckAll, selectToggle, checkedBg,
-            toggleFilter, selectedItems, selectedID,
-            nextPage, prevPage, currentPage, paginationDefault, changePerPage,
-            sort, applyFilter, removeSingleFilter, clearAllFilter, refreshData,
-            loadAuto,
-            // utility methods
-            capitalize: fmtUtils.capitalize,
-            formatNumber: fmtUtils.formatNumber,
-            displayDate: fmtUtils.displayDate,
-            fmt: fmtUtils.fmt,
-        };
-    },
-    template: `
+    return {
+      // state
+      tableData,
+      checkToggle,
+      filterState,
+      filters,
+      userGroup,
+      tableOptions,
+      // methods
+      loadTableData,
+      selectAll,
+      uncheckAll,
+      selectToggle,
+      checkedBg,
+      toggleFilter,
+      selectedItems,
+      selectedID,
+      nextPage,
+      prevPage,
+      currentPage,
+      paginationDefault,
+      changePerPage,
+      sort,
+      applyFilter,
+      removeSingleFilter,
+      clearAllFilter,
+      refreshData,
+      loadAuto,
+      // utility methods
+      capitalize: fmtUtils.capitalize,
+      formatNumber: fmtUtils.formatNumber,
+      displayDate: fmtUtils.displayDate,
+      fmt: fmtUtils.fmt,
+    };
+  },
+  template: `
         <div class="row" id="basic-table">
 
             <div class="col-md-8 col-sm-12 col-12 mb-0">
@@ -393,6 +452,6 @@ const SampleTable = {
 };
 
 useApp({ template: `<div><page-body/></div>` })
-    .component('page-body', PageBody)
-    .component('sample_table', SampleTable)
-    .mount('#app');
+  .component("page-body", PageBody)
+  .component("sample_table", SampleTable)
+  .mount("#app");

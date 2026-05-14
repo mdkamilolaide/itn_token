@@ -12,14 +12,20 @@ const { ref, reactive, nextTick, onMounted, onBeforeUnmount, onUpdated } = Vue;
 const { useApp, useFormat, bus, safeMessage } = window.utils;
 
 const PageBody = {
-    setup() {
-        const page = ref('list');
-        const gotoPageHandler = (data) => { page.value = data && data.page; };
-        onMounted(() => { bus.on('g-event-goto-page', gotoPageHandler); });
-        onBeforeUnmount(() => { bus.off('g-event-goto-page', gotoPageHandler); });
-        return { page };
-    },
-    template: `
+  setup() {
+    const page = ref("list");
+    const gotoPageHandler = (data) => {
+      page.value = data && data.page;
+    };
+    onMounted(() => {
+      bus.on("g-event-goto-page", gotoPageHandler);
+    });
+    onBeforeUnmount(() => {
+      bus.off("g-event-goto-page", gotoPageHandler);
+    });
+    return { page };
+  },
+  template: `
         <div>
             <div class="content-body">
                 <div v-show="page == 'list'"><icc_list/></div>
@@ -29,331 +35,483 @@ const PageBody = {
 };
 
 const IccList = {
-    setup() {
-        const fmtUtils = useFormat();
+  setup() {
+    const fmtUtils = useFormat();
 
-        const url = ref(window.common && window.common.DataService);
-        const permission = ref(
-            (typeof getPermission === 'function')
-                ? (getPermission(typeof per !== 'undefined' ? per : null, 'smc') || { permission_value: 0 })
-                : { permission_value: 0 }
+    const url = ref(window.common && window.common.DataService);
+    const permission = ref(
+      typeof getPermission === "function"
+        ? getPermission(typeof per !== "undefined" ? per : null, "smc") || {
+            permission_value: 0,
+          }
+        : { permission_value: 0 },
+    );
+    const tableData = ref([]);
+    const selectedICCDetails = ref({});
+    const iccIssuedReconcileDetails = ref([]);
+    const geoData = ref([]);
+    const periodData = ref([]);
+    const checkIfFilterOn = ref(false);
+    const filterState = ref(false);
+    const filters = ref(false);
+    const tableOptions = reactive({
+      total: 1,
+      pageLength: 1,
+      perPage: 10,
+      currentPage: 1,
+      orderDir: "desc",
+      orderField: 0,
+      limitStart: 0,
+      isNext: false,
+      isPrev: false,
+      aLength: [10, 20, 50, 100, 150, 200],
+      filterParam: {
+        periodid: [],
+        globalPeriod: "",
+        visitTitle: "",
+        geo_level: "",
+        geo_level_id: "",
+        geo_string: "",
+      },
+    });
+
+    const joinWithCommaAnd = (array, status) => {
+      if (!array || array.length === 0) return "";
+      if (array.length === 1) return array[0];
+      var copy = array.slice();
+      var lastElement = copy.pop();
+      return status
+        ? copy.join(",") + "," + lastElement
+        : copy.join(", ") + " and " + lastElement;
+    };
+
+    const setStickyOffsets = () => {
+      var table = document.getElementById("fixed-table");
+      if (!table) return;
+      var th1 = table.querySelector("th.col-1");
+      var th2 = table.querySelector("th.col-2");
+      var col1Width = (th1 && th1.offsetWidth) || 0;
+      var col2Width = (th2 && th2.offsetWidth) || 0;
+      var col2Left = col1Width;
+      var col3Left = col1Width + col2Width;
+      table.querySelectorAll(".col-2").forEach((el) => {
+        el.style.left = col2Left + "px";
+      });
+      table.querySelectorAll(".col-3").forEach((el) => {
+        el.style.left = col3Left + "px";
+      });
+    };
+
+    const loadTableData = async () => {
+      overlay.show();
+      var fp = tableOptions.filterParam;
+      fp.globalPeriod = joinWithCommaAnd(fp.periodid, true);
+      var endpoint =
+        common.TableService +
+        "?qid=706&draw=" +
+        tableOptions.currentPage +
+        "&order_column=" +
+        tableOptions.orderField +
+        "&length=" +
+        tableOptions.perPage +
+        "&start=" +
+        tableOptions.limitStart +
+        "&order_dir=" +
+        tableOptions.orderDir +
+        "&pid=" +
+        fp.globalPeriod +
+        "&gid=" +
+        fp.geo_level_id +
+        "&glv=" +
+        fp.geo_level;
+      try {
+        var response = await axios.get(endpoint);
+        var d = response && response.data;
+        tableData.value = Array.isArray(d && d.data) ? d.data : [];
+        tableOptions.total = (d && d.recordsTotal) || 0;
+        if (tableOptions.currentPage === 1) paginationDefault();
+      } catch (error) {
+        alert.Error("ERROR", safeMessage(error));
+      } finally {
+        overlay.hide();
+      }
+    };
+    const toggleFilter = () => {
+      if (!filterState.value && !checkIfFilterOn.value) filters.value = false;
+      return (filterState.value = !filterState.value);
+    };
+    const paginationDefault = () => {
+      tableOptions.pageLength = Math.ceil(
+        tableOptions.total / tableOptions.perPage,
+      );
+      tableOptions.limitStart = Math.ceil(
+        (tableOptions.currentPage - 1) * tableOptions.perPage,
+      );
+      tableOptions.isNext = tableOptions.currentPage < tableOptions.pageLength;
+      tableOptions.isPrev = tableOptions.currentPage > 1;
+    };
+    const nextPage = () => {
+      tableOptions.currentPage += 1;
+      paginationDefault();
+      loadTableData();
+    };
+    const prevPage = () => {
+      tableOptions.currentPage -= 1;
+      paginationDefault();
+      loadTableData();
+    };
+    const currentPage = () => {
+      paginationDefault();
+      if (tableOptions.currentPage < 1)
+        alert.Error("ERROR", "The Page requested doesn't exist");
+      else if (tableOptions.currentPage > tableOptions.pageLength)
+        alert.Error("ERROR", "The Page requested doesn't exist");
+      else loadTableData();
+    };
+    const changePerPage = (val) => {
+      var maxPerPage = Math.ceil(tableOptions.total / val);
+      if (maxPerPage < tableOptions.currentPage)
+        tableOptions.currentPage = maxPerPage;
+      tableOptions.perPage = val;
+      paginationDefault();
+      loadTableData();
+    };
+    const sort = (col) => {
+      if (tableOptions.orderField === col)
+        tableOptions.orderDir =
+          tableOptions.orderDir === "asc" ? "desc" : "asc";
+      else tableOptions.orderField = col;
+      paginationDefault();
+      loadTableData();
+    };
+    const applyFilter = () => {
+      var checkFill = 0;
+      if (tableOptions.filterParam.geo_level != "") checkFill++;
+      if (tableOptions.filterParam.geo_level_id != "") checkFill++;
+      if ((tableOptions.filterParam.periodid || []).length > 0) checkFill++;
+      if (checkFill > 0) {
+        toggleFilter();
+        filters.value = checkIfFilterOn.value = true;
+        paginationDefault();
+        loadTableData();
+      } else {
+        alert.Error("ERROR", "Invalid required data");
+      }
+    };
+    const removeSingleFilter = (column_name) => {
+      var fp = tableOptions.filterParam;
+      if (Array.isArray(fp[column_name])) fp[column_name] = [];
+      else fp[column_name] = "";
+      if (
+        ["geo_level", "geo_level_id", "geo_string"].indexOf(column_name) !== -1
+      ) {
+        fp.geo_level = "";
+        fp.geo_level_id = "";
+        try {
+          $(".select2").val("").trigger("change");
+        } catch (e) {}
+      }
+      if (column_name === "visitTitle") {
+        fp.periodid = [];
+        fp.visitTitle = "";
+        fp.globalPeriod = "";
+        try {
+          $(".period").val("").trigger("change");
+        } catch (e) {}
+      }
+      var hasActive = Object.values(fp).some((v) =>
+        Array.isArray(v) ? v.length > 0 : v !== "",
+      );
+      filters.value = checkIfFilterOn.value = hasActive;
+      paginationDefault();
+      loadTableData();
+    };
+    const clearAllFilter = () => {
+      filters.value = false;
+      Object.assign(tableOptions.filterParam, {
+        geo_level: "",
+        geo_level_id: "",
+        geo_string: "",
+        periodid: [],
+        visitTitle: "",
+        globalPeriod: "",
+      });
+      try {
+        $(".select2").val("").trigger("change");
+      } catch (e) {}
+      try {
+        $(".period").val("").trigger("change");
+      } catch (e) {}
+      paginationDefault();
+      loadTableData();
+    };
+    const checkAndHideFilter = (name) => {
+      return (
+        ["periodid", "geo_level_id", "geo_level", "globalPeriod"].indexOf(
+          name,
+        ) === -1
+      );
+    };
+    const GetIccFlowDetailByCdd = async (cddid, id) => {
+      overlay.show();
+      selectedICCDetails.value = tableData.value[id] || {};
+      var periodIds = tableOptions.filterParam.globalPeriod;
+      try {
+        var response = await axios.get(
+          url.value + "?qid=1127&cddid=" + cddid + "&pid=" + periodIds,
         );
-        const tableData = ref([]);
-        const selectedICCDetails = ref({});
-        const iccIssuedReconcileDetails = ref([]);
-        const geoData = ref([]);
-        const periodData = ref([]);
-        const checkIfFilterOn = ref(false);
-        const filterState = ref(false);
-        const filters = ref(false);
-        const tableOptions = reactive({
-            total: 1, pageLength: 1, perPage: 10, currentPage: 1,
-            orderDir: 'desc', orderField: 0, limitStart: 0,
-            isNext: false, isPrev: false,
-            aLength: [10, 20, 50, 100, 150, 200],
-            filterParam: {
-                periodid: [], globalPeriod: '', visitTitle: '',
-                geo_level: '', geo_level_id: '', geo_string: '',
-            },
+        if (response.data.result_code == 200) {
+          $("#iccDetailsModal").modal("show");
+          iccIssuedReconcileDetails.value = response.data.data || [];
+        } else {
+          iccIssuedReconcileDetails.value = [];
+          alert.Error("ERROR", response.data.message);
+        }
+      } catch (error) {
+        alert.Error("ERROR", safeMessage(error));
+      } finally {
+        overlay.hide();
+      }
+    };
+    const hideGetIccFlowDetailByCdd = () => {
+      overlay.show();
+      selectedICCDetails.value = {};
+      $("#iccDetailsModal").modal("hide");
+      iccIssuedReconcileDetails.value = [];
+      overlay.hide();
+    };
+    const checkIfEmpty = (data) => {
+      return data === null || data === "" ? "Nil" : data;
+    };
+    const refreshData = () => {
+      paginationDefault();
+      loadTableData();
+    };
+    const getGeoLocation = () => {
+      overlay.show();
+      axios
+        .get(common.DataService + "?qid=gen009")
+        .then((response) => {
+          geoData.value = (response.data && response.data.data) || [];
+          overlay.hide();
+        })
+        .catch((error) => {
+          overlay.hide();
+          alert.Error("ERROR", safeMessage(error));
         });
-
-        const joinWithCommaAnd = (array, status) => {
-            if (!array || array.length === 0) return '';
-            if (array.length === 1) return array[0];
-            var copy = array.slice();
-            var lastElement = copy.pop();
-            return status ? copy.join(',') + ',' + lastElement : copy.join(', ') + ' and ' + lastElement;
-        }
-
-        const setStickyOffsets = () => {
-            var table = document.getElementById('fixed-table');
-            if (!table) return;
-            var th1 = table.querySelector('th.col-1');
-            var th2 = table.querySelector('th.col-2');
-            var col1Width = (th1 && th1.offsetWidth) || 0;
-            var col2Width = (th2 && th2.offsetWidth) || 0;
-            var col2Left = col1Width;
-            var col3Left = col1Width + col2Width;
-            table.querySelectorAll('.col-2').forEach(el => { el.style.left = col2Left + 'px'; });
-            table.querySelectorAll('.col-3').forEach(el => { el.style.left = col3Left + 'px'; });
-        }
-
-        const loadTableData = async () => {
-            overlay.show();
-            var fp = tableOptions.filterParam;
-            fp.globalPeriod = joinWithCommaAnd(fp.periodid, true);
-            var endpoint = common.TableService +
-                '?qid=706&draw=' + tableOptions.currentPage +
-                '&order_column=' + tableOptions.orderField +
-                '&length=' + tableOptions.perPage +
-                '&start=' + tableOptions.limitStart +
-                '&order_dir=' + tableOptions.orderDir +
-                '&pid=' + fp.globalPeriod + '&gid=' + fp.geo_level_id + '&glv=' + fp.geo_level;
-            try {
-                var response = await axios.get(endpoint);
-                var d = response && response.data;
-                tableData.value = Array.isArray(d && d.data) ? d.data : [];
-                tableOptions.total = (d && d.recordsTotal) || 0;
-                if (tableOptions.currentPage === 1) paginationDefault();
-            } catch (error) {
-                alert.Error('ERROR', safeMessage(error));
-            } finally {
-                overlay.hide();
-            }
-        }
-        const toggleFilter = () => {
-            if (!filterState.value && !checkIfFilterOn.value) filters.value = false;
-            return (filterState.value = !filterState.value);
-        }
-        const paginationDefault = () => {
-            tableOptions.pageLength = Math.ceil(tableOptions.total / tableOptions.perPage);
-            tableOptions.limitStart = Math.ceil((tableOptions.currentPage - 1) * tableOptions.perPage);
-            tableOptions.isNext = tableOptions.currentPage < tableOptions.pageLength;
-            tableOptions.isPrev = tableOptions.currentPage > 1;
-        }
-        const nextPage = () => { tableOptions.currentPage += 1; paginationDefault(); loadTableData(); };
-        const prevPage = () => { tableOptions.currentPage -= 1; paginationDefault(); loadTableData(); };
-        const currentPage = () => {
-            paginationDefault();
-            if (tableOptions.currentPage < 1)                            alert.Error('ERROR', "The Page requested doesn't exist");
-            else if (tableOptions.currentPage > tableOptions.pageLength) alert.Error('ERROR', "The Page requested doesn't exist");
-            else                                                         loadTableData();
-        }
-        const changePerPage = (val) => {
-            var maxPerPage = Math.ceil(tableOptions.total / val);
-            if (maxPerPage < tableOptions.currentPage) tableOptions.currentPage = maxPerPage;
-            tableOptions.perPage = val;
-            paginationDefault();
-            loadTableData();
-        }
-        const sort = (col) => {
-            if (tableOptions.orderField === col) tableOptions.orderDir = tableOptions.orderDir === 'asc' ? 'desc' : 'asc';
-            else                                  tableOptions.orderField = col;
-            paginationDefault();
-            loadTableData();
-        }
-        const applyFilter = () => {
-            var checkFill = 0;
-            if (tableOptions.filterParam.geo_level != '') checkFill++;
-            if (tableOptions.filterParam.geo_level_id != '') checkFill++;
-            if ((tableOptions.filterParam.periodid || []).length > 0) checkFill++;
-            if (checkFill > 0) {
-                toggleFilter();
-                filters.value = checkIfFilterOn.value = true;
-                paginationDefault();
-                loadTableData();
-            } else {
-                alert.Error('ERROR', 'Invalid required data');
-            }
-        }
-        const removeSingleFilter = (column_name) => {
-            var fp = tableOptions.filterParam;
-            if (Array.isArray(fp[column_name])) fp[column_name] = [];
-            else fp[column_name] = '';
-            if (['geo_level', 'geo_level_id', 'geo_string'].indexOf(column_name) !== -1) {
-                fp.geo_level = '';
-                fp.geo_level_id = '';
-                try { $('.select2').val('').trigger('change'); } catch (e) {}
-            }
-            if (column_name === 'visitTitle') {
-                fp.periodid = [];
-                fp.visitTitle = '';
-                fp.globalPeriod = '';
-                try { $('.period').val('').trigger('change'); } catch (e) {}
-            }
-            var hasActive = Object.values(fp).some(v => Array.isArray(v) ? v.length > 0 : v !== '');
-            filters.value = checkIfFilterOn.value = hasActive;
-            paginationDefault();
-            loadTableData();
-        }
-        const clearAllFilter = () => {
-            filters.value = false;
-            Object.assign(tableOptions.filterParam, {
-                geo_level: '', geo_level_id: '', geo_string: '',
-                periodid: [], visitTitle: '', globalPeriod: '',
-            });
-            try { $('.select2').val('').trigger('change'); } catch (e) {}
-            try { $('.period').val('').trigger('change'); } catch (e) {}
-            paginationDefault();
-            loadTableData();
-        }
-        const checkAndHideFilter = (name) => {
-            return ['periodid', 'geo_level_id', 'geo_level', 'globalPeriod'].indexOf(name) === -1;
-        }
-        const GetIccFlowDetailByCdd = async (cddid, id) => {
-            overlay.show();
-            selectedICCDetails.value = tableData.value[id] || {};
-            var periodIds = tableOptions.filterParam.globalPeriod;
-            try {
-                var response = await axios.get(url.value + '?qid=1127&cddid=' + cddid + '&pid=' + periodIds);
-                if (response.data.result_code == 200) {
-                    $('#iccDetailsModal').modal('show');
-                    iccIssuedReconcileDetails.value = response.data.data || [];
-                } else {
-                    iccIssuedReconcileDetails.value = [];
-                    alert.Error('ERROR', response.data.message);
-                }
-            } catch (error) {
-                alert.Error('ERROR', safeMessage(error));
-            } finally {
-                overlay.hide();
-            }
-        }
-        const hideGetIccFlowDetailByCdd = () => {
-            overlay.show();
-            selectedICCDetails.value = {};
-            $('#iccDetailsModal').modal('hide');
-            iccIssuedReconcileDetails.value = [];
-            overlay.hide();
-        }
-        const checkIfEmpty = (data) => { return data === null || data === '' ? 'Nil' : data; };
-        const refreshData = () => { paginationDefault(); loadTableData(); };
-        const getGeoLocation = () => {
-            overlay.show();
-            axios.get(common.DataService + '?qid=gen009')
-                .then(response => {
-                    geoData.value = (response.data && response.data.data) || [];
-                    overlay.hide();
-                })
-                .catch(error => {
-                    overlay.hide();
-                    alert.Error('ERROR', safeMessage(error));
-                });
-        }
-        const getAllPeriodLists = () => {
-            overlay.show();
-            axios.get(common.DataService + '?qid=1004')
-                .then(response => {
-                    periodData.value = (response.data && response.data.data) || [];
-                    overlay.hide();
-                })
-                .catch(error => {
-                    overlay.hide();
-                    alert.Error('ERROR', safeMessage(error));
-                });
-        }
-        const setLocation = (select_index) => {
-            var i = select_index || 0;
-            var row = geoData.value[i];
-            if (!row) return;
-            tableOptions.filterParam.geo_level = row.geo_level;
-            tableOptions.filterParam.geo_level_id = row.geo_level_id;
-            tableOptions.filterParam.geo_string = row.title;
-        }
-        const setPeriodTitle = (event) => {
-            var selected = Array.isArray(event) ? event : [];
-            tableOptions.filterParam.periodid = [];
-            var titles = [];
-            selected.forEach(id => {
-                tableOptions.filterParam.periodid.push(id);
-                var period = (periodData.value || []).find(p => p.periodid == id);
-                if (period) titles.push(period.title);
-            });
-            tableOptions.filterParam.visitTitle = joinWithCommaAnd(titles);
-        }
-        const splitWordAndCapitalize = (str) => {
-            var words = String(str || '').split(/(?=[A-Z])|_| /);
-            return words.map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
-        }
-        const displayDayMonthYearTime = (d) => {
-            if (!d) return '';
-            var date = new Date(d);
-            return date.toLocaleString('en-us', {
-                year: 'numeric', month: 'long', day: 'numeric',
-                hour12: true, hour: '2-digit', minute: '2-digit',
-            });
-        }
-        const convertStringNumberToFigures = (d) => {
-            var data = d ? parseInt(d) : 0;
-            return data ? data.toLocaleString() : 0;
-        }
-        const exportIcc = async () => {
-            var fp = tableOptions.filterParam;
-            var periodIds = joinWithCommaAnd(fp.periodid, true);
-            fp.globalPeriod = periodIds;
-            var qs = '&draw=' + tableOptions.currentPage +
-                '&order_column=' + tableOptions.orderField +
-                '&length=' + tableOptions.perPage +
-                '&start=' + tableOptions.limitStart +
-                '&order_dir=' + tableOptions.orderDir +
-                '&pid=' + periodIds + '&gid=' + fp.geo_level_id + '&glv=' + fp.geo_level;
-            var veriUrl = 'qid=1126' + qs;
-            var dlString = 'qid=803' + qs;
-            var formattedDate = new Date().toLocaleString('en-GB', {
-                day: '2-digit', month: '2-digit', year: 'numeric',
-                hour: '2-digit', minute: '2-digit',
-            }).replace(/[\s,\/:]/g, '_');
-            var filename = fp.geo_level + '_' + fp.globalPeriod + '_ICC_Export_' + formattedDate;
-            overlay.show();
-            try {
-                var countResponse = await $.ajax({
-                    url: common.DataService, type: 'POST', data: veriUrl, dataType: 'json',
-                });
-                var count = parseInt(countResponse.total, 10);
-                var downloadMax = (window.common && window.common.ExportDownloadLimit) || 25000;
-                if (count > downloadMax) {
-                    alert.Error('Download Error', 'Unable to download data because it has exceeded the download limit of ' + downloadMax);
-                } else if (count === 0) {
-                    alert.Error('Download Error', 'No data found');
-                } else {
-                    alert.Info('DOWNLOADING...', 'Downloading ' + count + ' record(s)');
-                    var dl = await $.ajax({ url: common.ExportService, type: 'POST', data: dlString });
-                    var exportData = JSON.parse(dl);
-                    if (window.Jhxlsx && typeof window.Jhxlsx.export === 'function') {
-                        window.Jhxlsx.export(exportData, { fileName: filename });
-                    }
-                }
-            } catch (error) {
-                console.error('Error during export:', error);
-                alert.Error('Export Error', 'An error occurred while exporting data.');
-            } finally {
-                overlay.hide();
-            }
-        }
-
-        onMounted(() => {
-            getGeoLocation();
-            getAllPeriodLists();
-            loadTableData();
-            try {
-                $('.select2').each(function () {
-                    var $this = $(this);
-                    $this.wrap('<div class="position-relative"></div>');
-                    $this.select2({
-                        dropdownAutoWidth: true, width: '100%',
-                        dropdownParent: $this.parent(),
-                    }).on('change', function () { setLocation(this.value); });
-                });
-                $('.period').each(function () {
-                    var $this = $(this);
-                    $this.wrap('<div class="position-relative"></div>');
-                    $this.select2({
-                        multiple: true, dropdownAutoWidth: true, width: '100%',
-                        dropdownParent: $this.parent(),
-                        placeholder: 'Select Visits',
-                    }).on('change', function () { setPeriodTitle($(this).val()); });
-                });
-                $('.select2-selection__arrow').html('<i class="feather icon-chevron-down"></i>');
-            } catch (e) {}
-            nextTick(setStickyOffsets);
+    };
+    const getAllPeriodLists = () => {
+      overlay.show();
+      axios
+        .get(common.DataService + "?qid=1004")
+        .then((response) => {
+          periodData.value = (response.data && response.data.data) || [];
+          overlay.hide();
+        })
+        .catch((error) => {
+          overlay.hide();
+          alert.Error("ERROR", safeMessage(error));
         });
-        onUpdated(() => { nextTick(setStickyOffsets); });
+    };
+    const setLocation = (select_index) => {
+      var i = select_index || 0;
+      var row = geoData.value[i];
+      if (!row) return;
+      tableOptions.filterParam.geo_level = row.geo_level;
+      tableOptions.filterParam.geo_level_id = row.geo_level_id;
+      tableOptions.filterParam.geo_string = row.title;
+    };
+    const setPeriodTitle = (event) => {
+      var selected = Array.isArray(event) ? event : [];
+      tableOptions.filterParam.periodid = [];
+      var titles = [];
+      selected.forEach((id) => {
+        tableOptions.filterParam.periodid.push(id);
+        var period = (periodData.value || []).find((p) => p.periodid == id);
+        if (period) titles.push(period.title);
+      });
+      tableOptions.filterParam.visitTitle = joinWithCommaAnd(titles);
+    };
+    const splitWordAndCapitalize = (str) => {
+      var words = String(str || "").split(/(?=[A-Z])|_| /);
+      return words
+        .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+        .join(" ");
+    };
+    const displayDayMonthYearTime = (d) => {
+      if (!d) return "";
+      var date = new Date(d);
+      return date.toLocaleString("en-us", {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+        hour12: true,
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+    };
+    const convertStringNumberToFigures = (d) => {
+      var data = d ? parseInt(d) : 0;
+      return data ? data.toLocaleString() : 0;
+    };
+    const exportIcc = async () => {
+      var fp = tableOptions.filterParam;
+      var periodIds = joinWithCommaAnd(fp.periodid, true);
+      fp.globalPeriod = periodIds;
+      var qs =
+        "&draw=" +
+        tableOptions.currentPage +
+        "&order_column=" +
+        tableOptions.orderField +
+        "&length=" +
+        tableOptions.perPage +
+        "&start=" +
+        tableOptions.limitStart +
+        "&order_dir=" +
+        tableOptions.orderDir +
+        "&pid=" +
+        periodIds +
+        "&gid=" +
+        fp.geo_level_id +
+        "&glv=" +
+        fp.geo_level;
+      var veriUrl = "qid=1126" + qs;
+      var dlString = "qid=803" + qs;
+      var formattedDate = new Date()
+        .toLocaleString("en-GB", {
+          day: "2-digit",
+          month: "2-digit",
+          year: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+        })
+        .replace(/[\s,\/:]/g, "_");
+      var filename =
+        fp.geo_level + "_" + fp.globalPeriod + "_ICC_Export_" + formattedDate;
+      overlay.show();
+      try {
+        var countResponse = await $.ajax({
+          url: common.DataService,
+          type: "POST",
+          data: veriUrl,
+          dataType: "json",
+        });
+        var count = parseInt(countResponse.total, 10);
+        var downloadMax =
+          (window.common && window.common.ExportDownloadLimit) || 25000;
+        if (count > downloadMax) {
+          alert.Error(
+            "Download Error",
+            "Unable to download data because it has exceeded the download limit of " +
+              downloadMax,
+          );
+        } else if (count === 0) {
+          alert.Error("Download Error", "No data found");
+        } else {
+          alert.Info("DOWNLOADING...", "Downloading " + count + " record(s)");
+          var dl = await $.ajax({
+            url: common.ExportService,
+            type: "POST",
+            data: dlString,
+          });
+          var exportData = JSON.parse(dl);
+          if (window.Jhxlsx && typeof window.Jhxlsx.export === "function") {
+            window.Jhxlsx.export(exportData, { fileName: filename });
+          }
+        }
+      } catch (error) {
+        console.error("Error during export:", error);
+        alert.Error("Export Error", "An error occurred while exporting data.");
+      } finally {
+        overlay.hide();
+      }
+    };
 
-        return {
-            url, permission, tableData, selectedICCDetails, iccIssuedReconcileDetails,
-            geoData, periodData, checkIfFilterOn, filterState, filters, tableOptions,
-            setStickyOffsets, loadTableData, toggleFilter, paginationDefault,
-            nextPage, prevPage, currentPage, changePerPage, sort,
-            applyFilter, removeSingleFilter, clearAllFilter, checkAndHideFilter,
-            GetIccFlowDetailByCdd, hideGetIccFlowDetailByCdd, checkIfEmpty,
-            refreshData, getGeoLocation, getAllPeriodLists, setLocation,
-            setPeriodTitle, splitWordAndCapitalize,
-            displayDayMonthYearTime, convertStringNumberToFigures, exportIcc,
-            capitalize: fmtUtils.capitalize,
-            displayDate: fmtUtils.displayDate,
-        };
-    },
-    template: `
+    onMounted(() => {
+      getGeoLocation();
+      getAllPeriodLists();
+      loadTableData();
+      try {
+        $(".select2").each(function () {
+          var $this = $(this);
+          $this.wrap('<div class="position-relative"></div>');
+          $this
+            .select2({
+              dropdownAutoWidth: true,
+              width: "100%",
+              dropdownParent: $this.parent(),
+            })
+            .on("change", function () {
+              setLocation(this.value);
+            });
+        });
+        $(".period").each(function () {
+          var $this = $(this);
+          $this.wrap('<div class="position-relative"></div>');
+          $this
+            .select2({
+              multiple: true,
+              dropdownAutoWidth: true,
+              width: "100%",
+              dropdownParent: $this.parent(),
+              placeholder: "Select Visits",
+            })
+            .on("change", function () {
+              setPeriodTitle($(this).val());
+            });
+        });
+        $(".select2-selection__arrow").html(
+          '<i class="feather icon-chevron-down"></i>',
+        );
+      } catch (e) {}
+      nextTick(setStickyOffsets);
+    });
+    onUpdated(() => {
+      nextTick(setStickyOffsets);
+    });
+
+    return {
+      url,
+      permission,
+      tableData,
+      selectedICCDetails,
+      iccIssuedReconcileDetails,
+      geoData,
+      periodData,
+      checkIfFilterOn,
+      filterState,
+      filters,
+      tableOptions,
+      setStickyOffsets,
+      loadTableData,
+      toggleFilter,
+      paginationDefault,
+      nextPage,
+      prevPage,
+      currentPage,
+      changePerPage,
+      sort,
+      applyFilter,
+      removeSingleFilter,
+      clearAllFilter,
+      checkAndHideFilter,
+      GetIccFlowDetailByCdd,
+      hideGetIccFlowDetailByCdd,
+      checkIfEmpty,
+      refreshData,
+      getGeoLocation,
+      getAllPeriodLists,
+      setLocation,
+      setPeriodTitle,
+      splitWordAndCapitalize,
+      displayDayMonthYearTime,
+      convertStringNumberToFigures,
+      exportIcc,
+      capitalize: fmtUtils.capitalize,
+      displayDate: fmtUtils.displayDate,
+    };
+  },
+  template: `
         <div class="row" id="basic-table">
             <div class="col-md-8 col-sm-12 col-12 mb-0">
                 <h2 class="content-header-title header-txt float-left mb-0">SMC</h2>
@@ -569,6 +727,6 @@ const IccList = {
 };
 
 useApp({ template: `<div><page-body/></div>` })
-    .component('page-body', PageBody)
-    .component('icc_list', IccList)
-    .mount('#app');
+  .component("page-body", PageBody)
+  .component("icc_list", IccList)
+  .mount("#app");

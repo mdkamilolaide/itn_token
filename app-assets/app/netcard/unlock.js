@@ -10,14 +10,20 @@ const { ref, reactive, onMounted, onBeforeUnmount } = Vue;
 const { useApp, useFormat, bus, safeMessage } = window.utils;
 
 const PageBody = {
-    setup() {
-        const page = ref('allocation');
-        const gotoPageHandler = (data) => { page.value = data.page; };
-        onMounted(() => { bus.on('g-event-goto-page', gotoPageHandler); });
-        onBeforeUnmount(() => { bus.off('g-event-goto-page', gotoPageHandler); });
-        return { page };
-    },
-    template: `
+  setup() {
+    const page = ref("allocation");
+    const gotoPageHandler = (data) => {
+      page.value = data.page;
+    };
+    onMounted(() => {
+      bus.on("g-event-goto-page", gotoPageHandler);
+    });
+    onBeforeUnmount(() => {
+      bus.off("g-event-goto-page", gotoPageHandler);
+    });
+    return { page };
+  },
+  template: `
         <div>
             <div class="content-body">
                 <div v-show="page == 'allocation'"><necard_movement/></div>
@@ -27,262 +33,358 @@ const PageBody = {
 };
 
 const NecardMovement = {
-    setup() {
-        const fmtUtils = useFormat();
+  setup() {
+    const fmtUtils = useFormat();
 
-        const tableData = ref([]);
-        const checkToggle = ref(false);
-        const filterState = ref(false);
-        const filters = ref(false);
-        const permission = ref(
-            (typeof getPermission === 'function')
-                ? (getPermission(typeof per !== 'undefined' ? per : null, 'enetcard_unlock') || { permission_value: 0 })
-                : { permission_value: 0 }
-        );
-        const url = ref(window.common && window.common.TableService);
-        const tableOptions = reactive({
-            total: 1, pageLength: 1, perPage: 10, currentPage: 1,
-            orderDir: 'desc', orderField: 0, limitStart: 0,
-            isNext: false, isPrev: false,
-            aLength: [10, 20, 50, 100, 150, 200],
-            filterParam: { movementType: 'Forward' },
-        });
-        const currentWardBalance = reactive({
-            wardName: '', balance: 0, disbursed: 0, received: 0,
-        });
-        const wardMovementForm = reactive({
-            totalNetcard: 1, wardMoveBtn: '', wardMoveModal: false,
-            lgaid: '', wardid: '', wardName: '', wardBalance: '',
-        });
-        const movementForm = reactive({ geoLevel: '', geoLevelId: 0 });
-        const geoIndicator = reactive({
-            state: 50, currentLevelId: 0,
-            lga: '', cluster: '', ward: '',
-        });
-        const geoLevelData = ref([]);
-        const sysDefaultData = ref([]);
-        const lgaLevelData = ref([]);
-        const clusterLevelData = ref([]);
-        const wardLevelData = ref([]);
-        const lgaNetBalancesData = ref([]);
-        const wardNetBalancesData = ref([]);
-        const hhmBalanacesData = ref([]);
-        const isLgabalance = ref(true);
-        const isHHMbalance = ref(true);
-        const allStatistics = reactive({
-            stateBalance: 0, lgaBalance: 0, wardBalance: 0, mobilizer: 0,
-        });
+    const tableData = ref([]);
+    const checkToggle = ref(false);
+    const filterState = ref(false);
+    const filters = ref(false);
+    const permission = ref(
+      typeof getPermission === "function"
+        ? getPermission(
+            typeof per !== "undefined" ? per : null,
+            "enetcard_unlock",
+          ) || { permission_value: 0 }
+        : { permission_value: 0 },
+    );
+    const url = ref(window.common && window.common.TableService);
+    const tableOptions = reactive({
+      total: 1,
+      pageLength: 1,
+      perPage: 10,
+      currentPage: 1,
+      orderDir: "desc",
+      orderField: 0,
+      limitStart: 0,
+      isNext: false,
+      isPrev: false,
+      aLength: [10, 20, 50, 100, 150, 200],
+      filterParam: { movementType: "Forward" },
+    });
+    const currentWardBalance = reactive({
+      wardName: "",
+      balance: 0,
+      disbursed: 0,
+      received: 0,
+    });
+    const wardMovementForm = reactive({
+      totalNetcard: 1,
+      wardMoveBtn: "",
+      wardMoveModal: false,
+      lgaid: "",
+      wardid: "",
+      wardName: "",
+      wardBalance: "",
+    });
+    const movementForm = reactive({ geoLevel: "", geoLevelId: 0 });
+    const geoIndicator = reactive({
+      state: 50,
+      currentLevelId: 0,
+      lga: "",
+      cluster: "",
+      ward: "",
+    });
+    const geoLevelData = ref([]);
+    const sysDefaultData = ref([]);
+    const lgaLevelData = ref([]);
+    const clusterLevelData = ref([]);
+    const wardLevelData = ref([]);
+    const lgaNetBalancesData = ref([]);
+    const wardNetBalancesData = ref([]);
+    const hhmBalanacesData = ref([]);
+    const isLgabalance = ref(true);
+    const isHHMbalance = ref(true);
+    const allStatistics = reactive({
+      stateBalance: 0,
+      lgaBalance: 0,
+      wardBalance: 0,
+      mobilizer: 0,
+    });
 
-        const getsysDefaultDataSettings = () => {
-            overlay.show();
-            axios.get(common.DataService + '?qid=gen007')
-                .then(response => {
-                    if (response.data.data && response.data.data.length > 0) {
-                        sysDefaultData.value = response.data.data[0];
-                        getLgasLevel(response.data.data[0].stateid);
-                        movementForm.geoLevel = 'state';
-                        movementForm.geoLevelId = response.data.data[0].stateid;
-                    }
-                    overlay.hide();
-                })
-                .catch(error => {
-                    overlay.hide();
-                    alert.Error('ERROR', safeMessage(error));
-                });
-        }
-        const getLgasLevel = (stateid) => {
-            overlay.show();
-            axios.post(common.DataService + '?qid=gen003', JSON.stringify(stateid))
-                .then(response => {
-                    lgaLevelData.value = (response.data && response.data.data) || [];
-                    overlay.hide();
-                })
-                .catch(error => {
-                    overlay.hide();
-                    alert.Error('ERROR', safeMessage(error));
-                });
-        }
-        const getLgasNetBalances = () => {
-            overlay.show();
-            axios.post(common.DataService + '?qid=206')
-                .then(response => {
-                    lgaNetBalancesData.value = (response.data && response.data.data) || [];
-                    overlay.hide();
-                })
-                .catch(error => {
-                    overlay.hide();
-                    alert.Error('ERROR', safeMessage(error));
-                });
-        }
-        const getWardLevel = () => {
-            overlay.show();
-            wardMovementForm.wardid = '';
-            axios.get(common.DataService + '?qid=gen005&e=' + wardMovementForm.lgaid)
-                .then(response => {
-                    wardLevelData.value = (response.data && response.data.data) || [];
-                    overlay.hide();
-                })
-                .catch(error => {
-                    overlay.hide();
-                    alert.Error('ERROR', safeMessage(error));
-                });
-        }
-        const getWardData = (event) => {
-            overlay.show();
-            wardMovementForm.wardid = '';
-            wardMovementForm.lgaid = event.target.options[event.target.options.selectedIndex].value;
-            axios.get(common.DataService + '?qid=gen005&lgaid=' + wardMovementForm.lgaid + '&e=' + wardMovementForm.lgaid)
-                .then(response => {
-                    wardNetBalancesData.value = (response.data && response.data.data) || [];
-                    wardLevelData.value = (response.data && response.data.data) || [];
-                    overlay.hide();
-                })
-                .catch(error => {
-                    overlay.hide();
-                    alert.Error('ERROR', safeMessage(error));
-                });
-        }
-        const getHhmBalances = (event) => {
-            var optText = event.target.options[event.target.options.selectedIndex].text;
-            var trimmed = optText.trim().replace(',', '');
-            wardMovementForm.wardName = trimmed.split('-')[0];
-            var rawBal = trimmed.split('-')[1];
-            wardMovementForm.wardBalance = rawBal == '' ? 0 : parseInt(rawBal);
-            currentWardBalance.wardName = optText;
-            getHHMOfflineBalancesList();
-            getCurrentWardBalance();
-            overlay.show();
-        }
-        const refreshData = () => {
-            if (currentWardBalance.wardName != '') getHHMOfflineBalancesList();
-        }
-        const getHHMOfflineBalancesList = () => {
-            overlay.show();
-            axios.get(common.DataService + '?qid=216&wardid=' + wardMovementForm.wardid)
-                .then(response => {
-                    hhmBalanacesData.value = (response.data && response.data.data) || [];
-                    overlay.hide();
-                })
-                .catch(error => {
-                    overlay.hide();
-                    alert.Error('ERROR', safeMessage(error));
-                });
-        }
-        const getCurrentWardBalance = () => {
-            axios.get(common.DataService + '?qid=214&wardid=' + wardMovementForm.wardid)
-                .then(response => {
-                    var row = (response.data && response.data.data && response.data.data[0]) || {};
-                    currentWardBalance.balance = row.balance ? parseInt(row.balance) : 0;
-                    wardMovementForm.wardBalance = currentWardBalance.balance;
-                    currentWardBalance.received = row.received ? parseInt(row.received) : 0;
-                    currentWardBalance.disbursed = row.disbursed ? parseInt(row.disbursed) : 0;
-                    overlay.hide();
-                })
-                .catch(error => {
-                    overlay.hide();
-                    alert.Error('ERROR', safeMessage(error));
-                });
-        }
+    const getsysDefaultDataSettings = () => {
+      overlay.show();
+      axios
+        .get(common.DataService + "?qid=gen007")
+        .then((response) => {
+          if (response.data.data && response.data.data.length > 0) {
+            sysDefaultData.value = response.data.data[0];
+            getLgasLevel(response.data.data[0].stateid);
+            movementForm.geoLevel = "state";
+            movementForm.geoLevelId = response.data.data[0].stateid;
+          }
+          overlay.hide();
+        })
+        .catch((error) => {
+          overlay.hide();
+          alert.Error("ERROR", safeMessage(error));
+        });
+    };
+    const getLgasLevel = (stateid) => {
+      overlay.show();
+      axios
+        .post(common.DataService + "?qid=gen003", JSON.stringify(stateid))
+        .then((response) => {
+          lgaLevelData.value = (response.data && response.data.data) || [];
+          overlay.hide();
+        })
+        .catch((error) => {
+          overlay.hide();
+          alert.Error("ERROR", safeMessage(error));
+        });
+    };
+    const getLgasNetBalances = () => {
+      overlay.show();
+      axios
+        .post(common.DataService + "?qid=206")
+        .then((response) => {
+          lgaNetBalancesData.value =
+            (response.data && response.data.data) || [];
+          overlay.hide();
+        })
+        .catch((error) => {
+          overlay.hide();
+          alert.Error("ERROR", safeMessage(error));
+        });
+    };
+    const getWardLevel = () => {
+      overlay.show();
+      wardMovementForm.wardid = "";
+      axios
+        .get(common.DataService + "?qid=gen005&e=" + wardMovementForm.lgaid)
+        .then((response) => {
+          wardLevelData.value = (response.data && response.data.data) || [];
+          overlay.hide();
+        })
+        .catch((error) => {
+          overlay.hide();
+          alert.Error("ERROR", safeMessage(error));
+        });
+    };
+    const getWardData = (event) => {
+      overlay.show();
+      wardMovementForm.wardid = "";
+      wardMovementForm.lgaid =
+        event.target.options[event.target.options.selectedIndex].value;
+      axios
+        .get(
+          common.DataService +
+            "?qid=gen005&lgaid=" +
+            wardMovementForm.lgaid +
+            "&e=" +
+            wardMovementForm.lgaid,
+        )
+        .then((response) => {
+          wardNetBalancesData.value =
+            (response.data && response.data.data) || [];
+          wardLevelData.value = (response.data && response.data.data) || [];
+          overlay.hide();
+        })
+        .catch((error) => {
+          overlay.hide();
+          alert.Error("ERROR", safeMessage(error));
+        });
+    };
+    const getHhmBalances = (event) => {
+      var optText =
+        event.target.options[event.target.options.selectedIndex].text;
+      var trimmed = optText.trim().replace(",", "");
+      wardMovementForm.wardName = trimmed.split("-")[0];
+      var rawBal = trimmed.split("-")[1];
+      wardMovementForm.wardBalance = rawBal == "" ? 0 : parseInt(rawBal);
+      currentWardBalance.wardName = optText;
+      getHHMOfflineBalancesList();
+      getCurrentWardBalance();
+      overlay.show();
+    };
+    const refreshData = () => {
+      if (currentWardBalance.wardName != "") getHHMOfflineBalancesList();
+    };
+    const getHHMOfflineBalancesList = () => {
+      overlay.show();
+      axios
+        .get(common.DataService + "?qid=216&wardid=" + wardMovementForm.wardid)
+        .then((response) => {
+          hhmBalanacesData.value = (response.data && response.data.data) || [];
+          overlay.hide();
+        })
+        .catch((error) => {
+          overlay.hide();
+          alert.Error("ERROR", safeMessage(error));
+        });
+    };
+    const getCurrentWardBalance = () => {
+      axios
+        .get(common.DataService + "?qid=214&wardid=" + wardMovementForm.wardid)
+        .then((response) => {
+          var row =
+            (response.data && response.data.data && response.data.data[0]) ||
+            {};
+          currentWardBalance.balance = row.balance ? parseInt(row.balance) : 0;
+          wardMovementForm.wardBalance = currentWardBalance.balance;
+          currentWardBalance.received = row.received
+            ? parseInt(row.received)
+            : 0;
+          currentWardBalance.disbursed = row.disbursed
+            ? parseInt(row.disbursed)
+            : 0;
+          overlay.hide();
+        })
+        .catch((error) => {
+          overlay.hide();
+          alert.Error("ERROR", safeMessage(error));
+        });
+    };
 
-        const scroll = () => {
-            try {
-                var sidebarMenuList = $('.main-body');
-                if ($.app && $.app.menu && !$.app.menu.is_touch_device()) {
-                    if (sidebarMenuList.length > 0) {
-                        for (var i = 0; i < sidebarMenuList.length; ++i) {
-                            new PerfectScrollbar(sidebarMenuList[i], { theme: 'dark' });
-                        }
-                    }
-                } else {
-                    sidebarMenuList.css('overflow', 'scroll');
-                }
-            } catch (e) { /* swallow */ }
-        }
-        const onlyNumber = (event) => {
-            var keyCode = event.keyCode || event.which;
-            if ((keyCode < 48 || keyCode > 57) && keyCode == 46) event.preventDefault();
-        }
-
-        const unlockNetcardFromDevice = (userid, device_serial, total) => {
-            var requester_userid = document.getElementById('v_g_id').value;
-            if (total <= 0) {
-                alert.Error('Zero Balance', "You don't have an e-Netcard Residing on this device");
-                return;
+    const scroll = () => {
+      try {
+        var sidebarMenuList = $(".main-body");
+        if ($.app && $.app.menu && !$.app.menu.is_touch_device()) {
+          if (sidebarMenuList.length > 0) {
+            for (var i = 0; i < sidebarMenuList.length; ++i) {
+              new PerfectScrollbar(sidebarMenuList[i], { theme: "dark" });
             }
-            $.confirm({
-                title: 'WARNING!',
-                content: 'Are you sure you want to Unlock <b>' + total + '</b> e-Netcard on the Device with Serial <b>' + device_serial + '</b>?',
-                buttons: {
-                    delete: {
-                        text: 'Unlock e-Netcard',
-                        btnClass: 'btn btn-danger mr-1 text-capitalize',
-                        action: () => {
-                            axios.post(
-                                common.DataService +
-                                '?qid=215&device_serial=' + device_serial +
-                                '&userid=' + userid +
-                                '&requester_userid=' + requester_userid
-                            )
-                                .then(response => {
-                                    if (response.data.result_code == '200') {
-                                        refreshData();
-                                        getCurrentWardBalance();
-                                        alert.Success('Success', '<b>' + response.data.total + '</b> e-Netcards has been successfully Unlocked on Device with Serial No: <b>' + device_serial + '</b>');
-                                        overlay.hide();
-                                    } else {
-                                        overlay.hide();
-                                        alert.Error('Error', response.data.message);
-                                    }
-                                })
-                                .catch(error => {
-                                    alert.Error('ERROR', safeMessage(error));
-                                    overlay.hide();
-                                });
-                        },
-                    },
-                    cancel: () => { overlay.hide(); },
-                },
-            });
+          }
+        } else {
+          sidebarMenuList.css("overflow", "scroll");
         }
+      } catch (e) {
+        /* swallow */
+      }
+    };
+    const onlyNumber = (event) => {
+      var keyCode = event.keyCode || event.which;
+      if ((keyCode < 48 || keyCode > 57) && keyCode == 46)
+        event.preventDefault();
+    };
 
-        onMounted(() => {
-            getsysDefaultDataSettings();
-            bus.on('g-event-update', refreshData);
-            $('#todo-search').on('keyup', function () {
-                var value = $(this).val().toLowerCase();
-                $('#moveTable tbody tr').filter(function () {
-                    $(this).toggle($(this).text().toLowerCase().indexOf(value) > -1);
+    const unlockNetcardFromDevice = (userid, device_serial, total) => {
+      var requester_userid = document.getElementById("v_g_id").value;
+      if (total <= 0) {
+        alert.Error(
+          "Zero Balance",
+          "You don't have an e-Netcard Residing on this device",
+        );
+        return;
+      }
+      $.confirm({
+        title: "WARNING!",
+        content:
+          "Are you sure you want to Unlock <b>" +
+          total +
+          "</b> e-Netcard on the Device with Serial <b>" +
+          device_serial +
+          "</b>?",
+        buttons: {
+          delete: {
+            text: "Unlock e-Netcard",
+            btnClass: "btn btn-danger mr-1 text-capitalize",
+            action: () => {
+              axios
+                .post(
+                  common.DataService +
+                    "?qid=215&device_serial=" +
+                    device_serial +
+                    "&userid=" +
+                    userid +
+                    "&requester_userid=" +
+                    requester_userid,
+                )
+                .then((response) => {
+                  if (response.data.result_code == "200") {
+                    refreshData();
+                    getCurrentWardBalance();
+                    alert.Success(
+                      "Success",
+                      "<b>" +
+                        response.data.total +
+                        "</b> e-Netcards has been successfully Unlocked on Device with Serial No: <b>" +
+                        device_serial +
+                        "</b>",
+                    );
+                    overlay.hide();
+                  } else {
+                    overlay.hide();
+                    alert.Error("Error", response.data.message);
+                  }
+                })
+                .catch((error) => {
+                  alert.Error("ERROR", safeMessage(error));
+                  overlay.hide();
                 });
-            });
-            $('#todo-search1').on('keyup', function () {
-                var value = $(this).val().toLowerCase();
-                $('#moveTable1 tbody tr').filter(function () {
-                    $(this).toggle($(this).text().toLowerCase().indexOf(value) > -1);
-                });
-            });
-            try { $('[data-toggle="tooltip"]').tooltip({ container: 'body' }); } catch (e) {}
-            scroll();
-        });
-        onBeforeUnmount(() => {
-            bus.off('g-event-update', refreshData);
-        });
+            },
+          },
+          cancel: () => {
+            overlay.hide();
+          },
+        },
+      });
+    };
 
-        return {
-            tableData, checkToggle, filterState, filters, permission, url,
-            tableOptions, currentWardBalance, wardMovementForm, movementForm,
-            geoIndicator, geoLevelData, sysDefaultData, lgaLevelData,
-            clusterLevelData, wardLevelData, lgaNetBalancesData, wardNetBalancesData,
-            hhmBalanacesData, isLgabalance, isHHMbalance, allStatistics,
-            getsysDefaultDataSettings, getLgasLevel, getLgasNetBalances,
-            getWardLevel, getWardData, getHhmBalances, refreshData,
-            getHHMOfflineBalancesList, getCurrentWardBalance,
-            unlockNetcardFromDevice, onlyNumber,
-            capitalize: fmtUtils.capitalize,
-            formatNumber: fmtUtils.formatNumber,
-            displayDate: fmtUtils.displayDate,
-        };
-    },
-    template: `
+    onMounted(() => {
+      getsysDefaultDataSettings();
+      bus.on("g-event-update", refreshData);
+      $("#todo-search").on("keyup", function () {
+        var value = $(this).val().toLowerCase();
+        $("#moveTable tbody tr").filter(function () {
+          $(this).toggle($(this).text().toLowerCase().indexOf(value) > -1);
+        });
+      });
+      $("#todo-search1").on("keyup", function () {
+        var value = $(this).val().toLowerCase();
+        $("#moveTable1 tbody tr").filter(function () {
+          $(this).toggle($(this).text().toLowerCase().indexOf(value) > -1);
+        });
+      });
+      try {
+        $('[data-toggle="tooltip"]').tooltip({ container: "body" });
+      } catch (e) {}
+      scroll();
+    });
+    onBeforeUnmount(() => {
+      bus.off("g-event-update", refreshData);
+    });
+
+    return {
+      tableData,
+      checkToggle,
+      filterState,
+      filters,
+      permission,
+      url,
+      tableOptions,
+      currentWardBalance,
+      wardMovementForm,
+      movementForm,
+      geoIndicator,
+      geoLevelData,
+      sysDefaultData,
+      lgaLevelData,
+      clusterLevelData,
+      wardLevelData,
+      lgaNetBalancesData,
+      wardNetBalancesData,
+      hhmBalanacesData,
+      isLgabalance,
+      isHHMbalance,
+      allStatistics,
+      getsysDefaultDataSettings,
+      getLgasLevel,
+      getLgasNetBalances,
+      getWardLevel,
+      getWardData,
+      getHhmBalances,
+      refreshData,
+      getHHMOfflineBalancesList,
+      getCurrentWardBalance,
+      unlockNetcardFromDevice,
+      onlyNumber,
+      capitalize: fmtUtils.capitalize,
+      formatNumber: fmtUtils.formatNumber,
+      displayDate: fmtUtils.displayDate,
+    };
+  },
+  template: `
         <div class="row" id="basic-table" v-cloak>
             <div class="col-md-12 col-sm-12 col-12 mb-1">
                 <h2 class="content-header-title header-txt float-left mb-0">e-Netcard</h2>
@@ -423,6 +525,6 @@ const NecardMovement = {
 };
 
 useApp({ template: `<div><page-body/></div>` })
-    .component('page-body', PageBody)
-    .component('necard_movement', NecardMovement)
-    .mount('#app');
+  .component("page-body", PageBody)
+  .component("necard_movement", NecardMovement)
+  .mount("#app");

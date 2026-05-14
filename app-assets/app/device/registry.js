@@ -10,11 +10,11 @@ const { useApp, useFormat, safeMessage } = window.utils;
 
 /* ------------------------------------------------------------------ */
 const PageBody = {
-    setup() {
-        const page = ref('home');
-        return { page };
-    },
-    template: `
+  setup() {
+    const page = ref("home");
+    return { page };
+  },
+  template: `
         <div>
             <div class="content-body">
                 <sample_table/>
@@ -25,410 +25,540 @@ const PageBody = {
 
 /* ------------------------------------------------------------------ */
 const SampleTable = {
-    setup() {
-        const fmtUtils = useFormat();
+  setup() {
+    const fmtUtils = useFormat();
 
-        const tableData = ref([]);
-        const filterState = ref(false);
-        const filters = ref(false);
-        const checkToggle = ref(false);
-        const userGroup = ref([]);
-        const permission = ref(
-            (typeof getPermission === 'function')
-                ? (getPermission(typeof per !== 'undefined' ? per : null, 'device') || { permission_value: 0 })
-                : { permission_value: 0 }
+    const tableData = ref([]);
+    const filterState = ref(false);
+    const filters = ref(false);
+    const checkToggle = ref(false);
+    const userGroup = ref([]);
+    const permission = ref(
+      typeof getPermission === "function"
+        ? getPermission(typeof per !== "undefined" ? per : null, "device") || {
+            permission_value: 0,
+          }
+        : { permission_value: 0 },
+    );
+    const tableOptions = reactive({
+      total: 1,
+      pageLength: 1,
+      perPage: 10,
+      currentPage: 1,
+      orderDir: "desc",
+      orderField: 0,
+      limitStart: 0,
+      isNext: false,
+      isPrev: false,
+      aLength: [10, 20, 50, 100],
+      filterParam: { status: "", serial_no: "" },
+    });
+
+    const currentField = ref("");
+    const appSerialState = ref(false);
+    const deviceDetailsForm = reactive({
+      appSerial: "",
+      imeiOne: "",
+      imeiTwo: "",
+      deviceSerial: "",
+      networkType: "MTN",
+      simCardSerialNo: "",
+    });
+    const showCamera = ref(false);
+    const deviceDetails = ref({});
+
+    const loadTableData = () => {
+      overlay.show();
+      var url = common.TableService;
+      axios
+        .get(
+          url +
+            "?qid=601&draw=" +
+            tableOptions.currentPage +
+            "&order_column=" +
+            tableOptions.orderField +
+            "&length=" +
+            tableOptions.perPage +
+            "&start=" +
+            tableOptions.limitStart +
+            "&order_dir=" +
+            tableOptions.orderDir +
+            "&act=" +
+            tableOptions.filterParam.status +
+            "&sno=" +
+            tableOptions.filterParam.serial_no,
+        )
+        .then((response) => {
+          var d = response && response.data;
+          tableData.value = Array.isArray(d && d.data) ? d.data : [];
+          tableOptions.total = (d && d.recordsTotal) || 0;
+          if (tableOptions.currentPage == 1) paginationDefault();
+          overlay.hide();
+        })
+        .catch((error) => {
+          overlay.hide();
+          alert.Error("ERROR", safeMessage(error));
+        });
+    };
+
+    const selectAll = () => {
+      for (var i = 0; i < tableData.value.length; i++)
+        tableData.value[i].pick = true;
+    };
+    const uncheckAll = () => {
+      for (var i = 0; i < tableData.value.length; i++)
+        tableData.value[i].pick = false;
+    };
+    const selectToggle = () => {
+      if (checkToggle.value === false) {
+        selectAll();
+        checkToggle.value = true;
+      } else {
+        uncheckAll();
+        checkToggle.value = false;
+      }
+    };
+    const checkedBg = (pickOne) => {
+      return pickOne != "" ? "bg-select" : "";
+    };
+
+    const toggleFilter = () => {
+      if (filterState.value === false) filters.value = false;
+      return (filterState.value = !filterState.value);
+    };
+
+    const selectedItems = () => {
+      return tableData.value.filter((r) => r.pick);
+    };
+    const selectedID = () => {
+      return tableData.value.filter((r) => r.pick).map((r) => r.serial_no);
+    };
+
+    const paginationDefault = () => {
+      tableOptions.pageLength = Math.ceil(
+        tableOptions.total / tableOptions.perPage,
+      );
+      tableOptions.limitStart = Math.ceil(
+        (tableOptions.currentPage - 1) * tableOptions.perPage,
+      );
+      tableOptions.isNext = tableOptions.currentPage < tableOptions.pageLength;
+      tableOptions.isPrev = tableOptions.currentPage > 1;
+    };
+
+    const nextPage = () => {
+      tableOptions.currentPage += 1;
+      paginationDefault();
+      loadTableData();
+    };
+    const prevPage = () => {
+      tableOptions.currentPage -= 1;
+      paginationDefault();
+      loadTableData();
+    };
+    const currentPage = () => {
+      paginationDefault();
+      if (tableOptions.currentPage < 1)
+        alert.Error("ERROR", "The Page requested doesn't exist");
+      else if (tableOptions.currentPage > tableOptions.pageLength)
+        alert.Error("ERROR", "The Page requested doesn't exist");
+      else loadTableData();
+    };
+    const changePerPage = (val) => {
+      var maxPerPage = Math.ceil(tableOptions.total / val);
+      if (maxPerPage < tableOptions.currentPage)
+        tableOptions.currentPage = maxPerPage;
+      tableOptions.perPage = val;
+      paginationDefault();
+      loadTableData();
+    };
+    const sort = (col) => {
+      if (tableOptions.orderField === col) {
+        tableOptions.orderDir =
+          tableOptions.orderDir === "asc" ? "desc" : "asc";
+      } else {
+        tableOptions.orderField = col;
+      }
+      paginationDefault();
+      loadTableData();
+    };
+    const applyFilter = () => {
+      var checkFill = 0;
+      checkFill += tableOptions.filterParam.status != "" ? 1 : 0;
+      checkFill += tableOptions.filterParam.serial_no != "" ? 1 : 0;
+      if (checkFill > 0) {
+        toggleFilter();
+        filters.value = true;
+        paginationDefault();
+        loadTableData();
+      } else {
+        alert.Error("ERROR", "Invalid required data");
+      }
+    };
+    const removeSingleFilter = (column_name) => {
+      tableOptions.filterParam[column_name] = "";
+      var g = 0;
+      for (var k in tableOptions.filterParam) {
+        if (tableOptions.filterParam[k] != "") g++;
+      }
+      if (g == 0) filters.value = false;
+      paginationDefault();
+      loadTableData();
+    };
+    const clearAllFilter = () => {
+      filters.value = false;
+      tableOptions.filterParam.status = "";
+      tableOptions.filterParam.serial_no = "";
+      paginationDefault();
+      loadTableData();
+    };
+    const refreshData = () => {
+      paginationDefault();
+      loadTableData();
+    };
+
+    const deviceActivationDeactivation = (serial_no, active_status) => {
+      var url = common.DataService;
+      var message, btn_text, btn_class, response_txt;
+      if (active_status == "1") {
+        message =
+          "Are you sure you want to Deactivate the Device with Serial No <b>" +
+          serial_no +
+          "</b>? <br><br>Make sure you are sure that you want to deactivate the device.";
+        btn_text = "Deactivate";
+        btn_class = " btn-danger ";
+        response_txt =
+          "Device with Serial No <b>" +
+          serial_no +
+          "</b> Successfully Deactivated";
+      } else {
+        message =
+          "Are you sure you want to Activate the Training with Serial No <b>" +
+          serial_no +
+          "</b>? <br><br>Make sure you are sure that you want to activate the device.";
+        btn_text = "Activate";
+        btn_class = " btn-success ";
+        response_txt =
+          "Device with Serial No <b>" +
+          serial_no +
+          "</b> Successfully Activated";
+      }
+      $.confirm({
+        title: "WARNING!",
+        content: message,
+        buttons: {
+          delete: {
+            text: btn_text,
+            btnClass: "btn mr-1" + btn_class,
+            action: () => {
+              axios
+                .post(url + "?qid=501&sn=" + serial_no)
+                .then((response) => {
+                  if (response.data.result_code == "200") {
+                    loadTableData();
+                    alert.Success("SUCCESS", response_txt);
+                  } else {
+                    alert.Error(
+                      "ERROR",
+                      "Unable to De/Activate Device with Serial No <b>" +
+                        serial_no +
+                        "</b> at the moment please try again later",
+                    );
+                  }
+                })
+                .catch((error) => {
+                  alert.Error("ERROR", safeMessage(error));
+                });
+            },
+          },
+          cancel: () => {},
+        },
+      });
+    };
+
+    const bulkDeActivateDevice = () => {
+      var ids = selectedID();
+      if (ids.length < 1) {
+        alert.Error("ERROR", "No Device selected");
+        return;
+      }
+      var url = common.DataService;
+      $.confirm({
+        title: "WARNING!",
+        content:
+          "Are you sure you want to De/Activate <b>" +
+          ids.length +
+          "</b> Devices? <br><br>Make sure you know what you are doing before you De/Activate the Devices",
+        buttons: {
+          delete: {
+            text: "De/Activate",
+            btnClass: "btn btn-danger mr-1",
+            action: () => {
+              axios
+                .post(url + "?qid=502", JSON.stringify(ids))
+                .then((response) => {
+                  overlay.hide();
+                  if (response.data.result_code == "200") {
+                    loadTableData();
+                    alert.Success(
+                      "SUCCESS",
+                      response.data.total + " Devices De/activated",
+                    );
+                  } else {
+                    alert.Error("ERROR", "Device De/Activation failed");
+                  }
+                })
+                .catch((error) => {
+                  overlay.hide();
+                  alert.Error("ERROR", safeMessage(error));
+                });
+            },
+          },
+          cancel: () => {
+            overlay.hide();
+          },
+        },
+      });
+    };
+
+    const deleteDevice = (serial_no, state) => {
+      var url = common.DataService;
+      var message;
+      var selected_data;
+      if (state == "all") {
+        var ids = selectedID();
+        if (ids.length < 1) {
+          alert.Error("ERROR", "No Device selected");
+          return;
+        }
+        selected_data = JSON.stringify(ids);
+        message =
+          "Are you sure you want to Delete <b>" +
+          ids.length +
+          "</b> Devices? <br><br>Make sure you know what you are doing before you De/Activate the Devices";
+      } else {
+        selected_data = JSON.stringify([serial_no]);
+        message =
+          "Are you sure you want to Delete device with Serial No: <b>" +
+          serial_no +
+          "</b>? <br><br>Make sure you know what you are doing before you De/Activate the Devices";
+      }
+      $.confirm({
+        title: "WARNING!",
+        content: message,
+        buttons: {
+          delete: {
+            text: "Delete",
+            btnClass: "btn btn-danger mr-1",
+            action: () => {
+              axios
+                .post(url + "?qid=503", selected_data)
+                .then((response) => {
+                  overlay.hide();
+                  if (response.data.result_code == "200") {
+                    loadTableData();
+                    alert.Success(
+                      "SUCCESS",
+                      response.data.total + " Devices Removed",
+                    );
+                  } else {
+                    alert.Error("ERROR", "Device Removal failed");
+                  }
+                })
+                .catch((error) => {
+                  overlay.hide();
+                  alert.Error("ERROR", safeMessage(error));
+                });
+            },
+          },
+          cancel: () => {
+            overlay.hide();
+          },
+        },
+      });
+    };
+
+    const showUpdateDeviceModal = (update_state, index) => {
+      resetForm();
+      if (update_state === "bulk") {
+        appSerialState.value = true;
+      } else {
+        appSerialState.value = false;
+        var row = tableData.value[index] || {};
+        deviceDetailsForm.imeiOne = row.imei1;
+        deviceDetailsForm.imeiTwo = row.imei2;
+        deviceDetailsForm.deviceSerial = row.phone_serial;
+        deviceDetailsForm.simCardSerialNo = row.sim_serial;
+        deviceDetailsForm.networkType = row.sim_network;
+        deviceDetailsForm.appSerial = update_state;
+      }
+      $("#updateDeviceDetails").modal({ backdrop: "static", keyboard: false });
+    };
+    const hideUpdateDeviceModal = () => {
+      resetForm();
+      $("#updateDeviceDetails").modal("hide");
+    };
+    const resetForm = () => {
+      deviceDetailsForm.appSerial = "";
+      deviceDetailsForm.imeiOne = "";
+      deviceDetailsForm.imeiTwo = "";
+      deviceDetailsForm.deviceSerial = "";
+      deviceDetailsForm.simCardSerialNo = "";
+      overlay.hide();
+    };
+    const updateDeviceDetails = () => {
+      var url = common.DataService;
+      overlay.show();
+      axios
+        .post(url + "?qid=504", JSON.stringify(deviceDetailsForm))
+        .then((response) => {
+          if (response.data.result_code == "200") {
+            hideUpdateDeviceModal();
+            alert.Success("Success", response.data.data);
+            loadTableData();
+            overlay.hide();
+          } else {
+            overlay.hide();
+            alert.Error("Error", response.data.data);
+          }
+        })
+        .catch((error) => {
+          alert.Error("ERROR", safeMessage(error));
+          overlay.hide();
+        });
+    };
+
+    const startCamera = (field_name, action) => {
+      showCamera.value = true;
+      currentField.value = field_name;
+      if (typeof ZXing === "undefined") {
+        alert.Error("ERROR", "QR scanner library (ZXing) is not loaded");
+        showCamera.value = false;
+        return;
+      }
+      var codeReader = new ZXing.BrowserMultiFormatReader();
+      if (action === "stop") {
+        codeReader.reset();
+        var video = document.querySelector("video");
+        if (video && video.srcObject) {
+          var tracks = video.srcObject.getTracks();
+          if (tracks[0]) tracks[0].stop();
+          tracks.forEach((t) => {
+            t.stop();
+          });
+        }
+        showCamera.value = false;
+      } else {
+        codeReader.decodeFromVideoDevice(
+          null,
+          "webcam-preview",
+          (result, err) => {
+            var current = currentField.value;
+            if (result) {
+              deviceDetailsForm[current] =
+                field_name === "appSerial"
+                  ? result.text.split("|")[0].trim()
+                  : result.text;
+              codeReader.reset();
+              showCamera.value = false;
+            }
+            if (err) {
+              if (err instanceof ZXing.NotFoundException)
+                console.log("No QR code found.");
+              if (err instanceof ZXing.ChecksumException)
+                console.log(
+                  "A code was found, but it's read value was not valid.",
+                );
+              if (err instanceof ZXing.FormatException)
+                console.log(
+                  "A code was found, but it was in an invalid format.",
+                );
+            }
+          },
         );
-        const tableOptions = reactive({
-            total: 1,
-            pageLength: 1,
-            perPage: 10,
-            currentPage: 1,
-            orderDir: 'desc',
-            orderField: 0,
-            limitStart: 0,
-            isNext: false,
-            isPrev: false,
-            aLength: [10, 20, 50, 100],
-            filterParam: { status: '', serial_no: '' },
-        });
+      }
+    };
 
-        const currentField = ref('');
-        const appSerialState = ref(false);
-        const deviceDetailsForm = reactive({
-            appSerial: '',
-            imeiOne: '',
-            imeiTwo: '',
-            deviceSerial: '',
-            networkType: 'MTN',
-            simCardSerialNo: '',
-        });
-        const showCamera = ref(false);
-        const deviceDetails = ref({});
+    const showDeviceDetailsModal = (i) => {
+      deviceDetails.value = tableData.value[i] || {};
+      $("#deviceDetails").modal("show");
+    };
+    const hideDeviceDetailsModal = () => {
+      overlay.show();
+      $("#deviceDetails").modal("hide");
+      overlay.hide();
+    };
 
-        const loadTableData = () => {
-            overlay.show();
-            var url = common.TableService;
-            axios.get(
-                url +
-                '?qid=601&draw=' + tableOptions.currentPage +
-                '&order_column=' + tableOptions.orderField +
-                '&length=' + tableOptions.perPage +
-                '&start=' + tableOptions.limitStart +
-                '&order_dir=' + tableOptions.orderDir +
-                '&act=' + tableOptions.filterParam.status +
-                '&sno=' + tableOptions.filterParam.serial_no
-            )
-                .then(response => {
-                    var d = response && response.data;
-                    tableData.value = Array.isArray(d && d.data) ? d.data : [];
-                    tableOptions.total = (d && d.recordsTotal) || 0;
-                    if (tableOptions.currentPage == 1) paginationDefault();
-                    overlay.hide();
-                })
-                .catch(error => {
-                    overlay.hide();
-                    alert.Error('ERROR', safeMessage(error));
-                });
-        }
+    const checkIfEmpty = (data) => {
+      return data === null || data === "" || data === undefined ? "Nil" : data;
+    };
+    const displayDate = (d) => {
+      var date = new Date(d);
+      return date.toLocaleString("en-us", {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+        hour12: true,
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+      });
+    };
 
-        const selectAll = () => {
-            for (var i = 0; i < tableData.value.length; i++) tableData.value[i].pick = true;
-        }
-        const uncheckAll = () => {
-            for (var i = 0; i < tableData.value.length; i++) tableData.value[i].pick = false;
-        }
-        const selectToggle = () => {
-            if (checkToggle.value === false) { selectAll(); checkToggle.value = true; }
-            else                              { uncheckAll(); checkToggle.value = false; }
-        }
-        const checkedBg = (pickOne) => { return pickOne != '' ? 'bg-select' : ''; };
+    onMounted(() => {
+      loadTableData();
+    });
 
-        const toggleFilter = () => {
-            if (filterState.value === false) filters.value = false;
-            return (filterState.value = !filterState.value);
-        }
-
-        const selectedItems = () => {
-            return tableData.value.filter(r => r.pick);
-        }
-        const selectedID = () => {
-            return tableData.value.filter(r => r.pick).map(r => r.serial_no);
-        }
-
-        const paginationDefault = () => {
-            tableOptions.pageLength = Math.ceil(tableOptions.total / tableOptions.perPage);
-            tableOptions.limitStart = Math.ceil((tableOptions.currentPage - 1) * tableOptions.perPage);
-            tableOptions.isNext = tableOptions.currentPage < tableOptions.pageLength;
-            tableOptions.isPrev = tableOptions.currentPage > 1;
-        }
-
-        const nextPage = () => { tableOptions.currentPage += 1; paginationDefault(); loadTableData(); };
-        const prevPage = () => { tableOptions.currentPage -= 1; paginationDefault(); loadTableData(); };
-        const currentPage = () => {
-            paginationDefault();
-            if (tableOptions.currentPage < 1)                            alert.Error('ERROR', "The Page requested doesn't exist");
-            else if (tableOptions.currentPage > tableOptions.pageLength) alert.Error('ERROR', "The Page requested doesn't exist");
-            else                                                         loadTableData();
-        }
-        const changePerPage = (val) => {
-            var maxPerPage = Math.ceil(tableOptions.total / val);
-            if (maxPerPage < tableOptions.currentPage) tableOptions.currentPage = maxPerPage;
-            tableOptions.perPage = val;
-            paginationDefault();
-            loadTableData();
-        }
-        const sort = (col) => {
-            if (tableOptions.orderField === col) {
-                tableOptions.orderDir = tableOptions.orderDir === 'asc' ? 'desc' : 'asc';
-            } else {
-                tableOptions.orderField = col;
-            }
-            paginationDefault();
-            loadTableData();
-        }
-        const applyFilter = () => {
-            var checkFill = 0;
-            checkFill += tableOptions.filterParam.status    != '' ? 1 : 0;
-            checkFill += tableOptions.filterParam.serial_no != '' ? 1 : 0;
-            if (checkFill > 0) {
-                toggleFilter();
-                filters.value = true;
-                paginationDefault();
-                loadTableData();
-            } else {
-                alert.Error('ERROR', 'Invalid required data');
-            }
-        }
-        const removeSingleFilter = (column_name) => {
-            tableOptions.filterParam[column_name] = '';
-            var g = 0;
-            for (var k in tableOptions.filterParam) {
-                if (tableOptions.filterParam[k] != '') g++;
-            }
-            if (g == 0) filters.value = false;
-            paginationDefault();
-            loadTableData();
-        }
-        const clearAllFilter = () => {
-            filters.value = false;
-            tableOptions.filterParam.status = '';
-            tableOptions.filterParam.serial_no = '';
-            paginationDefault();
-            loadTableData();
-        }
-        const refreshData = () => { paginationDefault(); loadTableData(); };
-
-        const deviceActivationDeactivation = (serial_no, active_status) => {
-            var url = common.DataService;
-            var message, btn_text, btn_class, response_txt;
-            if (active_status == '1') {
-                message = 'Are you sure you want to Deactivate the Device with Serial No <b>' + serial_no + '</b>? <br><br>Make sure you are sure that you want to deactivate the device.';
-                btn_text = 'Deactivate';
-                btn_class = ' btn-danger ';
-                response_txt = 'Device with Serial No <b>' + serial_no + '</b> Successfully Deactivated';
-            } else {
-                message = 'Are you sure you want to Activate the Training with Serial No <b>' + serial_no + '</b>? <br><br>Make sure you are sure that you want to activate the device.';
-                btn_text = 'Activate';
-                btn_class = ' btn-success ';
-                response_txt = 'Device with Serial No <b>' + serial_no + '</b> Successfully Activated';
-            }
-            $.confirm({
-                title: 'WARNING!',
-                content: message,
-                buttons: {
-                    delete: {
-                        text: btn_text,
-                        btnClass: 'btn mr-1' + btn_class,
-                        action: () => {
-                            axios.post(url + '?qid=501&sn=' + serial_no)
-                                .then(response => {
-                                    if (response.data.result_code == '200') {
-                                        loadTableData();
-                                        alert.Success('SUCCESS', response_txt);
-                                    } else {
-                                        alert.Error('ERROR', "Unable to De/Activate Device with Serial No <b>" + serial_no + "</b> at the moment please try again later");
-                                    }
-                                })
-                                .catch(error => {
-                                    alert.Error('ERROR', safeMessage(error));
-                                });
-                        },
-                    },
-                    cancel: () => {},
-                },
-            });
-        }
-
-        const bulkDeActivateDevice = () => {
-            var ids = selectedID();
-            if (ids.length < 1) {
-                alert.Error('ERROR', 'No Device selected');
-                return;
-            }
-            var url = common.DataService;
-            $.confirm({
-                title: 'WARNING!',
-                content: 'Are you sure you want to De/Activate <b>' + ids.length + '</b> Devices? <br><br>Make sure you know what you are doing before you De/Activate the Devices',
-                buttons: {
-                    delete: {
-                        text: 'De/Activate',
-                        btnClass: 'btn btn-danger mr-1',
-                        action: () => {
-                            axios.post(url + '?qid=502', JSON.stringify(ids))
-                                .then(response => {
-                                    overlay.hide();
-                                    if (response.data.result_code == '200') {
-                                        loadTableData();
-                                        alert.Success('SUCCESS', response.data.total + ' Devices De/activated');
-                                    } else {
-                                        alert.Error('ERROR', 'Device De/Activation failed');
-                                    }
-                                })
-                                .catch(error => {
-                                    overlay.hide();
-                                    alert.Error('ERROR', safeMessage(error));
-                                });
-                        },
-                    },
-                    cancel: () => { overlay.hide(); },
-                },
-            });
-        }
-
-        const deleteDevice = (serial_no, state) => {
-            var url = common.DataService;
-            var message;
-            var selected_data;
-            if (state == 'all') {
-                var ids = selectedID();
-                if (ids.length < 1) {
-                    alert.Error('ERROR', 'No Device selected');
-                    return;
-                }
-                selected_data = JSON.stringify(ids);
-                message = 'Are you sure you want to Delete <b>' + ids.length + '</b> Devices? <br><br>Make sure you know what you are doing before you De/Activate the Devices';
-            } else {
-                selected_data = JSON.stringify([serial_no]);
-                message = 'Are you sure you want to Delete device with Serial No: <b>' + serial_no + '</b>? <br><br>Make sure you know what you are doing before you De/Activate the Devices';
-            }
-            $.confirm({
-                title: 'WARNING!',
-                content: message,
-                buttons: {
-                    delete: {
-                        text: 'Delete',
-                        btnClass: 'btn btn-danger mr-1',
-                        action: () => {
-                            axios.post(url + '?qid=503', selected_data)
-                                .then(response => {
-                                    overlay.hide();
-                                    if (response.data.result_code == '200') {
-                                        loadTableData();
-                                        alert.Success('SUCCESS', response.data.total + ' Devices Removed');
-                                    } else {
-                                        alert.Error('ERROR', 'Device Removal failed');
-                                    }
-                                })
-                                .catch(error => {
-                                    overlay.hide();
-                                    alert.Error('ERROR', safeMessage(error));
-                                });
-                        },
-                    },
-                    cancel: () => { overlay.hide(); },
-                },
-            });
-        }
-
-        const showUpdateDeviceModal = (update_state, index) => {
-            resetForm();
-            if (update_state === 'bulk') {
-                appSerialState.value = true;
-            } else {
-                appSerialState.value = false;
-                var row = tableData.value[index] || {};
-                deviceDetailsForm.imeiOne = row.imei1;
-                deviceDetailsForm.imeiTwo = row.imei2;
-                deviceDetailsForm.deviceSerial = row.phone_serial;
-                deviceDetailsForm.simCardSerialNo = row.sim_serial;
-                deviceDetailsForm.networkType = row.sim_network;
-                deviceDetailsForm.appSerial = update_state;
-            }
-            $('#updateDeviceDetails').modal({ backdrop: 'static', keyboard: false });
-        }
-        const hideUpdateDeviceModal = () => {
-            resetForm();
-            $('#updateDeviceDetails').modal('hide');
-        }
-        const resetForm = () => {
-            deviceDetailsForm.appSerial = '';
-            deviceDetailsForm.imeiOne = '';
-            deviceDetailsForm.imeiTwo = '';
-            deviceDetailsForm.deviceSerial = '';
-            deviceDetailsForm.simCardSerialNo = '';
-            overlay.hide();
-        }
-        const updateDeviceDetails = () => {
-            var url = common.DataService;
-            overlay.show();
-            axios.post(url + '?qid=504', JSON.stringify(deviceDetailsForm))
-                .then(response => {
-                    if (response.data.result_code == '200') {
-                        hideUpdateDeviceModal();
-                        alert.Success('Success', response.data.data);
-                        loadTableData();
-                        overlay.hide();
-                    } else {
-                        overlay.hide();
-                        alert.Error('Error', response.data.data);
-                    }
-                })
-                .catch(error => {
-                    alert.Error('ERROR', safeMessage(error));
-                    overlay.hide();
-                });
-        }
-
-        const startCamera = (field_name, action) => {
-            showCamera.value = true;
-            currentField.value = field_name;
-            if (typeof ZXing === 'undefined') {
-                alert.Error('ERROR', 'QR scanner library (ZXing) is not loaded');
-                showCamera.value = false;
-                return;
-            }
-            var codeReader = new ZXing.BrowserMultiFormatReader();
-            if (action === 'stop') {
-                codeReader.reset();
-                var video = document.querySelector('video');
-                if (video && video.srcObject) {
-                    var tracks = video.srcObject.getTracks();
-                    if (tracks[0]) tracks[0].stop();
-                    tracks.forEach(t => { t.stop(); });
-                }
-                showCamera.value = false;
-            } else {
-                codeReader.decodeFromVideoDevice(null, 'webcam-preview', (result, err) => {
-                    var current = currentField.value;
-                    if (result) {
-                        deviceDetailsForm[current] = (field_name === 'appSerial') ? result.text.split('|')[0].trim() : result.text;
-                        codeReader.reset();
-                        showCamera.value = false;
-                    }
-                    if (err) {
-                        if (err instanceof ZXing.NotFoundException)   console.log('No QR code found.');
-                        if (err instanceof ZXing.ChecksumException)   console.log("A code was found, but it's read value was not valid.");
-                        if (err instanceof ZXing.FormatException)     console.log('A code was found, but it was in an invalid format.');
-                    }
-                });
-            }
-        }
-
-        const showDeviceDetailsModal = (i) => {
-            deviceDetails.value = tableData.value[i] || {};
-            $('#deviceDetails').modal('show');
-        }
-        const hideDeviceDetailsModal = () => {
-            overlay.show();
-            $('#deviceDetails').modal('hide');
-            overlay.hide();
-        }
-
-        const checkIfEmpty = (data) => {
-            return data === null || data === '' || data === undefined ? 'Nil' : data;
-        }
-        const displayDate = (d) => {
-            var date = new Date(d);
-            return date.toLocaleString('en-us', {
-                year: 'numeric', month: 'long', day: 'numeric',
-                hour12: true, hour: '2-digit', minute: '2-digit', second: '2-digit',
-            });
-        }
-
-        onMounted(() => {
-            loadTableData();
-        });
-
-        return {
-            // state
-            tableData, filterState, filters, checkToggle, userGroup, permission,
-            tableOptions, currentField, appSerialState, deviceDetailsForm,
-            showCamera, deviceDetails,
-            // methods
-            loadTableData, selectAll, uncheckAll, selectToggle, checkedBg,
-            toggleFilter, selectedItems, selectedID,
-            nextPage, prevPage, currentPage, paginationDefault, changePerPage,
-            sort, applyFilter, removeSingleFilter, clearAllFilter, refreshData,
-            deviceActivationDeactivation, bulkDeActivateDevice, deleteDevice,
-            showUpdateDeviceModal, hideUpdateDeviceModal, resetForm, updateDeviceDetails,
-            startCamera, showDeviceDetailsModal, hideDeviceDetailsModal,
-            checkIfEmpty, displayDate,
-            // utility methods
-            capitalize: fmtUtils.capitalize,
-            formatNumber: fmtUtils.formatNumber,
-        };
-    },
-    template: `
+    return {
+      // state
+      tableData,
+      filterState,
+      filters,
+      checkToggle,
+      userGroup,
+      permission,
+      tableOptions,
+      currentField,
+      appSerialState,
+      deviceDetailsForm,
+      showCamera,
+      deviceDetails,
+      // methods
+      loadTableData,
+      selectAll,
+      uncheckAll,
+      selectToggle,
+      checkedBg,
+      toggleFilter,
+      selectedItems,
+      selectedID,
+      nextPage,
+      prevPage,
+      currentPage,
+      paginationDefault,
+      changePerPage,
+      sort,
+      applyFilter,
+      removeSingleFilter,
+      clearAllFilter,
+      refreshData,
+      deviceActivationDeactivation,
+      bulkDeActivateDevice,
+      deleteDevice,
+      showUpdateDeviceModal,
+      hideUpdateDeviceModal,
+      resetForm,
+      updateDeviceDetails,
+      startCamera,
+      showDeviceDetailsModal,
+      hideDeviceDetailsModal,
+      checkIfEmpty,
+      displayDate,
+      // utility methods
+      capitalize: fmtUtils.capitalize,
+      formatNumber: fmtUtils.formatNumber,
+    };
+  },
+  template: `
         <div class="row" id="basic-table">
 
             <div class="col-md-8 col-sm-12 col-12 mb-0">
@@ -767,6 +897,6 @@ const SampleTable = {
 };
 
 useApp({ template: `<div><page-body/></div>` })
-    .component('page-body', PageBody)
-    .component('sample_table', SampleTable)
-    .mount('#app');
+  .component("page-body", PageBody)
+  .component("sample_table", SampleTable)
+  .mount("#app");

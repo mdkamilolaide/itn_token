@@ -10,309 +10,449 @@ const { ref, reactive, onMounted } = Vue;
 const { useApp, useFormat, safeMessage } = window.utils;
 
 const PageBody = {
-    setup() { return {}; },
-    template: `<div><div class="content-body"><sample_table/></div></div>`,
+  setup() {
+    return {};
+  },
+  template: `<div><div class="content-body"><sample_table/></div></div>`,
 };
 
 const SampleTable = {
-    setup() {
-        const fmtUtils = useFormat();
+  setup() {
+    const fmtUtils = useFormat();
 
-        const tableData = ref([]);
-        const checkToggle = ref(false);
-        const filterState = ref(false);
-        const filters = ref(false);
-        const url = ref(window.common && window.common.BadgeService);
-        const tableOptions = reactive({
-            total: 1, pageLength: 1, perPage: 10, currentPage: 1,
-            orderDir: 'asc', orderField: 0, limitStart: 0,
-            isNext: false, isPrev: false,
-            aLength: [10, 20, 50, 100],
-            filterParam: { usergroup: '' },
+    const tableData = ref([]);
+    const checkToggle = ref(false);
+    const filterState = ref(false);
+    const filters = ref(false);
+    const url = ref(window.common && window.common.BadgeService);
+    const tableOptions = reactive({
+      total: 1,
+      pageLength: 1,
+      perPage: 10,
+      currentPage: 1,
+      orderDir: "asc",
+      orderField: 0,
+      limitStart: 0,
+      isNext: false,
+      isPrev: false,
+      aLength: [10, 20, 50, 100],
+      filterParam: { usergroup: "" },
+    });
+    const errors = ref([]);
+    const bulkUserModal = ref(false);
+    const bulkUserForm = reactive({
+      totalUser: 1,
+      groupName: "",
+      password: "",
+      geoLevel: "",
+      geoLevelId: 0,
+    });
+    const geoIndicator = reactive({
+      state: 50,
+      currentLevelId: 0,
+      lga: "",
+      cluster: "",
+      ward: "",
+    });
+    const geoLevelData = ref([]);
+    const sysDefaultData = ref({});
+    const lgaLevelData = ref([]);
+    const clusterLevelData = ref([]);
+    const wardLevelData = ref([]);
+    const dpLevelData = ref([]);
+
+    const loadTableData = () => {
+      overlay.show();
+      axios
+        .get(
+          common.TableService +
+            "?qid=002&draw=" +
+            tableOptions.currentPage +
+            "&order_column=" +
+            tableOptions.orderField +
+            "&length=" +
+            tableOptions.perPage +
+            "&start=" +
+            tableOptions.limitStart +
+            "&order_dir=" +
+            tableOptions.orderDir +
+            "&gr=" +
+            tableOptions.filterParam.usergroup,
+        )
+        .then((response) => {
+          var d = response && response.data;
+          tableData.value = Array.isArray(d && d.data) ? d.data : [];
+          tableOptions.total = (d && d.recordsTotal) || 0;
+          if (tableOptions.currentPage == 1) paginationDefault();
+          overlay.hide();
+        })
+        .catch((error) => {
+          overlay.hide();
+          alert.Error("ERROR", safeMessage(error));
         });
-        const errors = ref([]);
-        const bulkUserModal = ref(false);
-        const bulkUserForm = reactive({
-            totalUser: 1, groupName: '', password: '',
-            geoLevel: '', geoLevelId: 0,
-        });
-        const geoIndicator = reactive({
-            state: 50, currentLevelId: 0,
-            lga: '', cluster: '', ward: '',
-        });
-        const geoLevelData = ref([]);
-        const sysDefaultData = ref({});
-        const lgaLevelData = ref([]);
-        const clusterLevelData = ref([]);
-        const wardLevelData = ref([]);
-        const dpLevelData = ref([]);
+    };
 
-        const loadTableData = () => {
-            overlay.show();
-            axios.get(
-                common.TableService +
-                '?qid=002&draw=' + tableOptions.currentPage +
-                '&order_column=' + tableOptions.orderField +
-                '&length=' + tableOptions.perPage +
-                '&start=' + tableOptions.limitStart +
-                '&order_dir=' + tableOptions.orderDir +
-                '&gr=' + tableOptions.filterParam.usergroup
-            )
-                .then(response => {
-                    var d = response && response.data;
-                    tableData.value = Array.isArray(d && d.data) ? d.data : [];
-                    tableOptions.total = (d && d.recordsTotal) || 0;
-                    if (tableOptions.currentPage == 1) paginationDefault();
-                    overlay.hide();
-                })
-                .catch(error => {
-                    overlay.hide();
-                    alert.Error('ERROR', safeMessage(error));
-                });
-        }
+    const selectAll = () => {
+      for (var i = 0; i < tableData.value.length; i++)
+        tableData.value[i].pick = true;
+    };
+    const uncheckAll = () => {
+      for (var i = 0; i < tableData.value.length; i++)
+        tableData.value[i].pick = false;
+    };
+    const selectToggle = () => {
+      if (checkToggle.value === false) {
+        selectAll();
+        checkToggle.value = true;
+      } else {
+        uncheckAll();
+        checkToggle.value = false;
+      }
+    };
+    const checkedBg = (p) => {
+      return p != "" ? "bg-select" : "";
+    };
+    const toggleFilter = () => {
+      if (filterState.value === false) filters.value = false;
+      return (filterState.value = !filterState.value);
+    };
+    const paginationDefault = () => {
+      tableOptions.pageLength = Math.ceil(
+        tableOptions.total / tableOptions.perPage,
+      );
+      tableOptions.limitStart = Math.ceil(
+        (tableOptions.currentPage - 1) * tableOptions.perPage,
+      );
+      tableOptions.isNext = tableOptions.currentPage < tableOptions.pageLength;
+      tableOptions.isPrev = tableOptions.currentPage > 1;
+    };
+    const nextPage = () => {
+      tableOptions.currentPage += 1;
+      paginationDefault();
+      loadTableData();
+    };
+    const prevPage = () => {
+      tableOptions.currentPage -= 1;
+      paginationDefault();
+      loadTableData();
+    };
+    const currentPage = () => {
+      paginationDefault();
+      if (tableOptions.currentPage < 1)
+        alert.Error("ERROR", "The Page requested doesn't exist");
+      else if (tableOptions.currentPage > tableOptions.pageLength)
+        alert.Error("ERROR", "The Page requested doesn't exist");
+      else loadTableData();
+    };
+    const changePerPage = (val) => {
+      var maxPerPage = Math.ceil(tableOptions.total / val);
+      if (maxPerPage < tableOptions.currentPage)
+        tableOptions.currentPage = maxPerPage;
+      tableOptions.perPage = val;
+      paginationDefault();
+      loadTableData();
+    };
+    const sort = (col) => {
+      if (tableOptions.orderField === col)
+        tableOptions.orderDir =
+          tableOptions.orderDir === "asc" ? "desc" : "asc";
+      else tableOptions.orderField = col;
+      paginationDefault();
+      loadTableData();
+    };
+    const applyFilter = () => {
+      if (tableOptions.filterParam.usergroup != "") {
+        toggleFilter();
+        filters.value = true;
+        paginationDefault();
+        loadTableData();
+      } else {
+        alert.Error("ERROR", "Invalid required data");
+      }
+    };
+    const clearAllFilter = () => {
+      filters.value = false;
+      tableOptions.filterParam.usergroup = "";
+      paginationDefault();
+      loadTableData();
+    };
 
-        const selectAll = () => { for (var i = 0; i < tableData.value.length; i++) tableData.value[i].pick = true; };
-        const uncheckAll = () => { for (var i = 0; i < tableData.value.length; i++) tableData.value[i].pick = false; };
-        const selectToggle = () => {
-            if (checkToggle.value === false) { selectAll(); checkToggle.value = true; }
-            else                              { uncheckAll(); checkToggle.value = false; }
-        }
-        const checkedBg = (p) => { return p != '' ? 'bg-select' : ''; };
-        const toggleFilter = () => {
-            if (filterState.value === false) filters.value = false;
-            return (filterState.value = !filterState.value);
-        }
-        const paginationDefault = () => {
-            tableOptions.pageLength = Math.ceil(tableOptions.total / tableOptions.perPage);
-            tableOptions.limitStart = Math.ceil((tableOptions.currentPage - 1) * tableOptions.perPage);
-            tableOptions.isNext = tableOptions.currentPage < tableOptions.pageLength;
-            tableOptions.isPrev = tableOptions.currentPage > 1;
-        }
-        const nextPage = () => { tableOptions.currentPage += 1; paginationDefault(); loadTableData(); };
-        const prevPage = () => { tableOptions.currentPage -= 1; paginationDefault(); loadTableData(); };
-        const currentPage = () => {
-            paginationDefault();
-            if (tableOptions.currentPage < 1)                            alert.Error('ERROR', "The Page requested doesn't exist");
-            else if (tableOptions.currentPage > tableOptions.pageLength) alert.Error('ERROR', "The Page requested doesn't exist");
-            else                                                         loadTableData();
-        }
-        const changePerPage = (val) => {
-            var maxPerPage = Math.ceil(tableOptions.total / val);
-            if (maxPerPage < tableOptions.currentPage) tableOptions.currentPage = maxPerPage;
-            tableOptions.perPage = val;
-            paginationDefault();
-            loadTableData();
-        }
-        const sort = (col) => {
-            if (tableOptions.orderField === col) tableOptions.orderDir = tableOptions.orderDir === 'asc' ? 'desc' : 'asc';
-            else                                  tableOptions.orderField = col;
-            paginationDefault();
-            loadTableData();
-        }
-        const applyFilter = () => {
-            if (tableOptions.filterParam.usergroup != '') {
-                toggleFilter();
-                filters.value = true;
-                paginationDefault();
-                loadTableData();
-            } else {
-                alert.Error('ERROR', 'Invalid required data');
-            }
-        }
-        const clearAllFilter = () => {
-            filters.value = false;
-            tableOptions.filterParam.usergroup = '';
-            paginationDefault();
-            loadTableData();
-        }
-
-        const activateUserByGroup = (group) => {
-            $.confirm({
-                title: 'WARNING!',
-                content: 'Are you sure you want to Activate all the Users in <b>' + group + '</b> group?',
-                buttons: {
-                    delete: {
-                        text: 'Activate All', btnClass: 'btn btn-danger mr-1',
-                        action: () => {
-                            axios.post(common.DataService + '?qid=004&e=' + group)
-                                .then(response => {
-                                    overlay.hide();
-                                    if (response.data.result_code == '201') {
-                                        loadTableData();
-                                        alert.Success('SUCCESS', response.data.group + ' user group has been activated successfully');
-                                    } else {
-                                        alert.Error('ERROR', 'Unable to activate ' + response.data.group + ' at the moment please try again later');
-                                    }
-                                })
-                                .catch(error => {
-                                    overlay.hide();
-                                    alert.Error('ERROR', safeMessage(error));
-                                });
-                        },
-                    },
-                    cancel: () => { overlay.hide(); },
-                },
-            });
-        }
-        const deactivateUserByGroup = (group) => {
-            $.confirm({
-                title: 'WARNING!',
-                content: 'Are you sure you want to Deactivate all the Users in <b>' + group + '</b> group?',
-                buttons: {
-                    delete: {
-                        text: 'Deactivate All', btnClass: 'btn btn-danger mr-1',
-                        action: () => {
-                            axios.post(common.DataService + '?qid=003&e=' + group)
-                                .then(response => {
-                                    overlay.hide();
-                                    if (response.data.result_code == '201') {
-                                        loadTableData();
-                                        alert.Success('SUCCESS', response.data.group + ' user group has been deactivated successfully');
-                                    } else {
-                                        alert.Error('ERROR', 'Unable to deactivate ' + response.data.group + ' at the moment please try again later');
-                                    }
-                                })
-                                .catch(error => {
-                                    overlay.hide();
-                                    alert.Error('ERROR', safeMessage(error));
-                                });
-                        },
-                    },
-                    cancel: () => { overlay.hide(); },
-                },
-            });
-        }
-        const showBulkUserModal = () => { bulkUserModal.value = true; };
-        const hideBulkUserModal = () => { bulkUserModal.value = false; };
-
-        const getsysDefaultDataSettings = () => {
-            overlay.show();
-            axios.get(common.DataService + '?qid=gen007')
-                .then(response => {
-                    if (response.data.data && response.data.data.length > 0) {
-                        sysDefaultData.value = response.data.data[0];
-                        getLgasLevel(response.data.data[0].stateid);
-                        bulkUserForm.geoLevel = 'state';
-                        bulkUserForm.geoLevelId = response.data.data[0].stateid;
-                    }
-                    overlay.hide();
+    const activateUserByGroup = (group) => {
+      $.confirm({
+        title: "WARNING!",
+        content:
+          "Are you sure you want to Activate all the Users in <b>" +
+          group +
+          "</b> group?",
+        buttons: {
+          delete: {
+            text: "Activate All",
+            btnClass: "btn btn-danger mr-1",
+            action: () => {
+              axios
+                .post(common.DataService + "?qid=004&e=" + group)
+                .then((response) => {
+                  overlay.hide();
+                  if (response.data.result_code == "201") {
+                    loadTableData();
+                    alert.Success(
+                      "SUCCESS",
+                      response.data.group +
+                        " user group has been activated successfully",
+                    );
+                  } else {
+                    alert.Error(
+                      "ERROR",
+                      "Unable to activate " +
+                        response.data.group +
+                        " at the moment please try again later",
+                    );
+                  }
                 })
-                .catch(error => {
-                    overlay.hide();
-                    alert.Error('ERROR', safeMessage(error));
+                .catch((error) => {
+                  overlay.hide();
+                  alert.Error("ERROR", safeMessage(error));
                 });
-        }
-        const getGeoLevel = () => {
-            overlay.show();
-            axios.get(common.DataService + '?qid=gen001')
-                .then(response => {
-                    geoLevelData.value = (response.data && response.data.data) || [];
-                    overlay.hide();
-                })
-                .catch(error => {
-                    overlay.hide();
-                    alert.Error('ERROR', safeMessage(error));
-                });
-        }
-        const getLgasLevel = (stateid) => {
-            overlay.show();
-            axios.post(common.DataService + '?qid=gen003', JSON.stringify(stateid))
-                .then(response => {
-                    lgaLevelData.value = (response.data && response.data.data) || [];
-                    overlay.hide();
-                })
-                .catch(error => {
-                    overlay.hide();
-                    alert.Error('ERROR', safeMessage(error));
-                });
-        }
-        const getClusterLevel = () => {
-            overlay.show();
-            axios.get(common.DataService + '?qid=gen004&e=' + geoIndicator.cluster)
-                .then(response => {
-                    clusterLevelData.value = (response.data && response.data.data) || [];
-                    overlay.hide();
-                })
-                .catch(error => {
-                    overlay.hide();
-                    alert.Error('ERROR', safeMessage(error));
-                });
-        }
-        const getWardLevel = () => {
-            overlay.show();
-            axios.get(common.DataService + '?qid=gen005&e=' + geoIndicator.lga)
-                .then(response => {
-                    wardLevelData.value = (response.data && response.data.data) || [];
-                    overlay.hide();
-                })
-                .catch(error => {
-                    overlay.hide();
-                    alert.Error('ERROR', safeMessage(error));
-                });
-        }
-        const changeGeoLevel = () => {
-            if (bulkUserForm.geoLevel == 'country' || bulkUserForm.geoLevel == 'dp') {
-                alert.Error('ERROR', 'Invalid Geo-Level selected, please select a valid Geo-Level');
-            }
-        }
-        const onSubmitBulkUserCreation = () => {
-            overlay.show();
-            axios.post(common.DataService + '?qid=002', JSON.stringify(bulkUserForm))
-                .then(response => {
-                    if (response.data.result_code == '201') {
-                        resetBulkUserForm();
-                        bulkUserModal.value = false;
-                        $('#addNewUser').modal('hide');
-                        loadTableData();
-                        alert.Success('Success', response.data.total + ' Users Created Successfully');
-                        overlay.hide();
-                    } else {
-                        overlay.hide();
-                        alert.Error('Error', 'Users Creation Failed, Kindly check your input fields');
-                    }
-                })
-                .catch(error => {
-                    alert.Error('ERROR', safeMessage(error));
-                    overlay.hide();
-                });
-        }
-        const resetBulkUserForm = () => {
-            bulkUserForm.totalUser = 1;
-            bulkUserForm.groupName = '';
-            bulkUserForm.password = '';
-            getsysDefaultDataSettings();
+            },
+          },
+          cancel: () => {
             overlay.hide();
-        }
-        const refreshData = () => { paginationDefault(); loadTableData(); };
-        const downloadGroupBadge = (user_group) => {
-            overlay.show();
-            window.popup = window.open(url.value + '?qid=001&e=' + user_group, '_parent');
+          },
+        },
+      });
+    };
+    const deactivateUserByGroup = (group) => {
+      $.confirm({
+        title: "WARNING!",
+        content:
+          "Are you sure you want to Deactivate all the Users in <b>" +
+          group +
+          "</b> group?",
+        buttons: {
+          delete: {
+            text: "Deactivate All",
+            btnClass: "btn btn-danger mr-1",
+            action: () => {
+              axios
+                .post(common.DataService + "?qid=003&e=" + group)
+                .then((response) => {
+                  overlay.hide();
+                  if (response.data.result_code == "201") {
+                    loadTableData();
+                    alert.Success(
+                      "SUCCESS",
+                      response.data.group +
+                        " user group has been deactivated successfully",
+                    );
+                  } else {
+                    alert.Error(
+                      "ERROR",
+                      "Unable to deactivate " +
+                        response.data.group +
+                        " at the moment please try again later",
+                    );
+                  }
+                })
+                .catch((error) => {
+                  overlay.hide();
+                  alert.Error("ERROR", safeMessage(error));
+                });
+            },
+          },
+          cancel: () => {
             overlay.hide();
-        }
+          },
+        },
+      });
+    };
+    const showBulkUserModal = () => {
+      bulkUserModal.value = true;
+    };
+    const hideBulkUserModal = () => {
+      bulkUserModal.value = false;
+    };
 
-        onMounted(() => {
-            getGeoLevel();
-            getsysDefaultDataSettings();
-            loadTableData();
+    const getsysDefaultDataSettings = () => {
+      overlay.show();
+      axios
+        .get(common.DataService + "?qid=gen007")
+        .then((response) => {
+          if (response.data.data && response.data.data.length > 0) {
+            sysDefaultData.value = response.data.data[0];
+            getLgasLevel(response.data.data[0].stateid);
+            bulkUserForm.geoLevel = "state";
+            bulkUserForm.geoLevelId = response.data.data[0].stateid;
+          }
+          overlay.hide();
+        })
+        .catch((error) => {
+          overlay.hide();
+          alert.Error("ERROR", safeMessage(error));
         });
+    };
+    const getGeoLevel = () => {
+      overlay.show();
+      axios
+        .get(common.DataService + "?qid=gen001")
+        .then((response) => {
+          geoLevelData.value = (response.data && response.data.data) || [];
+          overlay.hide();
+        })
+        .catch((error) => {
+          overlay.hide();
+          alert.Error("ERROR", safeMessage(error));
+        });
+    };
+    const getLgasLevel = (stateid) => {
+      overlay.show();
+      axios
+        .post(common.DataService + "?qid=gen003", JSON.stringify(stateid))
+        .then((response) => {
+          lgaLevelData.value = (response.data && response.data.data) || [];
+          overlay.hide();
+        })
+        .catch((error) => {
+          overlay.hide();
+          alert.Error("ERROR", safeMessage(error));
+        });
+    };
+    const getClusterLevel = () => {
+      overlay.show();
+      axios
+        .get(common.DataService + "?qid=gen004&e=" + geoIndicator.cluster)
+        .then((response) => {
+          clusterLevelData.value = (response.data && response.data.data) || [];
+          overlay.hide();
+        })
+        .catch((error) => {
+          overlay.hide();
+          alert.Error("ERROR", safeMessage(error));
+        });
+    };
+    const getWardLevel = () => {
+      overlay.show();
+      axios
+        .get(common.DataService + "?qid=gen005&e=" + geoIndicator.lga)
+        .then((response) => {
+          wardLevelData.value = (response.data && response.data.data) || [];
+          overlay.hide();
+        })
+        .catch((error) => {
+          overlay.hide();
+          alert.Error("ERROR", safeMessage(error));
+        });
+    };
+    const changeGeoLevel = () => {
+      if (bulkUserForm.geoLevel == "country" || bulkUserForm.geoLevel == "dp") {
+        alert.Error(
+          "ERROR",
+          "Invalid Geo-Level selected, please select a valid Geo-Level",
+        );
+      }
+    };
+    const onSubmitBulkUserCreation = () => {
+      overlay.show();
+      axios
+        .post(common.DataService + "?qid=002", JSON.stringify(bulkUserForm))
+        .then((response) => {
+          if (response.data.result_code == "201") {
+            resetBulkUserForm();
+            bulkUserModal.value = false;
+            $("#addNewUser").modal("hide");
+            loadTableData();
+            alert.Success(
+              "Success",
+              response.data.total + " Users Created Successfully",
+            );
+            overlay.hide();
+          } else {
+            overlay.hide();
+            alert.Error(
+              "Error",
+              "Users Creation Failed, Kindly check your input fields",
+            );
+          }
+        })
+        .catch((error) => {
+          alert.Error("ERROR", safeMessage(error));
+          overlay.hide();
+        });
+    };
+    const resetBulkUserForm = () => {
+      bulkUserForm.totalUser = 1;
+      bulkUserForm.groupName = "";
+      bulkUserForm.password = "";
+      getsysDefaultDataSettings();
+      overlay.hide();
+    };
+    const refreshData = () => {
+      paginationDefault();
+      loadTableData();
+    };
+    const downloadGroupBadge = (user_group) => {
+      overlay.show();
+      window.popup = window.open(
+        url.value + "?qid=001&e=" + user_group,
+        "_parent",
+      );
+      overlay.hide();
+    };
 
-        return {
-            tableData, checkToggle, filterState, filters, url, tableOptions,
-            errors, bulkUserModal, bulkUserForm, geoIndicator,
-            geoLevelData, sysDefaultData, lgaLevelData, clusterLevelData,
-            wardLevelData, dpLevelData,
-            loadTableData, selectAll, uncheckAll, selectToggle, checkedBg,
-            toggleFilter, paginationDefault, nextPage, prevPage, currentPage,
-            changePerPage, sort, applyFilter, clearAllFilter,
-            activateUserByGroup, deactivateUserByGroup,
-            showBulkUserModal, hideBulkUserModal,
-            getsysDefaultDataSettings, getGeoLevel, getLgasLevel, getClusterLevel,
-            getWardLevel, changeGeoLevel, onSubmitBulkUserCreation, resetBulkUserForm,
-            refreshData, downloadGroupBadge,
-            capitalize: fmtUtils.capitalize,
-        };
-    },
-    template: `
+    onMounted(() => {
+      getGeoLevel();
+      getsysDefaultDataSettings();
+      loadTableData();
+    });
+
+    return {
+      tableData,
+      checkToggle,
+      filterState,
+      filters,
+      url,
+      tableOptions,
+      errors,
+      bulkUserModal,
+      bulkUserForm,
+      geoIndicator,
+      geoLevelData,
+      sysDefaultData,
+      lgaLevelData,
+      clusterLevelData,
+      wardLevelData,
+      dpLevelData,
+      loadTableData,
+      selectAll,
+      uncheckAll,
+      selectToggle,
+      checkedBg,
+      toggleFilter,
+      paginationDefault,
+      nextPage,
+      prevPage,
+      currentPage,
+      changePerPage,
+      sort,
+      applyFilter,
+      clearAllFilter,
+      activateUserByGroup,
+      deactivateUserByGroup,
+      showBulkUserModal,
+      hideBulkUserModal,
+      getsysDefaultDataSettings,
+      getGeoLevel,
+      getLgasLevel,
+      getClusterLevel,
+      getWardLevel,
+      changeGeoLevel,
+      onSubmitBulkUserCreation,
+      resetBulkUserForm,
+      refreshData,
+      downloadGroupBadge,
+      capitalize: fmtUtils.capitalize,
+    };
+  },
+  template: `
         <div class="row" id="basic-table">
             <div class="col-md-8 col-sm-12 col-12 mb-0">
                 <h2 class="content-header-title header-txt float-left mb-0">Users</h2>
@@ -500,6 +640,6 @@ const SampleTable = {
 };
 
 useApp({ template: `<div><page-body/></div>` })
-    .component('page-body', PageBody)
-    .component('sample_table', SampleTable)
-    .mount('#app');
+  .component("page-body", PageBody)
+  .component("sample_table", SampleTable)
+  .mount("#app");

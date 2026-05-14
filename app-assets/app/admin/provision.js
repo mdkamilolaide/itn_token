@@ -9,11 +9,11 @@ const { useApp, useFormat } = window.utils;
 
 /* ------------------------------------------------------------------ */
 const PageBody = {
-    setup() {
-        const page = ref('home');
-        return { page };
-    },
-    template: `
+  setup() {
+    const page = ref("home");
+    return { page };
+  },
+  template: `
         <div>
             <div class="content-body">
                 <sample_table/>
@@ -24,54 +24,64 @@ const PageBody = {
 
 /* ------------------------------------------------------------------ */
 const SampleTable = {
-    setup() {
-        const filterState = ref(0);
-        const expiringDate = ref('');
+  setup() {
+    const filterState = ref(0);
+    const expiringDate = ref("");
 
-        let flatpickrInstance = null;
+    let flatpickrInstance = null;
 
-        const resetDate = () => {
-            if (filterState.value == 0) {
-                expiringDate.value = '';
-                if (flatpickrInstance && typeof flatpickrInstance.clear === 'function') {
-                    flatpickrInstance.clear();
-                }
-            }
+    const resetDate = () => {
+      if (filterState.value == 0) {
+        expiringDate.value = "";
+        if (
+          flatpickrInstance &&
+          typeof flatpickrInstance.clear === "function"
+        ) {
+          flatpickrInstance.clear();
         }
+      }
+    };
 
-        const downloadBadge = (date) => {
-            overlay.show();
-            var url = common.DpBadgeService;
-            window.open(url + '?qid=003&date=' + date, '_parent');
-            overlay.hide();
+    const downloadBadge = (date) => {
+      overlay.show();
+      var url = common.DpBadgeService;
+      window.open(url + "?qid=003&date=" + date, "_parent");
+      overlay.hide();
+    };
+
+    onMounted(() => {
+      // flatpickr is loaded via the submodule.provision deps; guard anyway.
+      var $el = $("#date");
+      if ($el.length && typeof $el.flatpickr === "function") {
+        flatpickrInstance = $el.flatpickr({
+          altInput: true,
+          altFormat: "F j, Y",
+          dateFormat: "Y-m-d",
+          minDate: "today",
+          onChange: (selectedDates, dateStr) => {
+            expiringDate.value = dateStr;
+          },
+        });
+      }
+    });
+
+    onBeforeUnmount(() => {
+      if (
+        flatpickrInstance &&
+        typeof flatpickrInstance.destroy === "function"
+      ) {
+        try {
+          flatpickrInstance.destroy();
+        } catch (e) {
+          /* swallow */
         }
+        flatpickrInstance = null;
+      }
+    });
 
-        onMounted(() => {
-            // flatpickr is loaded via the submodule.provision deps; guard anyway.
-            var $el = $('#date');
-            if ($el.length && typeof $el.flatpickr === 'function') {
-                flatpickrInstance = $el.flatpickr({
-                    altInput: true,
-                    altFormat: 'F j, Y',
-                    dateFormat: 'Y-m-d',
-                    minDate: 'today',
-                    onChange: (selectedDates, dateStr) => {
-                        expiringDate.value = dateStr;
-                    },
-                });
-            }
-        });
-
-        onBeforeUnmount(() => {
-            if (flatpickrInstance && typeof flatpickrInstance.destroy === 'function') {
-                try { flatpickrInstance.destroy(); } catch (e) { /* swallow */ }
-                flatpickrInstance = null;
-            }
-        });
-
-        return { filterState, expiringDate, resetDate, downloadBadge };
-    },
-    template: `
+    return { filterState, expiringDate, resetDate, downloadBadge };
+  },
+  template: `
         <div class="row" id="basic-table">
 
             <div class="col-md-12 col-sm-12 col-12 mb-0">
@@ -121,6 +131,6 @@ const SampleTable = {
 };
 
 useApp({ template: `<div><page-body/></div>` })
-    .component('page-body', PageBody)
-    .component('sample_table', SampleTable)
-    .mount('#app');
+  .component("page-body", PageBody)
+  .component("sample_table", SampleTable)
+  .mount("#app");

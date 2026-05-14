@@ -7,102 +7,132 @@
  * Issue & Receipt Voucher PDF (qid=1136 + pdfMake).
  */
 
-const { ref, reactive, computed, watch, onMounted, onBeforeUnmount, nextTick } = Vue;
+const { ref, reactive, computed, watch, onMounted, onBeforeUnmount, nextTick } =
+  Vue;
 const { useApp, useFormat, bus, safeMessage } = window.utils;
 
 const appState = Vue.reactive({
-    pageState: { page: 'shipment-page', title: '' },
-    permission: (typeof getPermission === 'function')
-        ? (getPermission(typeof per !== 'undefined' ? per : null, 'smc') || { permission_value: 0 })
-        : { permission_value: 0 },
-    userId: (() => { var el = document.getElementById('v_g_id'); return el ? el.value : ''; })(),
-    geoLevelForm: { geoLevel: '', geoLevelId: 0 },
-    defaultStateId: '',
-    sysDefaultData: [],
-    productData: [],
-    lgaData: [],
-    shipmentData: [],
-    periodData: [],
-    currentPeriodId: '',
-    currentProductCode: '',
-    receiptHeader: '',
-    filterText: '',
-    statusFilter: '',
+  pageState: { page: "shipment-page", title: "" },
+  permission:
+    typeof getPermission === "function"
+      ? getPermission(typeof per !== "undefined" ? per : null, "smc") || {
+          permission_value: 0,
+        }
+      : { permission_value: 0 },
+  userId: (() => {
+    var el = document.getElementById("v_g_id");
+    return el ? el.value : "";
+  })(),
+  geoLevelForm: { geoLevel: "", geoLevelId: 0 },
+  defaultStateId: "",
+  sysDefaultData: [],
+  productData: [],
+  lgaData: [],
+  shipmentData: [],
+  periodData: [],
+  currentPeriodId: "",
+  currentProductCode: "",
+  receiptHeader: "",
+  filterText: "",
+  statusFilter: "",
 });
 
 const displayDateLong = (d, fullDate, withTime) => {
-    if (fullDate === undefined) fullDate = false;
-    if (withTime === undefined) withTime = true;
-    var date = new Date(d);
-    var options = {
-        year: 'numeric',
-        month: fullDate ? 'long' : 'short',
-        day: 'numeric',
-    };
-    if (withTime) { options.hour = '2-digit'; options.minute = '2-digit'; options.hour12 = true; }
-    return date.toLocaleString('en-US', options);
-}
+  if (fullDate === undefined) fullDate = false;
+  if (withTime === undefined) withTime = true;
+  var date = new Date(d);
+  var options = {
+    year: "numeric",
+    month: fullDate ? "long" : "short",
+    day: "numeric",
+  };
+  if (withTime) {
+    options.hour = "2-digit";
+    options.minute = "2-digit";
+    options.hour12 = true;
+  }
+  return date.toLocaleString("en-US", options);
+};
 
 /* ------------------------------------------------------------------ */
 /* select2-dropdown                                                     */
 /* ------------------------------------------------------------------ */
 const Select2Dropdown = {
-    props: {
-        modelValue: { type: [String, Number], default: null },
-        options: { type: Array, required: true },
-        placeholder: { type: String, default: 'Select an option' },
-        clearable: { type: Boolean, default: true },
-    },
-    emits: ['update:modelValue'],
-    setup(props, ctx) {
-        const selectEl = ref(null);
+  props: {
+    modelValue: { type: [String, Number], default: null },
+    options: { type: Array, required: true },
+    placeholder: { type: String, default: "Select an option" },
+    clearable: { type: Boolean, default: true },
+  },
+  emits: ["update:modelValue"],
+  setup(props, ctx) {
+    const selectEl = ref(null);
 
-        const initialize = () => {
-            if (!selectEl.value) return;
-            var $sel = $(selectEl.value);
-            $sel.wrap('<div class="position-relative"></div>');
-            $sel.select2({
-                data: props.options,
-                placeholder: props.placeholder,
-                dropdownAutoWidth: true,
-                allowClear: props.clearable,
-                width: '100%',
-                dropdownParent: $($sel[0]).parent(),
-            }).val(props.modelValue).trigger('change').on('change', () => {
-                ctx.emit('update:modelValue', $sel.val());
-            });
-            nextTick(() => {
-                $sel.next('.select2-container').find('.select2-selection__arrow')
-                    .html('<i class="feather icon-chevron-down"></i>');
-            });
-        }
-        const destroy = () => {
-            try {
-                if (!selectEl.value) return;
-                var $sel = $(selectEl.value);
-                $sel.off().select2('destroy');
-            } catch (e) { /* swallow */ }
-        }
-
-        onMounted(() => { initialize(); });
-        onBeforeUnmount(() => { destroy(); });
-
-        watch(() => props.modelValue, newVal => {
-            if (!selectEl.value) return;
-            var $sel = $(selectEl.value);
-            if ($sel.val() !== newVal) $sel.val(newVal).trigger('change');
-            var $selection = $sel.next('.select2').find('.select2-selection');
-            if (newVal) $selection.removeClass('is-invalid');
-            else $selection.addClass('is-invalid');
+    const initialize = () => {
+      if (!selectEl.value) return;
+      var $sel = $(selectEl.value);
+      $sel.wrap('<div class="position-relative"></div>');
+      $sel
+        .select2({
+          data: props.options,
+          placeholder: props.placeholder,
+          dropdownAutoWidth: true,
+          allowClear: props.clearable,
+          width: "100%",
+          dropdownParent: $($sel[0]).parent(),
+        })
+        .val(props.modelValue)
+        .trigger("change")
+        .on("change", () => {
+          ctx.emit("update:modelValue", $sel.val());
         });
-        watch(() => props.options, () => {
-            destroy();
-            nextTick(initialize);
-        }, { deep: true });
+      nextTick(() => {
+        $sel
+          .next(".select2-container")
+          .find(".select2-selection__arrow")
+          .html('<i class="feather icon-chevron-down"></i>');
+      });
+    };
+    const destroy = () => {
+      try {
+        if (!selectEl.value) return;
+        var $sel = $(selectEl.value);
+        $sel.off().select2("destroy");
+      } catch (e) {
+        /* swallow */
+      }
+    };
 
-        return { selectEl };
-    },
-    template: `
+    onMounted(() => {
+      initialize();
+    });
+    onBeforeUnmount(() => {
+      destroy();
+    });
+
+    watch(
+      () => props.modelValue,
+      (newVal) => {
+        if (!selectEl.value) return;
+        var $sel = $(selectEl.value);
+        if ($sel.val() !== newVal) $sel.val(newVal).trigger("change");
+        var $selection = $sel.next(".select2").find(".select2-selection");
+        if (newVal) $selection.removeClass("is-invalid");
+        else $selection.addClass("is-invalid");
+      },
+    );
+    watch(
+      () => props.options,
+      () => {
+        destroy();
+        nextTick(initialize);
+      },
+      { deep: true },
+    );
+
+    return { selectEl };
+  },
+  template: `
         <select class="form-control" ref="selectEl">
             <option :value="null">{{ placeholder }}</option>
         </select>
@@ -113,316 +143,525 @@ const Select2Dropdown = {
 /* page-shipment-page                                                   */
 /* ------------------------------------------------------------------ */
 const PageShipmentPage = {
-    setup() {
-        const fmtUtils = useFormat();
+  setup() {
+    const fmtUtils = useFormat();
 
-        const searchState = ref(false);
-        const searchText = ref('');
-        const movementType = ref('Forward');
-        const checkToggle = ref(false);
-        const conveyorData = ref([]);
-        const transporterData = ref([]);
-        const movementForm = reactive({
-            periodId: '', transporterId: '', movementTitle: '',
-            shipmentListIds: [], conveyorId: '', userid: appState.userId,
+    const searchState = ref(false);
+    const searchText = ref("");
+    const movementType = ref("Forward");
+    const checkToggle = ref(false);
+    const conveyorData = ref([]);
+    const transporterData = ref([]);
+    const movementForm = reactive({
+      periodId: "",
+      transporterId: "",
+      movementTitle: "",
+      shipmentListIds: [],
+      conveyorId: "",
+      userid: appState.userId,
+    });
+    const selectedShipment = ref("");
+
+    const closeMovementModal = () => {
+      $("#movementModal").modal("hide");
+    };
+    const resetMovementForm = () => {
+      closeMovementModal();
+      movementForm.movementTitle = "";
+      movementForm.shipmentListIds = [];
+      movementForm.conveyorId = "";
+      movementForm.transporterId = "";
+      loadShipment();
+      selectToggle();
+    };
+    const removeSelectedMovement = (item) => {
+      item.pick = false;
+      if (selectedID.value.length === 0) selectToggle();
+      movementForm.shipmentListIds = selectedID.value;
+    };
+
+    const getTransporterAndConveyor = async () => {
+      var endpoints = [
+        common.DataService + "?qid=gen014",
+        common.DataService + "?qid=gen015",
+      ];
+      try {
+        overlay.show();
+        var responses = await Promise.all(endpoints.map((e) => axios.get(e)));
+        transporterData.value =
+          (responses[0] && responses[0].data && responses[0].data.data) || [];
+        conveyorData.value =
+          (responses[1] && responses[1].data && responses[1].data.data) || [];
+      } catch (error) {
+        alert.Error("ERROR", safeMessage(error));
+      } finally {
+        overlay.hide();
+      }
+    };
+
+    const initializeMovement = () => {
+      if (totalCheckedBox.value === false) {
+        alert.Error(
+          "ERROR",
+          "Please select at least one Shipment item to create movement.",
+        );
+        return;
+      }
+      movementForm.shipmentListIds = selectedID.value;
+      movementForm.periodId = appState.currentPeriodId;
+      $("#movementModal").modal("show");
+    };
+    const validateMovementForm = () => {
+      // jQuery-validate-driven validation (preserved for compatibility).
+      try {
+        return $("#createMovementForm")
+          .validate({
+            rules: {
+              movementTitle: { required: true, minlength: 2, maxlength: 255 },
+              transporter: { required: true },
+              conveyor: { required: true },
+            },
+          })
+          .form();
+      } catch (e) {
+        return true;
+      }
+    };
+    const createMovement = () => {
+      if (!validateMovementForm()) {
+        alert.Error("*Required Fields", "All fields are required");
+        return;
+      }
+      var data = {
+        periodId: movementForm.periodId,
+        transporterId: parseInt(movementForm.transporterId),
+        title: movementForm.movementTitle,
+        shipmentIds: movementForm.shipmentListIds,
+        conveyorId: parseInt(movementForm.conveyorId),
+      };
+      overlay.show();
+      axios
+        .post(common.DataService + "?qid=1135", JSON.stringify(data))
+        .then((response) => {
+          overlay.hide();
+          if (response.data.result_code === 200) {
+            alert.Success("SUCCESS", response.data.message);
+            resetMovementForm();
+          } else {
+            alert.Error("ERROR", response.data.message);
+          }
+        })
+        .catch((error) => {
+          overlay.hide();
+          alert.Error("ERROR", safeMessage(error));
         });
-        const selectedShipment = ref('');
+    };
 
-        const closeMovementModal = () => { $('#movementModal').modal('hide'); };
-        const resetMovementForm = () => {
-            closeMovementModal();
-            movementForm.movementTitle = '';
-            movementForm.shipmentListIds = [];
-            movementForm.conveyorId = '';
-            movementForm.transporterId = '';
-            loadShipment();
-            selectToggle();
-        }
-        const removeSelectedMovement = (item) => {
-            item.pick = false;
-            if (selectedID.value.length === 0) selectToggle();
-            movementForm.shipmentListIds = selectedID.value;
-        }
-
-        const getTransporterAndConveyor = async () => {
-            var endpoints = [common.DataService + '?qid=gen014', common.DataService + '?qid=gen015'];
-            try {
-                overlay.show();
-                var responses = await Promise.all(endpoints.map(e => axios.get(e)));
-                transporterData.value = (responses[0] && responses[0].data && responses[0].data.data) || [];
-                conveyorData.value = (responses[1] && responses[1].data && responses[1].data.data) || [];
-            } catch (error) {
-                alert.Error('ERROR', safeMessage(error));
-            } finally {
-                overlay.hide();
-            }
-        }
-
-        const initializeMovement = () => {
-            if (totalCheckedBox.value === false) {
-                alert.Error('ERROR', 'Please select at least one Shipment item to create movement.');
-                return;
-            }
-            movementForm.shipmentListIds = selectedID.value;
-            movementForm.periodId = appState.currentPeriodId;
-            $('#movementModal').modal('show');
-        }
-        const validateMovementForm = () => {
-            // jQuery-validate-driven validation (preserved for compatibility).
-            try {
-                return $('#createMovementForm').validate({
-                    rules: {
-                        movementTitle: { required: true, minlength: 2, maxlength: 255 },
-                        transporter: { required: true },
-                        conveyor: { required: true },
-                    },
-                }).form();
-            } catch (e) { return true; }
-        }
-        const createMovement = () => {
-            if (!validateMovementForm()) {
-                alert.Error('*Required Fields', 'All fields are required');
-                return;
-            }
-            var data = {
-                periodId: movementForm.periodId,
-                transporterId: parseInt(movementForm.transporterId),
-                title: movementForm.movementTitle,
-                shipmentIds: movementForm.shipmentListIds,
-                conveyorId: parseInt(movementForm.conveyorId),
-            };
-            overlay.show();
-            axios.post(common.DataService + '?qid=1135', JSON.stringify(data))
-                .then(response => {
-                    overlay.hide();
-                    if (response.data.result_code === 200) {
-                        alert.Success('SUCCESS', response.data.message);
-                        resetMovementForm();
-                    } else {
-                        alert.Error('ERROR', response.data.message);
-                    }
-                })
-                .catch(error => {
-                    overlay.hide();
-                    alert.Error('ERROR', safeMessage(error));
-                });
-        }
-
-        const getAllPeriodLists = () => {
-            overlay.show();
-            axios.get(common.DataService + '?qid=1004')
-                .then(response => {
-                    appState.periodData = (response.data && response.data.data) || [];
-                    overlay.hide();
-                })
-                .catch(error => {
-                    overlay.hide();
-                    alert.Error('ERROR', safeMessage(error));
-                });
-        }
-        const getReceiptHeader = () => {
-            overlay.show();
-            axios.get(common.DataService + '?qid=gen0013')
-                .then(response => {
-                    var d = response.data && response.data.data && response.data.data[0];
-                    appState.receiptHeader = (d && d.logo) || '';
-                    overlay.hide();
-                })
-                .catch(error => {
-                    overlay.hide();
-                    alert.Error('ERROR', safeMessage(error));
-                });
-        }
-
-        const loadShipment = async () => {
-            if (!appState.currentPeriodId) { alert.Error('ERROR', 'Please select a visit'); return; }
-            var data = { periodid: appState.currentPeriodId };
-            overlay.show();
-            try {
-                var res1133 = await axios.post(common.DataService + '?qid=1133', JSON.stringify(data));
-                if (res1133.data.result_code !== 200) { alert.Error('ERROR', res1133.data.message); return; }
-                var res1134 = await axios.post(common.DataService + '?qid=1134', JSON.stringify(data));
-                if (res1134.data.result_code !== 200) { alert.Error('ERROR', res1134.data.message); return; }
-                appState.shipmentData = res1134.data.data || [];
-                searchState.value = true;
-            } catch (error) {
-                alert.Error('ERROR', safeMessage(error));
-            } finally {
-                overlay.hide();
-            }
-        }
-
-        const selectAll = () => {
-            (filteredStockData.value || []).forEach(item => {
-                if (item.shipment_status === 'Pending') item.pick = true;
-            });
-        }
-        const uncheckAll = () => {
-            (filteredStockData.value || []).forEach(item => { item.pick = false; });
-        }
-        const selectToggle = () => {
-            if (checkToggle.value === false) { selectAll(); checkToggle.value = true; }
-            else                              { uncheckAll(); checkToggle.value = false; }
-        }
-        const checkedBg = (p) => { return p != '' ? 'bg-select' : ''; };
-
-        const resetCheckTable = () => {
-            appState.shipmentData = [];
-            searchState.value = false;
-        }
-        const resetForm = () => {
-            resetCheckTable();
-            appState.currentPeriodId = '';
-            appState.currentProductCode = '';
-        }
-
-        const debounce = (fn, delay) => {
-            var timeout;
-            return function () {
-                var args = arguments;
-                clearTimeout(timeout);
-                timeout = setTimeout(() => { fn.apply(null, args); }, delay);
-            };
-        }
-        var debouncedSearch = debounce(val => { appState.filterText = val; }, 300);
-        watch(searchText, val => { debouncedSearch(val); });
-        const toggleMovementType = () => {
-            movementType.value = movementType.value === 'Forward' ? 'Reverse' : 'Forward';
-        }
-        const filterUsingStatus = (keyword) => { appState.statusFilter = keyword; };
-
-        const filteredStockData = computed(() => {
-            var data = appState.shipmentData || [];
-            var keyword = (appState.filterText || '').toLowerCase().trim();
-            var status = (appState.statusFilter || '').toLowerCase().trim();
-            if (status) {
-                data = data.filter(item => item.shipment_status && item.shipment_status.toLowerCase().trim().includes(status));
-            }
-            if (keyword) {
-                data = data.filter(item => (item.shipment_no && item.shipment_no.toLowerCase().includes(keyword)) ||
-                (item.shipment_status && item.shipment_status.toLowerCase().includes(keyword)) ||
-                (item.destination_location_type && item.destination_location_type.toLowerCase().includes(keyword)) ||
-                (item.origin_string && item.origin_string.toLowerCase().includes(keyword)) ||
-                (item.destination_string && item.destination_string.toLowerCase().includes(keyword)));
-            }
-            return data;
+    const getAllPeriodLists = () => {
+      overlay.show();
+      axios
+        .get(common.DataService + "?qid=1004")
+        .then((response) => {
+          appState.periodData = (response.data && response.data.data) || [];
+          overlay.hide();
+        })
+        .catch((error) => {
+          overlay.hide();
+          alert.Error("ERROR", safeMessage(error));
         });
-        const conveyorOptions = computed(() => (conveyorData.value || []).map(c => ({
-            id: c.userid,
-            text: c.fullname + ' (' + c.loginid + ')'
-        })));
-        const transporterOptions = computed(() => (transporterData.value || []).map(t => ({
-            id: t.transporter_id,
-            text: t.transporter + ' (' + t.poc + ')'
-        })));
-        const selectedItems = computed(() => (filteredStockData.value || []).filter(i => i.pick));
-        const selectedID = computed(() => (filteredStockData.value || []).filter(i => i.pick).map(i => i.shipment_id));
-        const totalCheckedBox = computed(() => {
-            var total = (selectedItems.value || []).length;
-            var el = document.getElementById('total-selected');
-            if (el) {
-                if (total > 0) {
-                    el.innerHTML = '<span class="badge badge-primary btn-icon"><span class="badge badge-success">' + total + '</span> Item Selected</span>';
-                } else {
-                    el.replaceChildren();
-                }
-            }
-            return total > 0;
+    };
+    const getReceiptHeader = () => {
+      overlay.show();
+      axios
+        .get(common.DataService + "?qid=gen0013")
+        .then((response) => {
+          var d = response.data && response.data.data && response.data.data[0];
+          appState.receiptHeader = (d && d.logo) || "";
+          overlay.hide();
+        })
+        .catch((error) => {
+          overlay.hide();
+          alert.Error("ERROR", safeMessage(error));
         });
+    };
 
-        const getShipmentItem = (shipmentId, destination, origin_string, shipmentNo, shipmentType, status, isOpen) => {
-            overlay.show();
-            axios.post(common.DataService + '?qid=1136', JSON.stringify({ shipmentId: shipmentId }))
-                .then(response => {
-                    if (response.data.result_code === 200) {
-                        generateShipmentPDF(response.data.data, destination, origin_string, shipmentNo, shipmentType, status, isOpen);
-                    } else {
-                        alert.Error('ERROR', response.data.message);
-                    }
-                    overlay.hide();
-                })
-                .catch(error => {
-                    overlay.hide();
-                    alert.Error('ERROR', safeMessage(error));
-                });
+    const loadShipment = async () => {
+      if (!appState.currentPeriodId) {
+        alert.Error("ERROR", "Please select a visit");
+        return;
+      }
+      var data = { periodid: appState.currentPeriodId };
+      overlay.show();
+      try {
+        var res1133 = await axios.post(
+          common.DataService + "?qid=1133",
+          JSON.stringify(data),
+        );
+        if (res1133.data.result_code !== 200) {
+          alert.Error("ERROR", res1133.data.message);
+          return;
         }
-        const generateShipmentPDF = (data, destination, origin_string, shipmentNo, shipmentType, status, isOpen) => {
-            if (!data || data.length === 0) { alert.Error('ERROR', 'No data available for PDF generation.'); return; }
-            if (typeof pdfMake === 'undefined') return;
-            var todayDate = displayDateLong(new Date().toLocaleDateString(), true, true);
-            var logoDataURL = 'data:image/svg+xml;base64,' + appState.receiptHeader;
-            var docDefinition = {
-                pageSize: 'A4', pageOrientation: 'landscape',
-                pageMargins: [40, 60, 40, 60],
-                images: { logo: logoDataURL },
-                content: [
-                    { text: 'FEDERAL MINISTRY OF HEALTH', fontSize: 12, bold: true, alignment: 'center', margin: [0, 0, 0, 5] },
-                    { text: 'NATIONAL MALARIA ELIMINATION PROGRAMME', fontSize: 12, alignment: 'center', margin: [0, 0, 0, 5] },
-                    { text: 'ISSUE AND RECEIPT VOUCHER', fontSize: 12, bold: true, alignment: 'center', margin: [0, 0, 0, 30] },
-                    {
-                        columns: [
-                            { stack: [
-                                { text: [{ text: 'Shipment No: ', bold: true }, { text: shipmentNo || 'N/A' }] },
-                                { text: [{ text: 'Shipment Type: ', bold: true }, { text: shipmentType || '' }] },
-                                { text: [{ text: 'Status: ', bold: true }, { text: status || '' }] },
-                                { text: [{ text: 'Created: ', bold: true }, { text: todayDate }] },
-                            ] },
-                            { stack: [
-                                { text: [{ text: 'Origin: ', bold: true }, { text: origin_string || 'N/A' }] },
-                                { text: [{ text: 'Destination: ', bold: true }, { text: destination || 'N/A' }] },
-                            ] },
-                        ],
-                        margin: [0, 0, 0, 20],
-                    },
-                    { text: 'Shipment Items', bold: true, margin: [0, 0, 0, 10] },
-                    {
-                        table: {
-                            headerRows: 1,
-                            widths: ['auto', '*', '*', '*', '*', '*'],
-                            body: [[
-                                '#', 'Product Name', 'Product Code', 'Batch', 'Expiry', 'Quantity'
-                            ]].concat(data.map((item, i) => [
-                                i + 1, item.product_name, item.product_code, item.batch,
-                                displayDateLong(item.expiry, false, false), item.secondary_qty,
-                            ])),
-                        },
-                        layout: 'lightHorizontalLines',
-                        margin: [0, 0, 0, 20],
-                    },
+        var res1134 = await axios.post(
+          common.DataService + "?qid=1134",
+          JSON.stringify(data),
+        );
+        if (res1134.data.result_code !== 200) {
+          alert.Error("ERROR", res1134.data.message);
+          return;
+        }
+        appState.shipmentData = res1134.data.data || [];
+        searchState.value = true;
+      } catch (error) {
+        alert.Error("ERROR", safeMessage(error));
+      } finally {
+        overlay.hide();
+      }
+    };
+
+    const selectAll = () => {
+      (filteredStockData.value || []).forEach((item) => {
+        if (item.shipment_status === "Pending") item.pick = true;
+      });
+    };
+    const uncheckAll = () => {
+      (filteredStockData.value || []).forEach((item) => {
+        item.pick = false;
+      });
+    };
+    const selectToggle = () => {
+      if (checkToggle.value === false) {
+        selectAll();
+        checkToggle.value = true;
+      } else {
+        uncheckAll();
+        checkToggle.value = false;
+      }
+    };
+    const checkedBg = (p) => {
+      return p != "" ? "bg-select" : "";
+    };
+
+    const resetCheckTable = () => {
+      appState.shipmentData = [];
+      searchState.value = false;
+    };
+    const resetForm = () => {
+      resetCheckTable();
+      appState.currentPeriodId = "";
+      appState.currentProductCode = "";
+    };
+
+    const debounce = (fn, delay) => {
+      var timeout;
+      return function () {
+        var args = arguments;
+        clearTimeout(timeout);
+        timeout = setTimeout(() => {
+          fn.apply(null, args);
+        }, delay);
+      };
+    };
+    var debouncedSearch = debounce((val) => {
+      appState.filterText = val;
+    }, 300);
+    watch(searchText, (val) => {
+      debouncedSearch(val);
+    });
+    const toggleMovementType = () => {
+      movementType.value =
+        movementType.value === "Forward" ? "Reverse" : "Forward";
+    };
+    const filterUsingStatus = (keyword) => {
+      appState.statusFilter = keyword;
+    };
+
+    const filteredStockData = computed(() => {
+      var data = appState.shipmentData || [];
+      var keyword = (appState.filterText || "").toLowerCase().trim();
+      var status = (appState.statusFilter || "").toLowerCase().trim();
+      if (status) {
+        data = data.filter(
+          (item) =>
+            item.shipment_status &&
+            item.shipment_status.toLowerCase().trim().includes(status),
+        );
+      }
+      if (keyword) {
+        data = data.filter(
+          (item) =>
+            (item.shipment_no &&
+              item.shipment_no.toLowerCase().includes(keyword)) ||
+            (item.shipment_status &&
+              item.shipment_status.toLowerCase().includes(keyword)) ||
+            (item.destination_location_type &&
+              item.destination_location_type.toLowerCase().includes(keyword)) ||
+            (item.origin_string &&
+              item.origin_string.toLowerCase().includes(keyword)) ||
+            (item.destination_string &&
+              item.destination_string.toLowerCase().includes(keyword)),
+        );
+      }
+      return data;
+    });
+    const conveyorOptions = computed(() =>
+      (conveyorData.value || []).map((c) => ({
+        id: c.userid,
+        text: c.fullname + " (" + c.loginid + ")",
+      })),
+    );
+    const transporterOptions = computed(() =>
+      (transporterData.value || []).map((t) => ({
+        id: t.transporter_id,
+        text: t.transporter + " (" + t.poc + ")",
+      })),
+    );
+    const selectedItems = computed(() =>
+      (filteredStockData.value || []).filter((i) => i.pick),
+    );
+    const selectedID = computed(() =>
+      (filteredStockData.value || [])
+        .filter((i) => i.pick)
+        .map((i) => i.shipment_id),
+    );
+    const totalCheckedBox = computed(() => {
+      var total = (selectedItems.value || []).length;
+      var el = document.getElementById("total-selected");
+      if (el) {
+        if (total > 0) {
+          el.innerHTML =
+            '<span class="badge badge-primary btn-icon"><span class="badge badge-success">' +
+            total +
+            "</span> Item Selected</span>";
+        } else {
+          el.replaceChildren();
+        }
+      }
+      return total > 0;
+    });
+
+    const getShipmentItem = (
+      shipmentId,
+      destination,
+      origin_string,
+      shipmentNo,
+      shipmentType,
+      status,
+      isOpen,
+    ) => {
+      overlay.show();
+      axios
+        .post(
+          common.DataService + "?qid=1136",
+          JSON.stringify({ shipmentId: shipmentId }),
+        )
+        .then((response) => {
+          if (response.data.result_code === 200) {
+            generateShipmentPDF(
+              response.data.data,
+              destination,
+              origin_string,
+              shipmentNo,
+              shipmentType,
+              status,
+              isOpen,
+            );
+          } else {
+            alert.Error("ERROR", response.data.message);
+          }
+          overlay.hide();
+        })
+        .catch((error) => {
+          overlay.hide();
+          alert.Error("ERROR", safeMessage(error));
+        });
+    };
+    const generateShipmentPDF = (
+      data,
+      destination,
+      origin_string,
+      shipmentNo,
+      shipmentType,
+      status,
+      isOpen,
+    ) => {
+      if (!data || data.length === 0) {
+        alert.Error("ERROR", "No data available for PDF generation.");
+        return;
+      }
+      if (typeof pdfMake === "undefined") return;
+      var todayDate = displayDateLong(
+        new Date().toLocaleDateString(),
+        true,
+        true,
+      );
+      var logoDataURL = "data:image/svg+xml;base64," + appState.receiptHeader;
+      var docDefinition = {
+        pageSize: "A4",
+        pageOrientation: "landscape",
+        pageMargins: [40, 60, 40, 60],
+        images: { logo: logoDataURL },
+        content: [
+          {
+            text: "FEDERAL MINISTRY OF HEALTH",
+            fontSize: 12,
+            bold: true,
+            alignment: "center",
+            margin: [0, 0, 0, 5],
+          },
+          {
+            text: "NATIONAL MALARIA ELIMINATION PROGRAMME",
+            fontSize: 12,
+            alignment: "center",
+            margin: [0, 0, 0, 5],
+          },
+          {
+            text: "ISSUE AND RECEIPT VOUCHER",
+            fontSize: 12,
+            bold: true,
+            alignment: "center",
+            margin: [0, 0, 0, 30],
+          },
+          {
+            columns: [
+              {
+                stack: [
+                  {
+                    text: [
+                      { text: "Shipment No: ", bold: true },
+                      { text: shipmentNo || "N/A" },
+                    ],
+                  },
+                  {
+                    text: [
+                      { text: "Shipment Type: ", bold: true },
+                      { text: shipmentType || "" },
+                    ],
+                  },
+                  {
+                    text: [
+                      { text: "Status: ", bold: true },
+                      { text: status || "" },
+                    ],
+                  },
+                  {
+                    text: [
+                      { text: "Created: ", bold: true },
+                      { text: todayDate },
+                    ],
+                  },
                 ],
-            };
-            try {
-                pdfMake.createPdf(docDefinition).download(destination + '_Stock_details_' + todayDate + '.pdf');
-            } catch (e) { console.error('[smc/logistics/shipment] PDF render failed:', e); }
-        }
+              },
+              {
+                stack: [
+                  {
+                    text: [
+                      { text: "Origin: ", bold: true },
+                      { text: origin_string || "N/A" },
+                    ],
+                  },
+                  {
+                    text: [
+                      { text: "Destination: ", bold: true },
+                      { text: destination || "N/A" },
+                    ],
+                  },
+                ],
+              },
+            ],
+            margin: [0, 0, 0, 20],
+          },
+          { text: "Shipment Items", bold: true, margin: [0, 0, 0, 10] },
+          {
+            table: {
+              headerRows: 1,
+              widths: ["auto", "*", "*", "*", "*", "*"],
+              body: [
+                [
+                  "#",
+                  "Product Name",
+                  "Product Code",
+                  "Batch",
+                  "Expiry",
+                  "Quantity",
+                ],
+              ].concat(
+                data.map((item, i) => [
+                  i + 1,
+                  item.product_name,
+                  item.product_code,
+                  item.batch,
+                  displayDateLong(item.expiry, false, false),
+                  item.secondary_qty,
+                ]),
+              ),
+            },
+            layout: "lightHorizontalLines",
+            margin: [0, 0, 0, 20],
+          },
+        ],
+      };
+      try {
+        pdfMake
+          .createPdf(docDefinition)
+          .download(destination + "_Stock_details_" + todayDate + ".pdf");
+      } catch (e) {
+        console.error("[smc/logistics/shipment] PDF render failed:", e);
+      }
+    };
 
-        onMounted(() => {
-            getAllPeriodLists();
-            getReceiptHeader();
-            getTransporterAndConveyor();
-            bus.on('g-event-reset-form', resetForm);
-        });
-        onBeforeUnmount(() => {
-            bus.off('g-event-reset-form', resetForm);
-        });
+    onMounted(() => {
+      getAllPeriodLists();
+      getReceiptHeader();
+      getTransporterAndConveyor();
+      bus.on("g-event-reset-form", resetForm);
+    });
+    onBeforeUnmount(() => {
+      bus.off("g-event-reset-form", resetForm);
+    });
 
-        return {
-            appState, searchState, searchText, movementType, checkToggle,
-            conveyorData, transporterData, movementForm, selectedShipment,
-            filteredStockData, conveyorOptions, transporterOptions,
-            selectedItems, selectedID, totalCheckedBox,
-            closeMovementModal, resetMovementForm, removeSelectedMovement,
-            getTransporterAndConveyor, initializeMovement, createMovement,
-            getAllPeriodLists, getReceiptHeader, loadShipment,
-            selectAll, uncheckAll, selectToggle, checkedBg,
-            resetCheckTable, resetForm, toggleMovementType, filterUsingStatus,
-            getShipmentItem, generateShipmentPDF,
-            capitalize: fmtUtils.capitalize,
-            displayDate: (d, fullDate, withTime) => { return displayDateLong(d, fullDate, withTime); },
-            convertStringNumberToFigures: fmtUtils.convertStringNumberToFigures,
-        };
-    },
-    template: `
+    return {
+      appState,
+      searchState,
+      searchText,
+      movementType,
+      checkToggle,
+      conveyorData,
+      transporterData,
+      movementForm,
+      selectedShipment,
+      filteredStockData,
+      conveyorOptions,
+      transporterOptions,
+      selectedItems,
+      selectedID,
+      totalCheckedBox,
+      closeMovementModal,
+      resetMovementForm,
+      removeSelectedMovement,
+      getTransporterAndConveyor,
+      initializeMovement,
+      createMovement,
+      getAllPeriodLists,
+      getReceiptHeader,
+      loadShipment,
+      selectAll,
+      uncheckAll,
+      selectToggle,
+      checkedBg,
+      resetCheckTable,
+      resetForm,
+      toggleMovementType,
+      filterUsingStatus,
+      getShipmentItem,
+      generateShipmentPDF,
+      capitalize: fmtUtils.capitalize,
+      displayDate: (d, fullDate, withTime) => {
+        return displayDateLong(d, fullDate, withTime);
+      },
+      convertStringNumberToFigures: fmtUtils.convertStringNumberToFigures,
+    };
+  },
+  template: `
         <div class="row">
             <div class="col-md-8 col-sm-12 col-12 mb-0">
                 <h2 class="content-header-title header-txt float-left mb-0">SMC</h2>
@@ -643,14 +882,16 @@ const PageShipmentPage = {
 };
 
 useApp({
-    template: `
+  template: `
         <div>
             <div v-show="appState.pageState.page == 'table'"></div>
             <div v-show="appState.pageState.page == 'shipment-page'"><page-shipment-page/></div>
         </div>
     `,
-    setup() { return { appState }; },
+  setup() {
+    return { appState };
+  },
 })
-    .component('select2-dropdown', Select2Dropdown)
-    .component('page-shipment-page', PageShipmentPage)
-    .mount('#app');
+  .component("select2-dropdown", Select2Dropdown)
+  .component("page-shipment-page", PageShipmentPage)
+  .mount("#app");

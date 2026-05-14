@@ -13,46 +13,57 @@ const { useApp, useFormat, bus, safeMessage } = window.utils;
 /* Shared helpers ---------------------------------------------------- */
 const fmt = useFormat();
 const percentageUsed = (total_data, used) => {
-    var p = (parseFloat(used) / parseFloat(total_data)) * 100;
-    return isNaN(p) ? 0 : p.toFixed(1);
-}
-const progressBarWidth = (total_data, used) => { return percentageUsed(total_data, used) + '%'; };
+  var p = (parseFloat(used) / parseFloat(total_data)) * 100;
+  return isNaN(p) ? 0 : p.toFixed(1);
+};
+const progressBarWidth = (total_data, used) => {
+  return percentageUsed(total_data, used) + "%";
+};
 const progressBarStatus = (total_data, used) => {
-    var progress = percentageUsed(total_data, used);
-    if (progress >= 90) return 'bg-success';
-    if (progress >= 70) return 'bg-info';
-    if (progress >= 40) return 'bg-warning';
-    if (progress > 30)  return 'bg-secondary';
-    return 'bg-danger';
-}
+  var progress = percentageUsed(total_data, used);
+  if (progress >= 90) return "bg-success";
+  if (progress >= 70) return "bg-info";
+  if (progress >= 40) return "bg-warning";
+  if (progress > 30) return "bg-secondary";
+  return "bg-danger";
+};
 const fetchData = (qid, query, onSuccess) => {
-    return axios.get(common.DataService + '?qid=' + qid + (query || ''))
-        .then(response => {
-            onSuccess((response && response.data && response.data.data) || []);
-        })
-        .catch(error => {
-            console.error('Error fetching qid=' + qid + ' data:', error);
-        });
-}
+  return axios
+    .get(common.DataService + "?qid=" + qid + (query || ""))
+    .then((response) => {
+      onSuccess((response && response.data && response.data.data) || []);
+    })
+    .catch((error) => {
+      console.error("Error fetching qid=" + qid + " data:", error);
+    });
+};
 const sharedExports = () => {
-    return {
-        formatNumber: fmt.formatNumber,
-        capitalize: fmt.capitalize,
-        displayDate: fmt.displayDate,
-        percentageUsed, progressBarWidth, progressBarStatus,
-    };
-}
+  return {
+    formatNumber: fmt.formatNumber,
+    capitalize: fmt.capitalize,
+    displayDate: fmt.displayDate,
+    percentageUsed,
+    progressBarWidth,
+    progressBarStatus,
+  };
+};
 
 /* page-body --------------------------------------------------------- */
 const PageBody = {
-    setup() {
-        const page = ref('lga_summary');
-        const gotoPageHandler = (data) => { page.value = data && data.page; };
-        onMounted(() => { bus.on('g-event-goto-page', gotoPageHandler); });
-        onBeforeUnmount(() => { bus.off('g-event-goto-page', gotoPageHandler); });
-        return { page };
-    },
-    template: `
+  setup() {
+    const page = ref("lga_summary");
+    const gotoPageHandler = (data) => {
+      page.value = data && data.page;
+    };
+    onMounted(() => {
+      bus.on("g-event-goto-page", gotoPageHandler);
+    });
+    onBeforeUnmount(() => {
+      bus.off("g-event-goto-page", gotoPageHandler);
+    });
+    return { page };
+  },
+  template: `
         <div>
             <div class="content-body">
                 <eNetcard_all_stat_component/>
@@ -66,92 +77,143 @@ const PageBody = {
 
 /* eNetcard_all_stat_component --------------------------------------- */
 const EnetcardAllStat = {
-    setup() {
-        const page = ref('');
-        const newPageData = reactive({
-            lgaId: null, lgaName: null,
-            wardId: null, wardName: null,
-            hhmId: null, hhmName: null,
-        });
-        const allStatistics = ref([]);
+  setup() {
+    const page = ref("");
+    const newPageData = reactive({
+      lgaId: null,
+      lgaName: null,
+      wardId: null,
+      wardName: null,
+      hhmId: null,
+      hhmName: null,
+    });
+    const allStatistics = ref([]);
 
-        const refreshData = () => {
-            overlay.show();
-            Promise.all([
-                fetchData('217', '', data => { allStatistics.value = data; }),
-            ]).finally(() => { overlay.hide(); });
-        }
-        const refreshAllData = () => { bus.emit('g-event-refresh-page', { page: page.value }); };
-        const gotoPageHandler = (data) => {
-            page.value = data && data.page;
-            newPageData.lgaId = data && data.lgaId;
-            newPageData.lgaName = data && data.lgaName;
-            newPageData.wardId = data && data.wardId;
-            newPageData.wardName = data && data.wardName;
-            newPageData.hhmId = data && data.hhmId;
-            newPageData.hhmName = data && data.hhmName;
-            overlay.show();
-            setTimeout(() => { overlay.hide(); }, 1000);
-        }
-        const refreshDataHandler = () => { refreshData(); };
+    const refreshData = () => {
+      overlay.show();
+      Promise.all([
+        fetchData("217", "", (data) => {
+          allStatistics.value = data;
+        }),
+      ]).finally(() => {
+        overlay.hide();
+      });
+    };
+    const refreshAllData = () => {
+      bus.emit("g-event-refresh-page", { page: page.value });
+    };
+    const gotoPageHandler = (data) => {
+      page.value = data && data.page;
+      newPageData.lgaId = data && data.lgaId;
+      newPageData.lgaName = data && data.lgaName;
+      newPageData.wardId = data && data.wardId;
+      newPageData.wardName = data && data.wardName;
+      newPageData.hhmId = data && data.hhmId;
+      newPageData.hhmName = data && data.hhmName;
+      overlay.show();
+      setTimeout(() => {
+        overlay.hide();
+      }, 1000);
+    };
+    const refreshDataHandler = () => {
+      refreshData();
+    };
 
-        const goBack = (data) => {
-            page.value = data && data.page;
-            newPageData.lgaId = data && data.lgaId;
-            newPageData.lgaName = data && data.lgaName;
-            newPageData.wardId = data && data.wardId;
-            newPageData.wardName = data && data.wardName;
-            bus.emit('g-event-goto-page', data);
-            refreshAllData();
-        }
+    const goBack = (data) => {
+      page.value = data && data.page;
+      newPageData.lgaId = data && data.lgaId;
+      newPageData.lgaName = data && data.lgaName;
+      newPageData.wardId = data && data.wardId;
+      newPageData.wardName = data && data.wardName;
+      bus.emit("g-event-goto-page", data);
+      refreshAllData();
+    };
 
-        const keyLabels = {
-            total:             { label: 'Total e-Netcard',           icon: 'database',    colorClass: 'text-success' },
-            state:             { label: 'State Balance',             icon: 'globe',       colorClass: 'text-primary' },
-            lga:               { label: 'LGA Balance',               icon: 'grid',        colorClass: 'text-info' },
-            ward:              { label: 'Ward',                      icon: 'target',      colorClass: 'text-secondary' },
-            mobilizer_online:  { label: 'Mobilizer Online',          icon: 'user-check',  colorClass: 'text-success' },
-            mobilizer_pending: { label: 'Mobilizer Pending Balance', icon: 'clock',       colorClass: 'text-warning' },
-            mobilizer_wallet:  { label: 'Mobilizer Wallet Balance',  icon: 'credit-card', colorClass: 'text-muted' },
-            beneficiary:       { label: 'Beneficiaries',             icon: 'users',       colorClass: 'text-danger' },
-        };
-        const buildStat = (key, obj) => {
-            var meta = keyLabels[key] || {};
-            return {
-                key: key, label: meta.label || key, icon: meta.icon || 'info',
-                colorClass: meta.colorClass || 'text-dark', value: obj[key],
-            };
-        }
-        const topStats = computed(() => {
-            var obj = allStatistics.value[0] || {};
-            return ['total', 'state', 'lga', 'ward'].map(k => buildStat(k, obj));
-        });
-        const beneficiaryStat = computed(() => {
-            var obj = allStatistics.value[0] || {};
-            return buildStat('beneficiary', obj);
-        });
-        const mergedMobilizerStats = computed(() => {
-            var obj = allStatistics.value[0] || {};
-            return ['mobilizer_online', 'mobilizer_pending', 'mobilizer_wallet'].map(k => buildStat(k, obj));
-        });
+    const keyLabels = {
+      total: {
+        label: "Total e-Netcard",
+        icon: "database",
+        colorClass: "text-success",
+      },
+      state: {
+        label: "State Balance",
+        icon: "globe",
+        colorClass: "text-primary",
+      },
+      lga: { label: "LGA Balance", icon: "grid", colorClass: "text-info" },
+      ward: { label: "Ward", icon: "target", colorClass: "text-secondary" },
+      mobilizer_online: {
+        label: "Mobilizer Online",
+        icon: "user-check",
+        colorClass: "text-success",
+      },
+      mobilizer_pending: {
+        label: "Mobilizer Pending Balance",
+        icon: "clock",
+        colorClass: "text-warning",
+      },
+      mobilizer_wallet: {
+        label: "Mobilizer Wallet Balance",
+        icon: "credit-card",
+        colorClass: "text-muted",
+      },
+      beneficiary: {
+        label: "Beneficiaries",
+        icon: "users",
+        colorClass: "text-danger",
+      },
+    };
+    const buildStat = (key, obj) => {
+      var meta = keyLabels[key] || {};
+      return {
+        key: key,
+        label: meta.label || key,
+        icon: meta.icon || "info",
+        colorClass: meta.colorClass || "text-dark",
+        value: obj[key],
+      };
+    };
+    const topStats = computed(() => {
+      var obj = allStatistics.value[0] || {};
+      return ["total", "state", "lga", "ward"].map((k) => buildStat(k, obj));
+    });
+    const beneficiaryStat = computed(() => {
+      var obj = allStatistics.value[0] || {};
+      return buildStat("beneficiary", obj);
+    });
+    const mergedMobilizerStats = computed(() => {
+      var obj = allStatistics.value[0] || {};
+      return ["mobilizer_online", "mobilizer_pending", "mobilizer_wallet"].map(
+        (k) => buildStat(k, obj),
+      );
+    });
 
-        onMounted(() => {
-            bus.on('g-event-goto-page', gotoPageHandler);
-            bus.on('g-event-refresh-page', refreshDataHandler);
-            refreshData();
-        });
-        onBeforeUnmount(() => {
-            bus.off('g-event-goto-page', gotoPageHandler);
-            bus.off('g-event-refresh-page', refreshDataHandler);
-        });
+    onMounted(() => {
+      bus.on("g-event-goto-page", gotoPageHandler);
+      bus.on("g-event-refresh-page", refreshDataHandler);
+      refreshData();
+    });
+    onBeforeUnmount(() => {
+      bus.off("g-event-goto-page", gotoPageHandler);
+      bus.off("g-event-refresh-page", refreshDataHandler);
+    });
 
-        return Object.assign({
-            page, newPageData, allStatistics,
-            topStats, beneficiaryStat, mergedMobilizerStats,
-            refreshAllData, goBack, refreshData,
-        }, sharedExports());
-    },
-    template: `
+    return Object.assign(
+      {
+        page,
+        newPageData,
+        allStatistics,
+        topStats,
+        beneficiaryStat,
+        mergedMobilizerStats,
+        refreshAllData,
+        goBack,
+        refreshData,
+      },
+      sharedExports(),
+    );
+  },
+  template: `
         <div class="content-header row" id="basic-statistics" v-cloak>
             <div class="content-header-left col-sm-8 col-md-9 col-8 mb-2">
                 <div class="row breadcrumbs-top">
@@ -266,53 +328,75 @@ const EnetcardAllStat = {
 
 /* lga_top_level_summary --------------------------------------------- */
 const LgaTopLevelSummary = {
-    setup() {
-        const page = ref('');
-        const newPageData = reactive({ lgaId: null, lgaName: null, wardId: null, wardName: null, hhmId: null, hhmName: null });
-        const tableData = ref([]);
+  setup() {
+    const page = ref("");
+    const newPageData = reactive({
+      lgaId: null,
+      lgaName: null,
+      wardId: null,
+      wardName: null,
+      hhmId: null,
+      hhmName: null,
+    });
+    const tableData = ref([]);
 
-        const refreshData = () => {
-            overlay.show();
-            Promise.all([
-                fetchData('218', '', data => { tableData.value = data; }),
-            ]).finally(() => { overlay.hide(); });
-        }
-        const refreshDataHandler = () => {
-            if (page.value == 'lga_summary' || page.value == '') refreshData();
-        }
-        const gotoPageHandler = (data) => {
-            page.value = data && data.page;
-            newPageData.lgaId = data && data.lgaId;
-            newPageData.lgaName = data && data.lgaName;
-            newPageData.wardId = data && data.wardId;
-            newPageData.wardName = data && data.wardName;
-            newPageData.hhmId = data && data.hhmId;
-            newPageData.hhmName = data && data.hhmName;
-            overlay.show();
-            setTimeout(() => { overlay.hide(); }, 1000);
-        }
-        const goToWardSummaryPage = (data) => {
-            bus.emit('g-event-goto-page', data);
-            bus.emit('g-event-refresh-page', data);
-        }
+    const refreshData = () => {
+      overlay.show();
+      Promise.all([
+        fetchData("218", "", (data) => {
+          tableData.value = data;
+        }),
+      ]).finally(() => {
+        overlay.hide();
+      });
+    };
+    const refreshDataHandler = () => {
+      if (page.value == "lga_summary" || page.value == "") refreshData();
+    };
+    const gotoPageHandler = (data) => {
+      page.value = data && data.page;
+      newPageData.lgaId = data && data.lgaId;
+      newPageData.lgaName = data && data.lgaName;
+      newPageData.wardId = data && data.wardId;
+      newPageData.wardName = data && data.wardName;
+      newPageData.hhmId = data && data.hhmId;
+      newPageData.hhmName = data && data.hhmName;
+      overlay.show();
+      setTimeout(() => {
+        overlay.hide();
+      }, 1000);
+    };
+    const goToWardSummaryPage = (data) => {
+      bus.emit("g-event-goto-page", data);
+      bus.emit("g-event-refresh-page", data);
+    };
 
-        const sortedByLGA = computed(() => [].concat(tableData.value).sort((a, b) => a.lga.localeCompare(b.lga)));
+    const sortedByLGA = computed(() =>
+      [].concat(tableData.value).sort((a, b) => a.lga.localeCompare(b.lga)),
+    );
 
-        onMounted(() => {
-            bus.on('g-event-goto-page', gotoPageHandler);
-            bus.on('g-event-refresh-page', refreshDataHandler);
-            refreshData();
-        });
-        onBeforeUnmount(() => {
-            bus.off('g-event-goto-page', gotoPageHandler);
-            bus.off('g-event-refresh-page', refreshDataHandler);
-        });
+    onMounted(() => {
+      bus.on("g-event-goto-page", gotoPageHandler);
+      bus.on("g-event-refresh-page", refreshDataHandler);
+      refreshData();
+    });
+    onBeforeUnmount(() => {
+      bus.off("g-event-goto-page", gotoPageHandler);
+      bus.off("g-event-refresh-page", refreshDataHandler);
+    });
 
-        return Object.assign({
-            page, newPageData, tableData, sortedByLGA, goToWardSummaryPage,
-        }, sharedExports());
-    },
-    template: `
+    return Object.assign(
+      {
+        page,
+        newPageData,
+        tableData,
+        sortedByLGA,
+        goToWardSummaryPage,
+      },
+      sharedExports(),
+    );
+  },
+  template: `
         <div class="content-header row" id="basic-table" v-cloak>
             <div class="col-12 mb-1">
                 <div class="card" style="height: 350px !important;">
@@ -362,50 +446,70 @@ const LgaTopLevelSummary = {
 
 /* ward_top_level_summary -------------------------------------------- */
 const WardTopLevelSummary = {
-    setup() {
-        const page = ref('');
-        const newPageData = reactive({ lgaId: null, lgaName: null, wardId: null, wardName: null, hhmId: null, hhmName: null });
-        const tableData = ref([]);
+  setup() {
+    const page = ref("");
+    const newPageData = reactive({
+      lgaId: null,
+      lgaName: null,
+      wardId: null,
+      wardName: null,
+      hhmId: null,
+      hhmName: null,
+    });
+    const tableData = ref([]);
 
-        const refreshData = () => {
-            overlay.show();
-            Promise.all([
-                fetchData('219', '&lgaId=' + newPageData.lgaId, data => { tableData.value = data; }),
-            ]).finally(() => { overlay.hide(); });
-        }
-        const refreshDataHandler = () => {
-            tableData.value = [];
-            if (page.value == 'ward_summary') refreshData();
-        }
-        const gotoPageHandler = (data) => {
-            page.value = data && data.page;
-            newPageData.lgaId = data && data.lgaId;
-            newPageData.lgaName = data && data.lgaName;
-            newPageData.wardId = data && data.wardId;
-            newPageData.wardName = data && data.wardName;
-            newPageData.hhmId = data && data.hhmId;
-        }
-        const goToHHMSummaryPage = (data) => {
-            bus.emit('g-event-goto-page', data);
-            bus.emit('g-event-refresh-page', data);
-        }
+    const refreshData = () => {
+      overlay.show();
+      Promise.all([
+        fetchData("219", "&lgaId=" + newPageData.lgaId, (data) => {
+          tableData.value = data;
+        }),
+      ]).finally(() => {
+        overlay.hide();
+      });
+    };
+    const refreshDataHandler = () => {
+      tableData.value = [];
+      if (page.value == "ward_summary") refreshData();
+    };
+    const gotoPageHandler = (data) => {
+      page.value = data && data.page;
+      newPageData.lgaId = data && data.lgaId;
+      newPageData.lgaName = data && data.lgaName;
+      newPageData.wardId = data && data.wardId;
+      newPageData.wardName = data && data.wardName;
+      newPageData.hhmId = data && data.hhmId;
+    };
+    const goToHHMSummaryPage = (data) => {
+      bus.emit("g-event-goto-page", data);
+      bus.emit("g-event-refresh-page", data);
+    };
 
-        const sortedByWard = computed(() => [].concat(tableData.value).sort((a, b) => a.ward.localeCompare(b.ward)));
+    const sortedByWard = computed(() =>
+      [].concat(tableData.value).sort((a, b) => a.ward.localeCompare(b.ward)),
+    );
 
-        onMounted(() => {
-            bus.on('g-event-goto-page', gotoPageHandler);
-            bus.on('g-event-refresh-page', refreshDataHandler);
-        });
-        onBeforeUnmount(() => {
-            bus.off('g-event-goto-page', gotoPageHandler);
-            bus.off('g-event-refresh-page', refreshDataHandler);
-        });
+    onMounted(() => {
+      bus.on("g-event-goto-page", gotoPageHandler);
+      bus.on("g-event-refresh-page", refreshDataHandler);
+    });
+    onBeforeUnmount(() => {
+      bus.off("g-event-goto-page", gotoPageHandler);
+      bus.off("g-event-refresh-page", refreshDataHandler);
+    });
 
-        return Object.assign({
-            page, newPageData, tableData, sortedByWard, goToHHMSummaryPage,
-        }, sharedExports());
-    },
-    template: `
+    return Object.assign(
+      {
+        page,
+        newPageData,
+        tableData,
+        sortedByWard,
+        goToHHMSummaryPage,
+      },
+      sharedExports(),
+    );
+  },
+  template: `
         <div class="content-header row" id="basic-table" v-cloak>
             <div class="col-12 mb-1">
                 <div class="card" style="height: 350px !important;">
@@ -453,42 +557,53 @@ const WardTopLevelSummary = {
 
 /* hhm_top_level_summary --------------------------------------------- */
 const HhmTopLevelSummary = {
-    setup() {
-        const page = ref('');
-        const newPageData = reactive({ lgaId: null, lgaName: null, wardId: null, wardName: null, hhmId: null, hhmName: null });
-        const tableData = ref([]);
+  setup() {
+    const page = ref("");
+    const newPageData = reactive({
+      lgaId: null,
+      lgaName: null,
+      wardId: null,
+      wardName: null,
+      hhmId: null,
+      hhmName: null,
+    });
+    const tableData = ref([]);
 
-        const refreshData = () => {
-            overlay.show();
-            Promise.all([
-                fetchData('220', '&wardId=' + newPageData.wardId, data => { tableData.value = data; }),
-            ]).finally(() => { overlay.hide(); });
-        }
-        const refreshDataHandler = () => {
-            tableData.value = [];
-            if (page.value == 'hhm_summary') refreshData();
-        }
-        const gotoPageHandler = (data) => {
-            page.value = data && data.page;
-            newPageData.lgaId = data && data.lgaId;
-            newPageData.lgaName = data && data.lgaName;
-            newPageData.wardId = data && data.wardId;
-            newPageData.wardName = data && data.wardName;
-            newPageData.hhmId = data && data.hhmId;
-        }
+    const refreshData = () => {
+      overlay.show();
+      Promise.all([
+        fetchData("220", "&wardId=" + newPageData.wardId, (data) => {
+          tableData.value = data;
+        }),
+      ]).finally(() => {
+        overlay.hide();
+      });
+    };
+    const refreshDataHandler = () => {
+      tableData.value = [];
+      if (page.value == "hhm_summary") refreshData();
+    };
+    const gotoPageHandler = (data) => {
+      page.value = data && data.page;
+      newPageData.lgaId = data && data.lgaId;
+      newPageData.lgaName = data && data.lgaName;
+      newPageData.wardId = data && data.wardId;
+      newPageData.wardName = data && data.wardName;
+      newPageData.hhmId = data && data.hhmId;
+    };
 
-        onMounted(() => {
-            bus.on('g-event-goto-page', gotoPageHandler);
-            bus.on('g-event-refresh-page', refreshDataHandler);
-        });
-        onBeforeUnmount(() => {
-            bus.off('g-event-goto-page', gotoPageHandler);
-            bus.off('g-event-refresh-page', refreshDataHandler);
-        });
+    onMounted(() => {
+      bus.on("g-event-goto-page", gotoPageHandler);
+      bus.on("g-event-refresh-page", refreshDataHandler);
+    });
+    onBeforeUnmount(() => {
+      bus.off("g-event-goto-page", gotoPageHandler);
+      bus.off("g-event-refresh-page", refreshDataHandler);
+    });
 
-        return Object.assign({ page, newPageData, tableData }, sharedExports());
-    },
-    template: `
+    return Object.assign({ page, newPageData, tableData }, sharedExports());
+  },
+  template: `
         <div class="content-header row" id="basic-table" v-cloak>
             <div class="col-12 mb-1">
                 <div class="card" style="height: 350px !important;">
@@ -534,9 +649,9 @@ const HhmTopLevelSummary = {
 };
 
 useApp({ template: `<div><page-body/></div>` })
-    .component('page-body', PageBody)
-    .component('eNetcard_all_stat_component', EnetcardAllStat)
-    .component('lga_top_level_summary', LgaTopLevelSummary)
-    .component('ward_top_level_summary', WardTopLevelSummary)
-    .component('hhm_top_level_summary', HhmTopLevelSummary)
-    .mount('#app');
+  .component("page-body", PageBody)
+  .component("eNetcard_all_stat_component", EnetcardAllStat)
+  .component("lga_top_level_summary", LgaTopLevelSummary)
+  .component("ward_top_level_summary", WardTopLevelSummary)
+  .component("hhm_top_level_summary", HhmTopLevelSummary)
+  .mount("#app");

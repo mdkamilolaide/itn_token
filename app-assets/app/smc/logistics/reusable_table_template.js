@@ -8,344 +8,517 @@ const { ref, reactive, onMounted, onBeforeUnmount } = Vue;
 const { useApp, useFormat, bus, safeMessage } = window.utils;
 
 const appState = Vue.reactive({
-    pageState: { page: 'table', title: '' },
-    permission: (typeof getPermission === 'function')
-        ? (getPermission(typeof per !== 'undefined' ? per : null, 'smc') || { permission_value: 0 })
-        : { permission_value: 0 },
+  pageState: { page: "table", title: "" },
+  permission:
+    typeof getPermission === "function"
+      ? getPermission(typeof per !== "undefined" ? per : null, "smc") || {
+          permission_value: 0,
+        }
+      : { permission_value: 0 },
 });
 
 const PageTable = {
-    setup() {
-        const fmtUtils = useFormat();
+  setup() {
+    const fmtUtils = useFormat();
 
-        const url = ref(window.common && window.common.BadgeService);
-        const tableData = ref([]);
-        const defaultStateId = ref('');
-        const roleListData = ref([]);
-        const geoData = ref([]);
-        const checkToggle = ref(false);
-        const filterState = ref(false);
-        const filters = ref(false);
-        const tableOptions = reactive({
-            total: 1, pageLength: 1, perPage: 10, currentPage: 1,
-            orderDir: 'asc', orderField: 0, limitStart: 0,
-            isNext: false, isPrev: false,
-            aLength: [10, 20, 50, 100, 150, 200],
-            filterParam: {
-                user_status: '', loginid: '', fullname: '', user_group: '',
-                phoneno: '', geo_level: '', geo_level_id: '', geo_string: '',
-                bank_status: '', role_id: '', role: '',
+    const url = ref(window.common && window.common.BadgeService);
+    const tableData = ref([]);
+    const defaultStateId = ref("");
+    const roleListData = ref([]);
+    const geoData = ref([]);
+    const checkToggle = ref(false);
+    const filterState = ref(false);
+    const filters = ref(false);
+    const tableOptions = reactive({
+      total: 1,
+      pageLength: 1,
+      perPage: 10,
+      currentPage: 1,
+      orderDir: "asc",
+      orderField: 0,
+      limitStart: 0,
+      isNext: false,
+      isPrev: false,
+      aLength: [10, 20, 50, 100, 150, 200],
+      filterParam: {
+        user_status: "",
+        loginid: "",
+        fullname: "",
+        user_group: "",
+        phoneno: "",
+        geo_level: "",
+        geo_level_id: "",
+        geo_string: "",
+        bank_status: "",
+        role_id: "",
+        role: "",
+      },
+    });
+    const geoIndicator = reactive({
+      state: 50,
+      currentLevelId: 0,
+      lga: "",
+      cluster: "",
+      ward: "",
+    });
+    const geoLevelData = ref([]);
+    const sysDefaultData = ref([]);
+    const lgaLevelData = ref([]);
+    const clusterLevelData = ref([]);
+    const wardLevelData = ref([]);
+    const dpLevelData = ref([]);
+    const userPass = reactive({
+      pass: "",
+      loginid: "",
+      name: "",
+      isBulk: false,
+    });
+
+    const reloadUserListOnUpdate = () => {
+      paginationDefault();
+      loadTableData();
+    };
+    const loadTableData = () => {
+      overlay.show();
+      axios
+        .get(
+          common.TableService +
+            "?qid=001&draw=" +
+            tableOptions.currentPage +
+            "&order_column=" +
+            tableOptions.orderField +
+            "&length=" +
+            tableOptions.perPage +
+            "&start=" +
+            tableOptions.limitStart +
+            "&order_dir=" +
+            tableOptions.orderDir +
+            "&ac=" +
+            tableOptions.filterParam.user_status +
+            "&lo=" +
+            tableOptions.filterParam.loginid +
+            "&na=" +
+            tableOptions.filterParam.fullname +
+            "&gr=" +
+            tableOptions.filterParam.user_group +
+            "&ph=" +
+            tableOptions.filterParam.phoneno +
+            "&gl=" +
+            tableOptions.filterParam.geo_level +
+            "&gl_id=" +
+            tableOptions.filterParam.geo_level_id +
+            "&bv=" +
+            tableOptions.filterParam.bank_status +
+            "&ri=" +
+            tableOptions.filterParam.role_id,
+        )
+        .then((response) => {
+          var d = response && response.data;
+          tableData.value = Array.isArray(d && d.data) ? d.data : [];
+          tableOptions.total = (d && d.recordsTotal) || 0;
+          if (tableOptions.currentPage == 1) paginationDefault();
+          overlay.hide();
+        })
+        .catch((error) => {
+          overlay.hide();
+          alert.Error("ERROR", safeMessage(error));
+        });
+    };
+    const selectAll = () => {
+      for (var i = 0; i < tableData.value.length; i++)
+        tableData.value[i].pick = true;
+    };
+    const uncheckAll = () => {
+      for (var i = 0; i < tableData.value.length; i++)
+        tableData.value[i].pick = false;
+    };
+    const selectToggle = () => {
+      if (checkToggle.value === false) {
+        selectAll();
+        checkToggle.value = true;
+      } else {
+        uncheckAll();
+        checkToggle.value = false;
+      }
+    };
+    const checkedBg = (pickOne) => {
+      return pickOne != "" ? "bg-select" : "";
+    };
+    const toggleFilter = () => {
+      if (filterState.value === false) filters.value = false;
+      return (filterState.value = !filterState.value);
+    };
+    const selectedItems = () => {
+      return tableData.value.filter((r) => r.pick);
+    };
+    const selectedID = () => {
+      return tableData.value.filter((r) => r.pick).map((r) => r.userid);
+    };
+
+    const paginationDefault = () => {
+      tableOptions.pageLength = Math.ceil(
+        tableOptions.total / tableOptions.perPage,
+      );
+      tableOptions.limitStart = Math.ceil(
+        (tableOptions.currentPage - 1) * tableOptions.perPage,
+      );
+      tableOptions.isNext = tableOptions.currentPage < tableOptions.pageLength;
+      tableOptions.isPrev = tableOptions.currentPage > 1;
+    };
+    const resetSelected = () => {
+      uncheckAll();
+      checkToggle.value = false;
+      totalCheckedBox();
+    };
+    const nextPage = () => {
+      resetSelected();
+      tableOptions.currentPage += 1;
+      paginationDefault();
+      loadTableData();
+    };
+    const prevPage = () => {
+      resetSelected();
+      tableOptions.currentPage -= 1;
+      paginationDefault();
+      loadTableData();
+    };
+    const currentPage = () => {
+      paginationDefault();
+      if (tableOptions.currentPage < 1)
+        alert.Error("ERROR", "The Page requested doesn't exist");
+      else if (tableOptions.currentPage > tableOptions.pageLength)
+        alert.Error("ERROR", "The Page requested doesn't exist");
+      else loadTableData();
+    };
+    const changePerPage = (val) => {
+      resetSelected();
+      tableOptions.currentPage = 1;
+      tableOptions.perPage = val;
+      paginationDefault();
+      loadTableData();
+    };
+    const sort = (col) => {
+      if (tableOptions.orderField === col)
+        tableOptions.orderDir =
+          tableOptions.orderDir === "asc" ? "desc" : "asc";
+      else tableOptions.orderField = col;
+      paginationDefault();
+      loadTableData();
+    };
+    const applyFilter = () => {
+      var checkFill = 0;
+      checkFill += tableOptions.filterParam.user_status != "" ? 1 : 0;
+      checkFill += tableOptions.filterParam.loginid != "" ? 1 : 0;
+      checkFill += tableOptions.filterParam.fullname != "" ? 1 : 0;
+      checkFill += tableOptions.filterParam.user_group != "" ? 1 : 0;
+      checkFill += tableOptions.filterParam.phoneno != "" ? 1 : 0;
+      checkFill += tableOptions.filterParam.geo_level != "" ? 1 : 0;
+      checkFill += tableOptions.filterParam.bank_status != "" ? 1 : 0;
+      checkFill += tableOptions.filterParam.role_id != "" ? 1 : 0;
+      if (checkFill > 0) {
+        toggleFilter();
+        filters.value = true;
+        paginationDefault();
+        loadTableData();
+      } else {
+        alert.Error("ERROR", "Invalid required data");
+      }
+    };
+    const removeSingleFilter = (column_name) => {
+      tableOptions.filterParam[column_name] = "";
+      if (column_name == "geo_string") {
+        tableOptions.filterParam.geo_level = "";
+        tableOptions.filterParam.geo_level_id = "";
+        tableOptions.filterParam.geo_string = "";
+      }
+      if (column_name == "role") {
+        tableOptions.filterParam.role_id = "";
+        tableOptions.filterParam.role = "";
+      }
+      var g = 0;
+      for (var k in tableOptions.filterParam) {
+        if (tableOptions.filterParam[k] != "") g++;
+      }
+      if (g == 0) filters.value = false;
+      paginationDefault();
+      loadTableData();
+    };
+    const clearAllFilter = () => {
+      filters.value = false;
+      try {
+        $(".select2").val("").trigger("change");
+      } catch (e) {}
+      tableOptions.filterParam.user_status = "";
+      tableOptions.filterParam.loginid = "";
+      tableOptions.filterParam.fullname = "";
+      tableOptions.filterParam.user_group = "";
+      tableOptions.filterParam.phoneno = "";
+      tableOptions.filterParam.geo_level = "";
+      tableOptions.filterParam.geo_level_id = "";
+      tableOptions.filterParam.geo_string = "";
+      tableOptions.filterParam.bank_status = "";
+      tableOptions.filterParam.role_id = "";
+      tableOptions.filterParam.role = "";
+      paginationDefault();
+      loadTableData();
+    };
+    const goToDetail = (userid, user_status) => {
+      bus.emit("g-event-goto-page", {
+        userid: userid,
+        page: "detail",
+        user_status: user_status,
+        role: roleListData.value,
+      });
+    };
+    const getRoleList = () => {
+      overlay.show();
+      axios
+        .get(common.DataService + "?qid=007")
+        .then((response) => {
+          roleListData.value = (response.data && response.data.data) || [];
+          overlay.hide();
+        })
+        .catch((error) => {
+          overlay.hide();
+          alert.Error("ERROR", safeMessage(error));
+        });
+    };
+    const getGeoLocation = () => {
+      overlay.show();
+      axios
+        .get(common.DataService + "?qid=gen009")
+        .then((response) => {
+          geoData.value = (response.data && response.data.data) || [];
+          overlay.hide();
+        })
+        .catch((error) => {
+          overlay.hide();
+          alert.Error("ERROR", safeMessage(error));
+        });
+    };
+    const setLocation = (select_index) => {
+      var i = select_index || 0;
+      var row = geoData.value[i];
+      if (!row) return;
+      tableOptions.filterParam.geo_level = row.geo_level;
+      tableOptions.filterParam.geo_level_id = row.geo_level_id;
+      tableOptions.filterParam.geo_string = row.geo_string;
+    };
+    const refreshData = () => {
+      paginationDefault();
+      loadTableData();
+    };
+    const downloadBadge = (uid) => {
+      overlay.show();
+      window.open(url.value + "?qid=002&e=" + uid, "_parent");
+      overlay.hide();
+    };
+    const downloadBadges = () => {
+      overlay.show();
+      if (parseInt(selectedID().length) > 0) {
+        window.open(url.value + "?qid=003&e=" + selectedID(), "_parent");
+      } else {
+        alert.Error("Badge Download Failed", "No user selected");
+      }
+      overlay.hide();
+    };
+    const getGeoLevel = () => {
+      overlay.show();
+      axios
+        .get(common.DataService + "?qid=gen001")
+        .then((response) => {
+          geoLevelData.value = (response.data && response.data.data) || [];
+          overlay.hide();
+        })
+        .catch((error) => {
+          overlay.hide();
+          alert.Error("ERROR", safeMessage(error));
+        });
+    };
+    const totalCheckedBox = () => {
+      var total = selectedID().length;
+      var el = document.getElementById("total-selected");
+      if (!el) return;
+      if (total > 0) {
+        el.innerHTML =
+          '<span id="selected-counter" class="badge badge-primary btn-icon"><span class="badge badge-success">' +
+          total +
+          "</span> Selected</span>";
+      } else {
+        el.replaceChildren();
+      }
+    };
+    const exportUserData = async () => {
+      var qs =
+        "&draw=" +
+        tableOptions.currentPage +
+        "&order_column=" +
+        tableOptions.orderField +
+        "&length=" +
+        tableOptions.perPage +
+        "&start=" +
+        tableOptions.limitStart +
+        "&order_dir=" +
+        tableOptions.orderDir +
+        "&ac=" +
+        tableOptions.filterParam.user_status +
+        "&lo=" +
+        tableOptions.filterParam.loginid +
+        "&na=" +
+        tableOptions.filterParam.fullname +
+        "&gr=" +
+        tableOptions.filterParam.user_group +
+        "&ph=" +
+        tableOptions.filterParam.phoneno +
+        "&gl=" +
+        tableOptions.filterParam.geo_level +
+        "&gl_id=" +
+        tableOptions.filterParam.geo_level_id +
+        "&bv=" +
+        tableOptions.filterParam.bank_status +
+        "&ri=" +
+        tableOptions.filterParam.role_id;
+      var veriUrl = "qid=014" + qs;
+      var dlString = "qid=001" + qs;
+      var filename =
+        (tableOptions.filterParam.geo_string
+          ? tableOptions.filterParam.geo_string
+          : "Recent ") +
+        " " +
+        (tableOptions.filterParam.loginid
+          ? tableOptions.filterParam.loginid
+          : "Recent ") +
+        " User List";
+      overlay.show();
+
+      var count = await new Promise((resolve) => {
+        $.ajax({
+          url: common.DataService,
+          type: "POST",
+          data: veriUrl,
+          dataType: "json",
+          success: (data) => {
+            resolve(data.total);
+          },
+        });
+      });
+      var downloadMax =
+        (window.common && window.common.ExportDownloadLimit) || 25000;
+      if (parseInt(count) > downloadMax) {
+        alert.Error(
+          "Download Error",
+          "Unable to download data because it has exceeded download limit, download limit is " +
+            downloadMax,
+        );
+      } else if (parseInt(count) == 0) {
+        alert.Error("Download Error", "No data found");
+      } else {
+        alert.Info("DOWNLOADING...", "Downloading " + count + " record(s)");
+        var outcome = await new Promise((resolve) => {
+          $.ajax({
+            url: common.ExportService,
+            type: "POST",
+            data: dlString,
+            success: (data) => {
+              resolve(data);
             },
+          });
         });
-        const geoIndicator = reactive({
-            state: 50, currentLevelId: 0,
-            lga: '', cluster: '', ward: '',
-        });
-        const geoLevelData = ref([]);
-        const sysDefaultData = ref([]);
-        const lgaLevelData = ref([]);
-        const clusterLevelData = ref([]);
-        const wardLevelData = ref([]);
-        const dpLevelData = ref([]);
-        const userPass = reactive({ pass: '', loginid: '', name: '', isBulk: false });
+        var exportData = JSON.parse(outcome);
+        if (window.Jhxlsx && typeof window.Jhxlsx.export === "function") {
+          window.Jhxlsx.export(exportData, { fileName: filename });
+        }
+      }
+      resetSelected();
+      overlay.hide();
+    };
+    const checkIfAndReturnEmpty = (data) => {
+      return data === null || data === "" ? "" : data;
+    };
 
-        const reloadUserListOnUpdate = () => { paginationDefault(); loadTableData(); };
-        const loadTableData = () => {
-            overlay.show();
-            axios.get(
-                common.TableService +
-                '?qid=001&draw=' + tableOptions.currentPage +
-                '&order_column=' + tableOptions.orderField +
-                '&length=' + tableOptions.perPage +
-                '&start=' + tableOptions.limitStart +
-                '&order_dir=' + tableOptions.orderDir +
-                '&ac=' + tableOptions.filterParam.user_status +
-                '&lo=' + tableOptions.filterParam.loginid +
-                '&na=' + tableOptions.filterParam.fullname +
-                '&gr=' + tableOptions.filterParam.user_group +
-                '&ph=' + tableOptions.filterParam.phoneno +
-                '&gl=' + tableOptions.filterParam.geo_level +
-                '&gl_id=' + tableOptions.filterParam.geo_level_id +
-                '&bv=' + tableOptions.filterParam.bank_status +
-                '&ri=' + tableOptions.filterParam.role_id
-            )
-                .then(response => {
-                    var d = response && response.data;
-                    tableData.value = Array.isArray(d && d.data) ? d.data : [];
-                    tableOptions.total = (d && d.recordsTotal) || 0;
-                    if (tableOptions.currentPage == 1) paginationDefault();
-                    overlay.hide();
-                })
-                .catch(error => {
-                    overlay.hide();
-                    alert.Error('ERROR', safeMessage(error));
-                });
-        }
-        const selectAll = () => { for (var i = 0; i < tableData.value.length; i++) tableData.value[i].pick = true; };
-        const uncheckAll = () => { for (var i = 0; i < tableData.value.length; i++) tableData.value[i].pick = false; };
-        const selectToggle = () => {
-            if (checkToggle.value === false) { selectAll(); checkToggle.value = true; }
-            else                              { uncheckAll(); checkToggle.value = false; }
-        }
-        const checkedBg = (pickOne) => { return pickOne != '' ? 'bg-select' : ''; };
-        const toggleFilter = () => {
-            if (filterState.value === false) filters.value = false;
-            return (filterState.value = !filterState.value);
-        }
-        const selectedItems = () => { return tableData.value.filter(r => r.pick); };
-        const selectedID = () => { return tableData.value.filter(r => r.pick).map(r => r.userid); };
-
-        const paginationDefault = () => {
-            tableOptions.pageLength = Math.ceil(tableOptions.total / tableOptions.perPage);
-            tableOptions.limitStart = Math.ceil((tableOptions.currentPage - 1) * tableOptions.perPage);
-            tableOptions.isNext = tableOptions.currentPage < tableOptions.pageLength;
-            tableOptions.isPrev = tableOptions.currentPage > 1;
-        }
-        const resetSelected = () => { uncheckAll(); checkToggle.value = false; totalCheckedBox(); };
-        const nextPage = () => { resetSelected(); tableOptions.currentPage += 1; paginationDefault(); loadTableData(); };
-        const prevPage = () => { resetSelected(); tableOptions.currentPage -= 1; paginationDefault(); loadTableData(); };
-        const currentPage = () => {
-            paginationDefault();
-            if (tableOptions.currentPage < 1)                            alert.Error('ERROR', "The Page requested doesn't exist");
-            else if (tableOptions.currentPage > tableOptions.pageLength) alert.Error('ERROR', "The Page requested doesn't exist");
-            else                                                         loadTableData();
-        }
-        const changePerPage = (val) => {
-            resetSelected();
-            tableOptions.currentPage = 1;
-            tableOptions.perPage = val;
-            paginationDefault();
-            loadTableData();
-        }
-        const sort = (col) => {
-            if (tableOptions.orderField === col) tableOptions.orderDir = tableOptions.orderDir === 'asc' ? 'desc' : 'asc';
-            else                                  tableOptions.orderField = col;
-            paginationDefault();
-            loadTableData();
-        }
-        const applyFilter = () => {
-            var checkFill = 0;
-            checkFill += tableOptions.filterParam.user_status != '' ? 1 : 0;
-            checkFill += tableOptions.filterParam.loginid != '' ? 1 : 0;
-            checkFill += tableOptions.filterParam.fullname != '' ? 1 : 0;
-            checkFill += tableOptions.filterParam.user_group != '' ? 1 : 0;
-            checkFill += tableOptions.filterParam.phoneno != '' ? 1 : 0;
-            checkFill += tableOptions.filterParam.geo_level != '' ? 1 : 0;
-            checkFill += tableOptions.filterParam.bank_status != '' ? 1 : 0;
-            checkFill += tableOptions.filterParam.role_id != '' ? 1 : 0;
-            if (checkFill > 0) {
-                toggleFilter();
-                filters.value = true;
-                paginationDefault();
-                loadTableData();
-            } else {
-                alert.Error('ERROR', 'Invalid required data');
-            }
-        }
-        const removeSingleFilter = (column_name) => {
-            tableOptions.filterParam[column_name] = '';
-            if (column_name == 'geo_string') {
-                tableOptions.filterParam.geo_level = '';
-                tableOptions.filterParam.geo_level_id = '';
-                tableOptions.filterParam.geo_string = '';
-            }
-            if (column_name == 'role') {
-                tableOptions.filterParam.role_id = '';
-                tableOptions.filterParam.role = '';
-            }
-            var g = 0;
-            for (var k in tableOptions.filterParam) {
-                if (tableOptions.filterParam[k] != '') g++;
-            }
-            if (g == 0) filters.value = false;
-            paginationDefault();
-            loadTableData();
-        }
-        const clearAllFilter = () => {
-            filters.value = false;
-            try { $('.select2').val('').trigger('change'); } catch (e) {}
-            tableOptions.filterParam.user_status = '';
-            tableOptions.filterParam.loginid = '';
-            tableOptions.filterParam.fullname = '';
-            tableOptions.filterParam.user_group = '';
-            tableOptions.filterParam.phoneno = '';
-            tableOptions.filterParam.geo_level = '';
-            tableOptions.filterParam.geo_level_id = '';
-            tableOptions.filterParam.geo_string = '';
-            tableOptions.filterParam.bank_status = '';
-            tableOptions.filterParam.role_id = '';
-            tableOptions.filterParam.role = '';
-            paginationDefault();
-            loadTableData();
-        }
-        const goToDetail = (userid, user_status) => {
-            bus.emit('g-event-goto-page', {
-                userid: userid, page: 'detail',
-                user_status: user_status, role: roleListData.value,
+    onMounted(() => {
+      getGeoLocation();
+      try {
+        var select = $(".select2");
+        select.each(function () {
+          var $this = $(this);
+          $this.wrap('<div class="position-relative"></div>');
+          $this
+            .select2({
+              dropdownAutoWidth: true,
+              width: "100%",
+              dropdownParent: $this.parent(),
+            })
+            .on("change", function () {
+              setLocation(this.value);
             });
-        }
-        const getRoleList = () => {
-            overlay.show();
-            axios.get(common.DataService + '?qid=007')
-                .then(response => {
-                    roleListData.value = (response.data && response.data.data) || [];
-                    overlay.hide();
-                })
-                .catch(error => {
-                    overlay.hide();
-                    alert.Error('ERROR', safeMessage(error));
-                });
-        }
-        const getGeoLocation = () => {
-            overlay.show();
-            axios.get(common.DataService + '?qid=gen009')
-                .then(response => {
-                    geoData.value = (response.data && response.data.data) || [];
-                    overlay.hide();
-                })
-                .catch(error => {
-                    overlay.hide();
-                    alert.Error('ERROR', safeMessage(error));
-                });
-        }
-        const setLocation = (select_index) => {
-            var i = select_index || 0;
-            var row = geoData.value[i];
-            if (!row) return;
-            tableOptions.filterParam.geo_level = row.geo_level;
-            tableOptions.filterParam.geo_level_id = row.geo_level_id;
-            tableOptions.filterParam.geo_string = row.geo_string;
-        }
-        const refreshData = () => { paginationDefault(); loadTableData(); };
-        const downloadBadge = (uid) => {
-            overlay.show();
-            window.open(url.value + '?qid=002&e=' + uid, '_parent');
-            overlay.hide();
-        }
-        const downloadBadges = () => {
-            overlay.show();
-            if (parseInt(selectedID().length) > 0) {
-                window.open(url.value + '?qid=003&e=' + selectedID(), '_parent');
-            } else {
-                alert.Error('Badge Download Failed', 'No user selected');
-            }
-            overlay.hide();
-        }
-        const getGeoLevel = () => {
-            overlay.show();
-            axios.get(common.DataService + '?qid=gen001')
-                .then(response => {
-                    geoLevelData.value = (response.data && response.data.data) || [];
-                    overlay.hide();
-                })
-                .catch(error => {
-                    overlay.hide();
-                    alert.Error('ERROR', safeMessage(error));
-                });
-        }
-        const totalCheckedBox = () => {
-            var total = selectedID().length;
-            var el = document.getElementById('total-selected');
-            if (!el) return;
-            if (total > 0) {
-                el.innerHTML = '<span id="selected-counter" class="badge badge-primary btn-icon"><span class="badge badge-success">' + total + '</span> Selected</span>';
-            } else {
-                el.replaceChildren();
-            }
-        }
-        const exportUserData = async () => {
-            var qs =
-                '&draw=' + tableOptions.currentPage +
-                '&order_column=' + tableOptions.orderField +
-                '&length=' + tableOptions.perPage +
-                '&start=' + tableOptions.limitStart +
-                '&order_dir=' + tableOptions.orderDir +
-                '&ac=' + tableOptions.filterParam.user_status +
-                '&lo=' + tableOptions.filterParam.loginid +
-                '&na=' + tableOptions.filterParam.fullname +
-                '&gr=' + tableOptions.filterParam.user_group +
-                '&ph=' + tableOptions.filterParam.phoneno +
-                '&gl=' + tableOptions.filterParam.geo_level +
-                '&gl_id=' + tableOptions.filterParam.geo_level_id +
-                '&bv=' + tableOptions.filterParam.bank_status +
-                '&ri=' + tableOptions.filterParam.role_id;
-            var veriUrl = 'qid=014' + qs;
-            var dlString = 'qid=001' + qs;
-            var filename =
-                (tableOptions.filterParam.geo_string ? tableOptions.filterParam.geo_string : 'Recent ') + ' ' +
-                (tableOptions.filterParam.loginid ? tableOptions.filterParam.loginid : 'Recent ') +
-                ' User List';
-            overlay.show();
-
-            var count = await new Promise(resolve => {
-                $.ajax({
-                    url: common.DataService, type: 'POST', data: veriUrl, dataType: 'json',
-                    success: (data) => { resolve(data.total); },
-                });
-            });
-            var downloadMax = (window.common && window.common.ExportDownloadLimit) || 25000;
-            if (parseInt(count) > downloadMax) {
-                alert.Error('Download Error', 'Unable to download data because it has exceeded download limit, download limit is ' + downloadMax);
-            } else if (parseInt(count) == 0) {
-                alert.Error('Download Error', 'No data found');
-            } else {
-                alert.Info('DOWNLOADING...', 'Downloading ' + count + ' record(s)');
-                var outcome = await new Promise(resolve => {
-                    $.ajax({
-                        url: common.ExportService, type: 'POST', data: dlString,
-                        success: (data) => { resolve(data); },
-                    });
-                });
-                var exportData = JSON.parse(outcome);
-                if (window.Jhxlsx && typeof window.Jhxlsx.export === 'function') {
-                    window.Jhxlsx.export(exportData, { fileName: filename });
-                }
-            }
-            resetSelected();
-            overlay.hide();
-        }
-        const checkIfAndReturnEmpty = (data) => { return data === null || data === '' ? '' : data; };
-
-        onMounted(() => {
-            getGeoLocation();
-            try {
-                var select = $('.select2');
-                select.each(function () {
-                    var $this = $(this);
-                    $this.wrap('<div class="position-relative"></div>');
-                    $this.select2({
-                        dropdownAutoWidth: true, width: '100%',
-                        dropdownParent: $this.parent(),
-                    }).on('change', function () { setLocation(this.value); });
-                });
-                $('.select2-selection__arrow').html('<i class="feather icon-chevron-down"></i>');
-            } catch (e) {}
-            loadTableData();
-            getGeoLevel();
-            bus.on('g-event-update-user', reloadUserListOnUpdate);
         });
-        onBeforeUnmount(() => {
-            bus.off('g-event-update-user', reloadUserListOnUpdate);
-        });
+        $(".select2-selection__arrow").html(
+          '<i class="feather icon-chevron-down"></i>',
+        );
+      } catch (e) {}
+      loadTableData();
+      getGeoLevel();
+      bus.on("g-event-update-user", reloadUserListOnUpdate);
+    });
+    onBeforeUnmount(() => {
+      bus.off("g-event-update-user", reloadUserListOnUpdate);
+    });
 
-        return {
-            appState, url, tableData, defaultStateId, roleListData, geoData,
-            checkToggle, filterState, filters, tableOptions, geoIndicator,
-            geoLevelData, sysDefaultData, lgaLevelData, clusterLevelData,
-            wardLevelData, dpLevelData, userPass,
-            reloadUserListOnUpdate, loadTableData,
-            selectAll, uncheckAll, selectToggle, checkedBg, toggleFilter,
-            selectedItems, selectedID,
-            paginationDefault, resetSelected, nextPage, prevPage, currentPage,
-            changePerPage, sort, applyFilter, removeSingleFilter, clearAllFilter,
-            goToDetail, getRoleList, getGeoLocation, setLocation, refreshData,
-            downloadBadge, downloadBadges, getGeoLevel, totalCheckedBox,
-            exportUserData, checkIfAndReturnEmpty,
-            capitalize: fmtUtils.capitalize,
-            formatNumber: fmtUtils.formatNumber,
-        };
-    },
-    template: `
+    return {
+      appState,
+      url,
+      tableData,
+      defaultStateId,
+      roleListData,
+      geoData,
+      checkToggle,
+      filterState,
+      filters,
+      tableOptions,
+      geoIndicator,
+      geoLevelData,
+      sysDefaultData,
+      lgaLevelData,
+      clusterLevelData,
+      wardLevelData,
+      dpLevelData,
+      userPass,
+      reloadUserListOnUpdate,
+      loadTableData,
+      selectAll,
+      uncheckAll,
+      selectToggle,
+      checkedBg,
+      toggleFilter,
+      selectedItems,
+      selectedID,
+      paginationDefault,
+      resetSelected,
+      nextPage,
+      prevPage,
+      currentPage,
+      changePerPage,
+      sort,
+      applyFilter,
+      removeSingleFilter,
+      clearAllFilter,
+      goToDetail,
+      getRoleList,
+      getGeoLocation,
+      setLocation,
+      refreshData,
+      downloadBadge,
+      downloadBadges,
+      getGeoLevel,
+      totalCheckedBox,
+      exportUserData,
+      checkIfAndReturnEmpty,
+      capitalize: fmtUtils.capitalize,
+      formatNumber: fmtUtils.formatNumber,
+    };
+  },
+  template: `
         <div class="row" id="basic-table">
             <div class="col-md-8 col-sm-12 col-12 mb-0">
                 <h2 class="content-header-title header-txt float-left mb-0">SMC</h2>
@@ -481,13 +654,15 @@ const PageTable = {
 };
 
 useApp({
-    template: `
+  template: `
         <div>
             <div v-show="appState.pageState.page == 'table'"><page-table/></div>
             <div v-show="appState.pageState.page == 'create-issues'"><h1>Others</h1></div>
         </div>
     `,
-    setup() { return { appState }; },
+  setup() {
+    return { appState };
+  },
 })
-    .component('page-table', PageTable)
-    .mount('#app');
+  .component("page-table", PageTable)
+  .mount("#app");

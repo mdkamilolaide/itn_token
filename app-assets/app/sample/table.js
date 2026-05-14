@@ -8,11 +8,11 @@ const { ref, reactive, computed, onMounted } = Vue;
 const { useApp, useFormat, safeMessage } = window.utils;
 
 const PageBody = {
-    setup() {
-        const page = ref('home');
-        return { page };
-    },
-    template: `
+  setup() {
+    const page = ref("home");
+    return { page };
+  },
+  template: `
     <div>
         <div class="content-body">
             <sample_table/>
@@ -22,162 +22,195 @@ const PageBody = {
 };
 
 const SampleTable = {
-    setup() {
-        const fmtUtils = useFormat();
+  setup() {
+    const fmtUtils = useFormat();
 
-        const tableData = ref([]);
-        const checkToggle = ref(false);
-        const filterState = ref(false);
-        const filters = ref(false);
+    const tableData = ref([]);
+    const checkToggle = ref(false);
+    const filterState = ref(false);
+    const filters = ref(false);
 
-        const tableOptions = reactive({
-            total: 1,
-            pageLength: 1,
-            perPage: 10,
-            currentPage: 1,
-            orderDir: 'asc',
-            orderField: 0,
-            limitStart: 0,
-            isNext: false,
-            isPrev: false,
-            aLength: [10, 20, 50, 100],
-            filterParameters: {
-                loginid: '',
-                firstname: '',
-            },
+    const tableOptions = reactive({
+      total: 1,
+      pageLength: 1,
+      perPage: 10,
+      currentPage: 1,
+      orderDir: "asc",
+      orderField: 0,
+      limitStart: 0,
+      isNext: false,
+      isPrev: false,
+      aLength: [10, 20, 50, 100],
+      filterParameters: {
+        loginid: "",
+        firstname: "",
+      },
+    });
+
+    const loadTableData = () => {
+      overlay.show();
+      var url = common.TableService;
+      axios
+        .get(
+          url +
+            "?qid=200&draw=" +
+            tableOptions.currentPage +
+            "&order_column=" +
+            tableOptions.orderField +
+            "&length=" +
+            tableOptions.perPage +
+            "&start=" +
+            tableOptions.limitStart +
+            "&order_dir=" +
+            tableOptions.orderDir,
+        )
+        .then((response) => {
+          var d = response && response.data;
+          tableData.value = Array.isArray(d && d.data) ? d.data : [];
+          tableOptions.total = (d && d.recordsTotal) || 0;
+          if (tableOptions.currentPage == 1) paginationDefault();
+          overlay.hide();
+        })
+        .catch((error) => {
+          overlay.hide();
+          alert.Error("ERROR", safeMessage(error));
         });
+    };
 
-        const loadTableData = () => {
-            overlay.show();
-            var url = common.TableService;
-            axios
-                .get(
-                    url +
-                        '?qid=200&draw=' + tableOptions.currentPage +
-                        '&order_column=' + tableOptions.orderField +
-                        '&length=' + tableOptions.perPage +
-                        '&start=' + tableOptions.limitStart +
-                        '&order_dir=' + tableOptions.orderDir
-                )
-                .then(response => {
-                    var d = response && response.data;
-                    tableData.value = Array.isArray(d && d.data) ? d.data : [];
-                    tableOptions.total = (d && d.recordsTotal) || 0;
-                    if (tableOptions.currentPage == 1) paginationDefault();
-                    overlay.hide();
-                })
-                .catch(error => {
-                    overlay.hide();
-                    alert.Error('ERROR', safeMessage(error));
-                });
-        }
+    const selectAll = () => {
+      for (var i = 0; i < tableData.value.length; i++)
+        tableData.value[i].pick = true;
+    };
+    const uncheckAll = () => {
+      for (var i = 0; i < tableData.value.length; i++)
+        tableData.value[i].pick = false;
+    };
+    const selectToggle = () => {
+      if (checkToggle.value === false) {
+        selectAll();
+        checkToggle.value = true;
+      } else {
+        uncheckAll();
+        checkToggle.value = false;
+      }
+    };
+    const checkedBg = (pickOne) => {
+      return pickOne != "" ? "bg-select" : "";
+    };
 
-        const selectAll = () => {
-            for (var i = 0; i < tableData.value.length; i++) tableData.value[i].pick = true;
-        }
-        const uncheckAll = () => {
-            for (var i = 0; i < tableData.value.length; i++) tableData.value[i].pick = false;
-        }
-        const selectToggle = () => {
-            if (checkToggle.value === false) { selectAll(); checkToggle.value = true; }
-            else                              { uncheckAll(); checkToggle.value = false; }
-        }
-        const checkedBg = (pickOne) => { return pickOne != '' ? 'bg-select' : ''; };
+    const toggleFilter = () => {
+      if (filterState.value === false) filters.value = false;
+      return (filterState.value = !filterState.value);
+    };
 
-        const toggleFilter = () => {
-            if (filterState.value === false) filters.value = false;
-            return (filterState.value = !filterState.value);
-        }
+    const selectedItems = () => {
+      return tableData.value.filter((r) => r.pick);
+    };
+    const selectedID = () => {
+      return tableData.value.filter((r) => r.pick).map((r) => r.userid);
+    };
 
-        const selectedItems = () => {
-            return tableData.value.filter(r => r.pick);
-        }
-        const selectedID = () => {
-            return tableData.value.filter(r => r.pick).map(r => r.userid);
-        }
+    const paginationDefault = () => {
+      tableOptions.pageLength = Math.ceil(
+        tableOptions.total / tableOptions.perPage,
+      );
+      tableOptions.limitStart = Math.ceil(
+        (tableOptions.currentPage - 1) * tableOptions.perPage,
+      );
+      tableOptions.isNext = tableOptions.currentPage < tableOptions.pageLength;
+      tableOptions.isPrev = tableOptions.currentPage > 1;
+    };
 
-        const paginationDefault = () => {
-            tableOptions.pageLength = Math.ceil(tableOptions.total / tableOptions.perPage);
-            tableOptions.limitStart = Math.ceil((tableOptions.currentPage - 1) * tableOptions.perPage);
-            tableOptions.isNext = (tableOptions.currentPage < tableOptions.pageLength);
-            tableOptions.isPrev = (tableOptions.currentPage > 1);
-        }
+    const nextPage = () => {
+      tableOptions.currentPage += 1;
+      paginationDefault();
+      loadTableData();
+    };
+    const prevPage = () => {
+      tableOptions.currentPage -= 1;
+      paginationDefault();
+      loadTableData();
+    };
+    const currentPage = () => {
+      paginationDefault();
+      if (tableOptions.currentPage < 1)
+        alert.Error("ERROR", "The Page requested doesn't exist");
+      else if (tableOptions.currentPage > tableOptions.pageLength)
+        alert.Error("ERROR", "The Page requested doesn't exist");
+      else loadTableData();
+    };
+    const changePerPage = (val) => {
+      var maxPerPage = Math.ceil(tableOptions.total / val);
+      if (maxPerPage < tableOptions.currentPage)
+        tableOptions.currentPage = maxPerPage;
+      tableOptions.perPage = val;
+      paginationDefault();
+      loadTableData();
+    };
 
-        const nextPage = () => {
-            tableOptions.currentPage += 1;
-            paginationDefault();
-            loadTableData();
-        }
-        const prevPage = () => {
-            tableOptions.currentPage -= 1;
-            paginationDefault();
-            loadTableData();
-        }
-        const currentPage = () => {
-            paginationDefault();
-            if (tableOptions.currentPage < 1)                          alert.Error('ERROR', "The Page requested doesn't exist");
-            else if (tableOptions.currentPage > tableOptions.pageLength) alert.Error('ERROR', "The Page requested doesn't exist");
-            else                                                       loadTableData();
-        }
-        const changePerPage = (val) => {
-            var maxPerPage = Math.ceil(tableOptions.total / val);
-            if (maxPerPage < tableOptions.currentPage) tableOptions.currentPage = maxPerPage;
-            tableOptions.perPage = val;
-            paginationDefault();
-            loadTableData();
-        }
+    const sort = (col) => {
+      if (tableOptions.orderField === col) {
+        tableOptions.orderDir =
+          tableOptions.orderDir === "asc" ? "desc" : "asc";
+      } else {
+        tableOptions.orderField = col;
+      }
+      paginationDefault();
+      loadTableData();
+    };
 
-        const sort = (col) => {
-            if (tableOptions.orderField === col) {
-                tableOptions.orderDir = tableOptions.orderDir === 'asc' ? 'desc' : 'asc';
-            } else {
-                tableOptions.orderField = col;
-            }
-            paginationDefault();
-            loadTableData();
-        }
+    const applyFilter = () => {
+      var checkFill = 0;
+      checkFill += tableOptions.filterParameters.firstname != "" ? 1 : 0;
+      checkFill += tableOptions.filterParameters.loginid != "" ? 1 : 0;
+      if (checkFill > 0) {
+        toggleFilter();
+        filters.value = true;
+        loadTableData();
+      } else {
+        alert.Error("ERROR", "Invalid required data");
+      }
+    };
+    const clearAllFilter = () => {
+      filters.value = false;
+      tableOptions.filterParameters.loginid = "";
+      tableOptions.filterParameters.firstname = "";
+    };
 
-        const applyFilter = () => {
-            var checkFill = 0;
-            checkFill += tableOptions.filterParameters.firstname != '' ? 1 : 0;
-            checkFill += tableOptions.filterParameters.loginid   != '' ? 1 : 0;
-            if (checkFill > 0) {
-                toggleFilter();
-                filters.value = true;
-                loadTableData();
-            } else {
-                alert.Error('ERROR', 'Invalid required data');
-            }
-        }
-        const clearAllFilter = () => {
-            filters.value = false;
-            tableOptions.filterParameters.loginid = '';
-            tableOptions.filterParameters.firstname = '';
-        }
+    onMounted(() => {
+      loadTableData();
+    });
 
-        onMounted(() => {
-            loadTableData();
-        });
-
-        return {
-            // state
-            tableData,
-            checkToggle,
-            filterState,
-            filters,
-            tableOptions,
-            // methods
-            loadTableData,
-            selectAll, uncheckAll, selectToggle, checkedBg,
-            toggleFilter, selectedItems, selectedID,
-            nextPage, prevPage, currentPage, paginationDefault, changePerPage,
-            sort, applyFilter, clearAllFilter,
-            // template helpers (return all so template references survive)
-            capitalize: fmtUtils.capitalize,
-            formatNumber: fmtUtils.formatNumber,
-        };
-    },
-    template: `
+    return {
+      // state
+      tableData,
+      checkToggle,
+      filterState,
+      filters,
+      tableOptions,
+      // methods
+      loadTableData,
+      selectAll,
+      uncheckAll,
+      selectToggle,
+      checkedBg,
+      toggleFilter,
+      selectedItems,
+      selectedID,
+      nextPage,
+      prevPage,
+      currentPage,
+      paginationDefault,
+      changePerPage,
+      sort,
+      applyFilter,
+      clearAllFilter,
+      // template helpers (return all so template references survive)
+      capitalize: fmtUtils.capitalize,
+      formatNumber: fmtUtils.formatNumber,
+    };
+  },
+  template: `
     <div class="row" id="basic-table">
 
         <div class="col-8">
@@ -383,6 +416,6 @@ const SampleTable = {
 };
 
 useApp({ template: `<div><page-body/></div>` })
-    .component('page-body', PageBody)
-    .component('sample_table', SampleTable)
-    .mount('#app');
+  .component("page-body", PageBody)
+  .component("sample_table", SampleTable)
+  .mount("#app");

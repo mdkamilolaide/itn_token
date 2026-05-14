@@ -4,254 +4,355 @@
  * (drag-fill grid where you enter secondary_qty per facility/product).
  */
 
-const { ref, reactive, computed, watch, nextTick, onMounted, onBeforeUnmount } = Vue;
+const { ref, reactive, computed, watch, nextTick, onMounted, onBeforeUnmount } =
+  Vue;
 const { useApp, useFormat, bus, safeMessage } = window.utils;
 
 const appState = Vue.reactive({
-    pageState: { page: 'table', title: '' },
-    permission: (typeof getPermission === 'function')
-        ? (getPermission(typeof per !== 'undefined' ? per : null, 'smc') || { permission_value: 0 })
-        : { permission_value: 0 },
-    userId: (() => { var el = document.getElementById('v_g_id'); return el ? el.value : ''; })(),
-    geoLevelForm: { geoLevel: '', geoLevelId: 0 },
-    defaultStateId: '',
-    sysDefaultData: [],
-    productData: [],
-    lgaData: [],
-    periodData: [],
-    currentPeriodId: '',
-    currentLgaId: '',
-    selectedLgaKey: '',
-    facilityTitles: '',
-    level: 'lga',
+  pageState: { page: "table", title: "" },
+  permission:
+    typeof getPermission === "function"
+      ? getPermission(typeof per !== "undefined" ? per : null, "smc") || {
+          permission_value: 0,
+        }
+      : { permission_value: 0 },
+  userId: (() => {
+    var el = document.getElementById("v_g_id");
+    return el ? el.value : "";
+  })(),
+  geoLevelForm: { geoLevel: "", geoLevelId: 0 },
+  defaultStateId: "",
+  sysDefaultData: [],
+  productData: [],
+  lgaData: [],
+  periodData: [],
+  currentPeriodId: "",
+  currentLgaId: "",
+  selectedLgaKey: "",
+  facilityTitles: "",
+  level: "lga",
 });
 
 const setSelectedLga = () => {
-    var key = appState.selectedLgaKey;
-    var selectedLga = appState.lgaData[key];
-    if (!selectedLga) return;
-    appState.facilityTitles = selectedLga.lga;
-    appState.currentLgaId = selectedLga.lgaid;
-    bus.emit('g-event-reset-form');
-}
+  var key = appState.selectedLgaKey;
+  var selectedLga = appState.lgaData[key];
+  if (!selectedLga) return;
+  appState.facilityTitles = selectedLga.lga;
+  appState.currentLgaId = selectedLga.lgaid;
+  bus.emit("g-event-reset-form");
+};
 
 const PageTable = {
-    setup() {
-        const fmtUtils = useFormat();
+  setup() {
+    const fmtUtils = useFormat();
 
-        const tableData = ref([]);
-        const roleListData = ref([]);
-        const geoData = ref([]);
-        const checkToggle = ref(false);
-        const filterState = ref(false);
-        const filters = ref(false);
-        const tableOptions = reactive({
-            total: 1, pageLength: 1, perPage: 10, currentPage: 1,
-            orderDir: 'desc', orderField: 0, limitStart: 0,
-            isNext: false, isPrev: false,
-            aLength: [10, 20, 50, 100, 150, 200],
-            filterParam: {
-                gid: appState.currentLgaId,
-                glv: appState.level,
-                lga_name: appState.facilityTitles,
-            },
+    const tableData = ref([]);
+    const roleListData = ref([]);
+    const geoData = ref([]);
+    const checkToggle = ref(false);
+    const filterState = ref(false);
+    const filters = ref(false);
+    const tableOptions = reactive({
+      total: 1,
+      pageLength: 1,
+      perPage: 10,
+      currentPage: 1,
+      orderDir: "desc",
+      orderField: 0,
+      limitStart: 0,
+      isNext: false,
+      isPrev: false,
+      aLength: [10, 20, 50, 100, 150, 200],
+      filterParam: {
+        gid: appState.currentLgaId,
+        glv: appState.level,
+        lga_name: appState.facilityTitles,
+      },
+    });
+    const geoLevelData = ref([]);
+
+    const reloadTableListOnUpdate = () => {
+      paginationDefault();
+      loadTableData();
+    };
+    const loadTableData = () => {
+      overlay.show();
+      axios
+        .get(
+          common.TableService +
+            "?qid=801&draw=" +
+            tableOptions.currentPage +
+            "&order_column=" +
+            tableOptions.orderField +
+            "&length=" +
+            tableOptions.perPage +
+            "&start=" +
+            tableOptions.limitStart +
+            "&order_dir=" +
+            tableOptions.orderDir +
+            "&gid=" +
+            appState.currentLgaId +
+            "&glv=lga",
+        )
+        .then((response) => {
+          var d = response && response.data;
+          tableData.value = Array.isArray(d && d.data) ? d.data : [];
+          tableOptions.total = (d && d.recordsTotal) || 0;
+          if (tableOptions.currentPage == 1) paginationDefault();
+          overlay.hide();
+        })
+        .catch((error) => {
+          overlay.hide();
+          alert.Error("ERROR", safeMessage(error));
         });
-        const geoLevelData = ref([]);
-
-        const reloadTableListOnUpdate = () => { paginationDefault(); loadTableData(); };
-        const loadTableData = () => {
-            overlay.show();
-            axios.get(
-                common.TableService +
-                '?qid=801&draw=' + tableOptions.currentPage +
-                '&order_column=' + tableOptions.orderField +
-                '&length=' + tableOptions.perPage +
-                '&start=' + tableOptions.limitStart +
-                '&order_dir=' + tableOptions.orderDir +
-                '&gid=' + appState.currentLgaId +
-                '&glv=lga'
-            )
-                .then(response => {
-                    var d = response && response.data;
-                    tableData.value = Array.isArray(d && d.data) ? d.data : [];
-                    tableOptions.total = (d && d.recordsTotal) || 0;
-                    if (tableOptions.currentPage == 1) paginationDefault();
-                    overlay.hide();
-                })
-                .catch(error => {
-                    overlay.hide();
-                    alert.Error('ERROR', safeMessage(error));
-                });
-        }
-        const selectAll = () => { for (var i = 0; i < tableData.value.length; i++) tableData.value[i].pick = true; };
-        const uncheckAll = () => { for (var i = 0; i < tableData.value.length; i++) tableData.value[i].pick = false; };
-        const selectToggle = () => {
-            if (checkToggle.value === false) { selectAll(); checkToggle.value = true; }
-            else                              { uncheckAll(); checkToggle.value = false; }
-        }
-        const checkedBg = (p) => { return p != '' ? 'bg-select' : ''; };
-        const toggleFilter = () => {
-            if (filterState.value === false) filters.value = false;
-            return (filterState.value = !filterState.value);
-        }
-        const paginationDefault = () => {
-            tableOptions.pageLength = Math.ceil(tableOptions.total / tableOptions.perPage);
-            tableOptions.limitStart = Math.ceil((tableOptions.currentPage - 1) * tableOptions.perPage);
-            tableOptions.isNext = tableOptions.currentPage < tableOptions.pageLength;
-            tableOptions.isPrev = tableOptions.currentPage > 1;
-        }
-        const resetSelected = () => { uncheckAll(); checkToggle.value = false; totalCheckedBox(); };
-        const nextPage = () => { resetSelected(); tableOptions.currentPage += 1; paginationDefault(); loadTableData(); };
-        const prevPage = () => { resetSelected(); tableOptions.currentPage -= 1; paginationDefault(); loadTableData(); };
-        const currentPage = () => {
-            paginationDefault();
-            if (tableOptions.currentPage < 1)                            alert.Error('ERROR', "The Page requested doesn't exist");
-            else if (tableOptions.currentPage > tableOptions.pageLength) alert.Error('ERROR', "The Page requested doesn't exist");
-            else                                                         loadTableData();
-        }
-        const changePerPage = (val) => {
-            resetSelected();
-            tableOptions.currentPage = 1;
-            tableOptions.perPage = val;
-            paginationDefault();
-            loadTableData();
-        }
-        const sort = (col) => {
-            if (tableOptions.orderField === col) tableOptions.orderDir = tableOptions.orderDir === 'asc' ? 'desc' : 'asc';
-            else                                  tableOptions.orderField = col;
-            paginationDefault();
-            loadTableData();
-        }
-        const applyFilter = () => {
-            if (appState.currentLgaId != '') {
-                tableOptions.filterParam.gid = appState.currentLgaId;
-                tableOptions.filterParam.glv = appState.level;
-                tableOptions.filterParam.lga_name = appState.facilityTitles;
-            }
-            var checkFill = 0;
-            checkFill += tableOptions.filterParam.gid != '' ? 1 : 0;
-            checkFill += tableOptions.filterParam.level != '' ? 1 : 0;
-            if (checkFill > 0) {
-                toggleFilter();
-                filters.value = true;
-                paginationDefault();
-                loadTableData();
-            } else {
-                alert.Error('ERROR', 'Invalid required data');
-            }
-        }
-        const removeSingleFilter = (column_name) => {
-            tableOptions.filterParam[column_name] = '';
-            if (column_name == 'lga_name') {
-                tableOptions.filterParam.gid = '';
-                tableOptions.filterParam.glv = '';
-                tableOptions.filterParam.lga_name = '';
-                appState.selectedLgaKey = '';
-            }
-            var g = 0;
-            for (var k in tableOptions.filterParam) {
-                if (tableOptions.filterParam[k] != '') g++;
-            }
-            if (g == 0) filters.value = false;
-            paginationDefault();
-            loadTableData();
-        }
-        const clearAllFilter = () => {
-            filters.value = false;
-            tableOptions.filterParam.gid = '';
-            tableOptions.filterParam.level = '';
-            tableOptions.filterParam.lga_name = '';
-            appState.selectedLgaKey = '';
-            paginationDefault();
-            loadTableData();
-        }
-        const getGeoLocation = () => {
-            overlay.show();
-            axios.get(common.DataService + '?qid=gen009')
-                .then(response => {
-                    geoData.value = (response.data && response.data.data) || [];
-                    overlay.hide();
-                })
-                .catch(error => {
-                    overlay.hide();
-                    alert.Error('ERROR', safeMessage(error));
-                });
-        }
-        const setLocation = (select_index) => {
-            var i = select_index || 0;
-            var row = geoData.value[i];
-            if (!row) return;
-            tableOptions.filterParam.geo_level = row.geo_level;
-            tableOptions.filterParam.geo_level_id = row.geo_level_id;
-            tableOptions.filterParam.geo_string = row.geo_string;
-        }
-        const refreshData = () => { paginationDefault(); loadTableData(); };
-        const totalCheckedBox = () => {
-            var total = tableData.value.filter(r => r.pick).length;
-            var el = document.getElementById('total-selected');
-            if (!el) return;
-            if (total > 0) el.innerHTML = '<span class="badge badge-primary btn-icon"><span class="badge badge-success">' + total + '</span> Selected</span>';
-            else el.replaceChildren();
-        }
-        const goToCreateIssue = () => {
-            appState.pageState.page = 'create-issues';
-            appState.currentPeriodId = '';
-            appState.currentLgaId = '';
-            appState.facilityTitles = '';
-            appState.selectedLgaKey = '';
-        }
-        const getProductMaster = () => {
-            overlay.show();
-            axios.get(common.DataService + '?qid=gen011')
-                .then(response => {
-                    var data = ((response.data && response.data.data) || []).slice().sort((a, b) => a.product_code.localeCompare(b.product_code));
-                    appState.productData = data;
-                    overlay.hide();
-                })
-                .catch(error => {
-                    overlay.hide();
-                    alert.Error('ERROR', safeMessage(error));
-                });
-        }
-
-        onMounted(() => {
-            getProductMaster();
-            getGeoLocation();
-            try {
-                var select = $('.select2');
-                select.each(function () {
-                    var $this = $(this);
-                    $this.wrap('<div class="position-relative"></div>');
-                    $this.select2({
-                        dropdownAutoWidth: true, width: '100%',
-                        dropdownParent: $this.parent(),
-                    }).on('change', function () { setLocation(this.value); });
-                });
-                $('.select2-selection__arrow').html('<i class="feather icon-chevron-down"></i>');
-            } catch (e) {}
-            loadTableData();
-            bus.on('g-event-refresh-page', reloadTableListOnUpdate);
+    };
+    const selectAll = () => {
+      for (var i = 0; i < tableData.value.length; i++)
+        tableData.value[i].pick = true;
+    };
+    const uncheckAll = () => {
+      for (var i = 0; i < tableData.value.length; i++)
+        tableData.value[i].pick = false;
+    };
+    const selectToggle = () => {
+      if (checkToggle.value === false) {
+        selectAll();
+        checkToggle.value = true;
+      } else {
+        uncheckAll();
+        checkToggle.value = false;
+      }
+    };
+    const checkedBg = (p) => {
+      return p != "" ? "bg-select" : "";
+    };
+    const toggleFilter = () => {
+      if (filterState.value === false) filters.value = false;
+      return (filterState.value = !filterState.value);
+    };
+    const paginationDefault = () => {
+      tableOptions.pageLength = Math.ceil(
+        tableOptions.total / tableOptions.perPage,
+      );
+      tableOptions.limitStart = Math.ceil(
+        (tableOptions.currentPage - 1) * tableOptions.perPage,
+      );
+      tableOptions.isNext = tableOptions.currentPage < tableOptions.pageLength;
+      tableOptions.isPrev = tableOptions.currentPage > 1;
+    };
+    const resetSelected = () => {
+      uncheckAll();
+      checkToggle.value = false;
+      totalCheckedBox();
+    };
+    const nextPage = () => {
+      resetSelected();
+      tableOptions.currentPage += 1;
+      paginationDefault();
+      loadTableData();
+    };
+    const prevPage = () => {
+      resetSelected();
+      tableOptions.currentPage -= 1;
+      paginationDefault();
+      loadTableData();
+    };
+    const currentPage = () => {
+      paginationDefault();
+      if (tableOptions.currentPage < 1)
+        alert.Error("ERROR", "The Page requested doesn't exist");
+      else if (tableOptions.currentPage > tableOptions.pageLength)
+        alert.Error("ERROR", "The Page requested doesn't exist");
+      else loadTableData();
+    };
+    const changePerPage = (val) => {
+      resetSelected();
+      tableOptions.currentPage = 1;
+      tableOptions.perPage = val;
+      paginationDefault();
+      loadTableData();
+    };
+    const sort = (col) => {
+      if (tableOptions.orderField === col)
+        tableOptions.orderDir =
+          tableOptions.orderDir === "asc" ? "desc" : "asc";
+      else tableOptions.orderField = col;
+      paginationDefault();
+      loadTableData();
+    };
+    const applyFilter = () => {
+      if (appState.currentLgaId != "") {
+        tableOptions.filterParam.gid = appState.currentLgaId;
+        tableOptions.filterParam.glv = appState.level;
+        tableOptions.filterParam.lga_name = appState.facilityTitles;
+      }
+      var checkFill = 0;
+      checkFill += tableOptions.filterParam.gid != "" ? 1 : 0;
+      checkFill += tableOptions.filterParam.level != "" ? 1 : 0;
+      if (checkFill > 0) {
+        toggleFilter();
+        filters.value = true;
+        paginationDefault();
+        loadTableData();
+      } else {
+        alert.Error("ERROR", "Invalid required data");
+      }
+    };
+    const removeSingleFilter = (column_name) => {
+      tableOptions.filterParam[column_name] = "";
+      if (column_name == "lga_name") {
+        tableOptions.filterParam.gid = "";
+        tableOptions.filterParam.glv = "";
+        tableOptions.filterParam.lga_name = "";
+        appState.selectedLgaKey = "";
+      }
+      var g = 0;
+      for (var k in tableOptions.filterParam) {
+        if (tableOptions.filterParam[k] != "") g++;
+      }
+      if (g == 0) filters.value = false;
+      paginationDefault();
+      loadTableData();
+    };
+    const clearAllFilter = () => {
+      filters.value = false;
+      tableOptions.filterParam.gid = "";
+      tableOptions.filterParam.level = "";
+      tableOptions.filterParam.lga_name = "";
+      appState.selectedLgaKey = "";
+      paginationDefault();
+      loadTableData();
+    };
+    const getGeoLocation = () => {
+      overlay.show();
+      axios
+        .get(common.DataService + "?qid=gen009")
+        .then((response) => {
+          geoData.value = (response.data && response.data.data) || [];
+          overlay.hide();
+        })
+        .catch((error) => {
+          overlay.hide();
+          alert.Error("ERROR", safeMessage(error));
         });
-        onBeforeUnmount(() => {
-            bus.off('g-event-refresh-page', reloadTableListOnUpdate);
+    };
+    const setLocation = (select_index) => {
+      var i = select_index || 0;
+      var row = geoData.value[i];
+      if (!row) return;
+      tableOptions.filterParam.geo_level = row.geo_level;
+      tableOptions.filterParam.geo_level_id = row.geo_level_id;
+      tableOptions.filterParam.geo_string = row.geo_string;
+    };
+    const refreshData = () => {
+      paginationDefault();
+      loadTableData();
+    };
+    const totalCheckedBox = () => {
+      var total = tableData.value.filter((r) => r.pick).length;
+      var el = document.getElementById("total-selected");
+      if (!el) return;
+      if (total > 0)
+        el.innerHTML =
+          '<span class="badge badge-primary btn-icon"><span class="badge badge-success">' +
+          total +
+          "</span> Selected</span>";
+      else el.replaceChildren();
+    };
+    const goToCreateIssue = () => {
+      appState.pageState.page = "create-issues";
+      appState.currentPeriodId = "";
+      appState.currentLgaId = "";
+      appState.facilityTitles = "";
+      appState.selectedLgaKey = "";
+    };
+    const getProductMaster = () => {
+      overlay.show();
+      axios
+        .get(common.DataService + "?qid=gen011")
+        .then((response) => {
+          var data = ((response.data && response.data.data) || [])
+            .slice()
+            .sort((a, b) => a.product_code.localeCompare(b.product_code));
+          appState.productData = data;
+          overlay.hide();
+        })
+        .catch((error) => {
+          overlay.hide();
+          alert.Error("ERROR", safeMessage(error));
         });
+    };
 
-        return {
-            appState, tableData, roleListData, geoData, checkToggle, filterState, filters,
-            tableOptions, geoLevelData,
-            reloadTableListOnUpdate, loadTableData,
-            selectAll, uncheckAll, selectToggle, checkedBg, toggleFilter,
-            paginationDefault, resetSelected, nextPage, prevPage, currentPage,
-            changePerPage, sort, applyFilter, removeSingleFilter, clearAllFilter,
-            getGeoLocation, setLocation, refreshData, totalCheckedBox,
-            goToCreateIssue, getProductMaster, setSelectedLga,
-            capitalize: fmtUtils.capitalize,
-            displayDate: fmtUtils.displayDate,
-            formatNumber: fmtUtils.formatNumber,
-            convertStringNumberToFigures: fmtUtils.convertStringNumberToFigures,
-        };
-    },
-    template: `
+    onMounted(() => {
+      getProductMaster();
+      getGeoLocation();
+      try {
+        var select = $(".select2");
+        select.each(function () {
+          var $this = $(this);
+          $this.wrap('<div class="position-relative"></div>');
+          $this
+            .select2({
+              dropdownAutoWidth: true,
+              width: "100%",
+              dropdownParent: $this.parent(),
+            })
+            .on("change", function () {
+              setLocation(this.value);
+            });
+        });
+        $(".select2-selection__arrow").html(
+          '<i class="feather icon-chevron-down"></i>',
+        );
+      } catch (e) {}
+      loadTableData();
+      bus.on("g-event-refresh-page", reloadTableListOnUpdate);
+    });
+    onBeforeUnmount(() => {
+      bus.off("g-event-refresh-page", reloadTableListOnUpdate);
+    });
+
+    return {
+      appState,
+      tableData,
+      roleListData,
+      geoData,
+      checkToggle,
+      filterState,
+      filters,
+      tableOptions,
+      geoLevelData,
+      reloadTableListOnUpdate,
+      loadTableData,
+      selectAll,
+      uncheckAll,
+      selectToggle,
+      checkedBg,
+      toggleFilter,
+      paginationDefault,
+      resetSelected,
+      nextPage,
+      prevPage,
+      currentPage,
+      changePerPage,
+      sort,
+      applyFilter,
+      removeSingleFilter,
+      clearAllFilter,
+      getGeoLocation,
+      setLocation,
+      refreshData,
+      totalCheckedBox,
+      goToCreateIssue,
+      getProductMaster,
+      setSelectedLga,
+      capitalize: fmtUtils.capitalize,
+      displayDate: fmtUtils.displayDate,
+      formatNumber: fmtUtils.formatNumber,
+      convertStringNumberToFigures: fmtUtils.convertStringNumberToFigures,
+    };
+  },
+  template: `
         <div class="row">
             <div class="col-md-8 col-sm-12 col-12 mb-0">
                 <h2 class="content-header-title header-txt float-left mb-0">SMC</h2>
@@ -370,295 +471,384 @@ const PageTable = {
 };
 
 const PageCreateIssue = {
-    setup() {
-        const fmtUtils = useFormat();
+  setup() {
+    const fmtUtils = useFormat();
 
-        const facilityData = ref({});
-        const tempFacilityData = ref({});
-        const editingCell = reactive({ rowIndex: null, productCode: null });
-        const isUpdated = ref(false);
-        const dragStart = ref(null);
-        const dragField = ref(null);
-        const facilityName = ref(null);
-        const product = ref(null);
+    const facilityData = ref({});
+    const tempFacilityData = ref({});
+    const editingCell = reactive({ rowIndex: null, productCode: null });
+    const isUpdated = ref(false);
+    const dragStart = ref(null);
+    const dragField = ref(null);
+    const facilityName = ref(null);
+    const product = ref(null);
 
-        const getSysDefaultDataSettings = () => {
-            overlay.show();
-            axios.get(common.DataService + '?qid=gen007')
-                .then(response => {
-                    if (response.data.data && response.data.data.length > 0) {
-                        appState.sysDefaultData = response.data.data[0];
-                        getAllLga(response.data.data[0].stateid);
-                        appState.geoLevelForm.geoLevel = 'state';
-                        appState.geoLevelForm.geoLevelId = response.data.data[0].stateid;
-                        appState.defaultStateId = response.data.data[0].stateid;
-                    }
-                    overlay.hide();
-                })
-                .catch(error => {
-                    overlay.hide();
-                    alert.Error('ERROR', safeMessage(error));
-                });
-        }
-        const getAllLga = (stateid) => {
-            overlay.show();
-            axios.post(common.DataService + '?qid=gen003', JSON.stringify(stateid))
-                .then(response => {
-                    appState.lgaData = (response.data && response.data.data) || [];
-                    overlay.hide();
-                })
-                .catch(error => {
-                    overlay.hide();
-                    alert.Error('ERROR', safeMessage(error));
-                });
-        }
-        const getAllPeriodLists = () => {
-            overlay.show();
-            axios.get(common.DataService + '?qid=1004')
-                .then(response => {
-                    appState.periodData = (response.data && response.data.data) || [];
-                    overlay.hide();
-                })
-                .catch(error => {
-                    overlay.hide();
-                    alert.Error('ERROR', safeMessage(error));
-                });
-        }
+    const getSysDefaultDataSettings = () => {
+      overlay.show();
+      axios
+        .get(common.DataService + "?qid=gen007")
+        .then((response) => {
+          if (response.data.data && response.data.data.length > 0) {
+            appState.sysDefaultData = response.data.data[0];
+            getAllLga(response.data.data[0].stateid);
+            appState.geoLevelForm.geoLevel = "state";
+            appState.geoLevelForm.geoLevelId = response.data.data[0].stateid;
+            appState.defaultStateId = response.data.data[0].stateid;
+          }
+          overlay.hide();
+        })
+        .catch((error) => {
+          overlay.hide();
+          alert.Error("ERROR", safeMessage(error));
+        });
+    };
+    const getAllLga = (stateid) => {
+      overlay.show();
+      axios
+        .post(common.DataService + "?qid=gen003", JSON.stringify(stateid))
+        .then((response) => {
+          appState.lgaData = (response.data && response.data.data) || [];
+          overlay.hide();
+        })
+        .catch((error) => {
+          overlay.hide();
+          alert.Error("ERROR", safeMessage(error));
+        });
+    };
+    const getAllPeriodLists = () => {
+      overlay.show();
+      axios
+        .get(common.DataService + "?qid=1004")
+        .then((response) => {
+          appState.periodData = (response.data && response.data.data) || [];
+          overlay.hide();
+        })
+        .catch((error) => {
+          overlay.hide();
+          alert.Error("ERROR", safeMessage(error));
+        });
+    };
 
-        const groupAndFillMissingProducts = (data, masterProductData) => {
-            var grouped = {};
-            const sanitize = (obj) => {
-                var clean = {};
-                for (var key in obj) {
-                    clean[key] = obj[key] === null || obj[key] === undefined ? '' : obj[key];
-                }
-                return clean;
-            }
-            data.forEach(item => {
-                var key = item.geo_string;
-                if (!grouped[key]) grouped[key] = [];
-                if (!item.product_code) {
-                    masterProductData.forEach(prod => {
-                        grouped[key].push(sanitize(Object.assign({}, item, {
-                            product_code: prod.product_code,
-                            product_name: prod.name,
-                        })));
-                    });
-                } else {
-                    grouped[key].push(sanitize(item));
-                }
+    const groupAndFillMissingProducts = (data, masterProductData) => {
+      var grouped = {};
+      const sanitize = (obj) => {
+        var clean = {};
+        for (var key in obj) {
+          clean[key] =
+            obj[key] === null || obj[key] === undefined ? "" : obj[key];
+        }
+        return clean;
+      };
+      data.forEach((item) => {
+        var key = item.geo_string;
+        if (!grouped[key]) grouped[key] = [];
+        if (!item.product_code) {
+          masterProductData.forEach((prod) => {
+            grouped[key].push(
+              sanitize(
+                Object.assign({}, item, {
+                  product_code: prod.product_code,
+                  product_name: prod.name,
+                }),
+              ),
+            );
+          });
+        } else {
+          grouped[key].push(sanitize(item));
+        }
+      });
+      for (var key in grouped) {
+        var entries = grouped[key];
+        var existingCodes = new Set(entries.map((i) => i.product_code));
+        var baseDPID = (entries[0] && entries[0].dpid) || "";
+        masterProductData.forEach((prod) => {
+          if (!existingCodes.has(prod.product_code)) {
+            entries.push(
+              sanitize({
+                geo_string: key,
+                dpid: baseDPID,
+                issue_id: "",
+                period: appState.currentPeriodId,
+                product_code: prod.product_code,
+                product_name: prod.name,
+                primary_qty: "",
+                secondary_qty: "",
+                created: "",
+              }),
+            );
+          }
+        });
+        entries.sort((a, b) => a.product_code.localeCompare(b.product_code));
+      }
+      return grouped;
+    };
+
+    const getFacilityIssueByPeriod = async () => {
+      var currentLgaId = appState.currentLgaId;
+      var currentPeriodId = appState.currentPeriodId;
+      var productData = appState.productData;
+      if (!currentLgaId) {
+        alert.Error("ERROR", "Please select LGA");
+        return;
+      }
+      if (!currentPeriodId) {
+        alert.Error("ERROR", "Please select a visit");
+        return;
+      }
+      overlay.show();
+      try {
+        var response = await axios.post(common.DataService + "?qid=gen010", {
+          lgaId: currentLgaId,
+          periodId: currentPeriodId,
+        });
+        facilityData.value = groupAndFillMissingProducts(
+          (response.data && response.data.data) || [],
+          productData || [],
+        );
+        tempFacilityData.value =
+          typeof structuredClone === "function"
+            ? structuredClone(facilityData.value)
+            : JSON.parse(JSON.stringify(facilityData.value));
+      } catch (error) {
+        alert.Error("ERROR", safeMessage(error));
+      } finally {
+        overlay.hide();
+      }
+    };
+
+    const isEditing = (rowIndex, productCode) => {
+      return (
+        editingCell.rowIndex === rowIndex &&
+        editingCell.productCode === productCode
+      );
+    };
+    const stopEdit = () => {
+      editingCell.rowIndex = null;
+      editingCell.productCode = null;
+    };
+
+    const prepareIssues = (fd) => {
+      var packSize = 50;
+      var periodId = appState.currentPeriodId || null;
+      var result = [];
+      if (!fd || typeof fd !== "object") return result;
+      Object.values(fd).forEach((entries) => {
+        (entries || []).forEach((entry) => {
+          if (!entry) return;
+          var secondaryQty = Number(entry.secondary_qty);
+          if (!isNaN(secondaryQty) && secondaryQty > 0) {
+            result.push({
+              issue_id:
+                entry.issue_id != null && entry.issue_id !== ""
+                  ? parseInt(entry.issue_id)
+                  : "",
+              periodid: periodId,
+              dpid: entry.dpid != null ? entry.dpid : null,
+              product_code: entry.product_code || null,
+              product_name: entry.product_name || null,
+              primary_qty: secondaryQty * packSize,
+              secondary_qty: secondaryQty,
             });
-            for (var key in grouped) {
-                var entries = grouped[key];
-                var existingCodes = new Set(entries.map(i => i.product_code));
-                var baseDPID = (entries[0] && entries[0].dpid) || '';
-                masterProductData.forEach(prod => {
-                    if (!existingCodes.has(prod.product_code)) {
-                        entries.push(sanitize({
-                            geo_string: key, dpid: baseDPID, issue_id: '',
-                            period: appState.currentPeriodId,
-                            product_code: prod.product_code,
-                            product_name: prod.name,
-                            primary_qty: '', secondary_qty: '', created: '',
-                        }));
-                    }
-                });
-                entries.sort((a, b) => a.product_code.localeCompare(b.product_code));
+          }
+        });
+      });
+      return result;
+    };
+    const submitIssues = () => {
+      if (appState.currentPeriodId == "") {
+        alert.Error("ERROR", "Please select a visit");
+        return;
+      }
+      var data = prepareIssues(facilityData.value);
+      overlay.show();
+      axios
+        .post(common.DataService + "?qid=1129", JSON.stringify(data))
+        .then((response) => {
+          overlay.hide();
+          if (response.data.result_code == "200") {
+            bus.emit("g-event-refresh-page");
+            alert.Success("SUCCESS", response.data.message);
+            goToIssueTable();
+          } else {
+            alert.Error("ERROR", response.data.message);
+          }
+        })
+        .catch((error) => {
+          overlay.hide();
+          alert.Error("ERROR", safeMessage(error));
+        });
+    };
+    const goToIssueTable = () => {
+      appState.pageState.page = "table";
+      facilityData.value = {};
+      tempFacilityData.value = {};
+      appState.currentPeriodId = "";
+      appState.currentLgaId = "";
+      appState.facilityTitles = "";
+      appState.selectedLgaKey = "";
+    };
+    const resetForm = () => {
+      facilityData.value = {};
+      tempFacilityData.value = {};
+    };
+
+    const startDrag = (rowIndex, field, fName, prod) => {
+      dragStart.value = rowIndex;
+      dragField.value = field;
+      facilityName.value = fName;
+      product.value = prod;
+      window.addEventListener("mouseup", finishDrag);
+    };
+    const onDragOver = (currentRow, fName, field) => {
+      if (dragStart.value !== null && dragField.value !== null) {
+        var startRow = Math.min(dragStart.value, currentRow);
+        var endRow = Math.max(dragStart.value, currentRow);
+        var startField = dragField.value;
+        var currentField = field;
+        var updated = fName;
+        var valueToFill = product.value && product.value.secondary_qty;
+        var allProductCodes = (facilityData.value[updated] || []).map(
+          (item) => item.product_code && item.product_code.toUpperCase(),
+        );
+        var startColIndex = allProductCodes.indexOf(
+          startField && startField.toUpperCase(),
+        );
+        var endColIndex = allProductCodes.indexOf(
+          currentField && currentField.toUpperCase(),
+        );
+        if (startColIndex === -1 || endColIndex === -1) return;
+        var minCol = Math.min(startColIndex, endColIndex);
+        var maxCol = Math.max(startColIndex, endColIndex);
+        for (var i = startRow; i <= endRow; i++) {
+          for (var j = minCol; j <= maxCol; j++) {
+            var targetCode = allProductCodes[j];
+            var position = (facilityData.value[updated] || []).findIndex(
+              (item) =>
+                item.product_code &&
+                item.product_code.toUpperCase() === targetCode,
+            );
+            if (position !== -1) {
+              facilityData.value[updated][position]["secondary_qty"] =
+                valueToFill;
             }
-            return grouped;
+          }
         }
-
-        const getFacilityIssueByPeriod = async () => {
-            var currentLgaId = appState.currentLgaId;
-            var currentPeriodId = appState.currentPeriodId;
-            var productData = appState.productData;
-            if (!currentLgaId)    { alert.Error('ERROR', 'Please select LGA'); return; }
-            if (!currentPeriodId) { alert.Error('ERROR', 'Please select a visit'); return; }
-            overlay.show();
-            try {
-                var response = await axios.post(common.DataService + '?qid=gen010', {
-                    lgaId: currentLgaId, periodId: currentPeriodId,
-                });
-                facilityData.value = groupAndFillMissingProducts(
-                    (response.data && response.data.data) || [],
-                    productData || []
-                );
-                tempFacilityData.value = typeof structuredClone === 'function'
-                    ? structuredClone(facilityData.value)
-                    : JSON.parse(JSON.stringify(facilityData.value));
-            } catch (error) {
-                alert.Error('ERROR', safeMessage(error));
-            } finally {
-                overlay.hide();
-            }
-        }
-
-        const isEditing = (rowIndex, productCode) => {
-            return editingCell.rowIndex === rowIndex && editingCell.productCode === productCode;
-        }
-        const stopEdit = () => { editingCell.rowIndex = null; editingCell.productCode = null; };
-
-        const prepareIssues = (fd) => {
-            var packSize = 50;
-            var periodId = appState.currentPeriodId || null;
-            var result = [];
-            if (!fd || typeof fd !== 'object') return result;
-            Object.values(fd).forEach(entries => {
-                (entries || []).forEach(entry => {
-                    if (!entry) return;
-                    var secondaryQty = Number(entry.secondary_qty);
-                    if (!isNaN(secondaryQty) && secondaryQty > 0) {
-                        result.push({
-                            issue_id: entry.issue_id != null && entry.issue_id !== '' ? parseInt(entry.issue_id) : '',
-                            periodid: periodId,
-                            dpid: entry.dpid != null ? entry.dpid : null,
-                            product_code: entry.product_code || null,
-                            product_name: entry.product_name || null,
-                            primary_qty: secondaryQty * packSize,
-                            secondary_qty: secondaryQty,
-                        });
-                    }
-                });
-            });
-            return result;
-        }
-        const submitIssues = () => {
-            if (appState.currentPeriodId == '') { alert.Error('ERROR', 'Please select a visit'); return; }
-            var data = prepareIssues(facilityData.value);
-            overlay.show();
-            axios.post(common.DataService + '?qid=1129', JSON.stringify(data))
-                .then(response => {
-                    overlay.hide();
-                    if (response.data.result_code == '200') {
-                        bus.emit('g-event-refresh-page');
-                        alert.Success('SUCCESS', response.data.message);
-                        goToIssueTable();
-                    } else {
-                        alert.Error('ERROR', response.data.message);
-                    }
-                })
-                .catch(error => {
-                    overlay.hide();
-                    alert.Error('ERROR', safeMessage(error));
-                });
-        }
-        const goToIssueTable = () => {
-            appState.pageState.page = 'table';
-            facilityData.value = {};
-            tempFacilityData.value = {};
-            appState.currentPeriodId = '';
-            appState.currentLgaId = '';
-            appState.facilityTitles = '';
-            appState.selectedLgaKey = '';
-        }
-        const resetForm = () => { facilityData.value = {}; tempFacilityData.value = {}; };
-
-        const startDrag = (rowIndex, field, fName, prod) => {
-            dragStart.value = rowIndex;
-            dragField.value = field;
-            facilityName.value = fName;
-            product.value = prod;
-            window.addEventListener('mouseup', finishDrag);
-        }
-        const onDragOver = (currentRow, fName, field) => {
-            if (dragStart.value !== null && dragField.value !== null) {
-                var startRow = Math.min(dragStart.value, currentRow);
-                var endRow = Math.max(dragStart.value, currentRow);
-                var startField = dragField.value;
-                var currentField = field;
-                var updated = fName;
-                var valueToFill = product.value && product.value.secondary_qty;
-                var allProductCodes = (facilityData.value[updated] || []).map(item => item.product_code && item.product_code.toUpperCase());
-                var startColIndex = allProductCodes.indexOf(startField && startField.toUpperCase());
-                var endColIndex = allProductCodes.indexOf(currentField && currentField.toUpperCase());
-                if (startColIndex === -1 || endColIndex === -1) return;
-                var minCol = Math.min(startColIndex, endColIndex);
-                var maxCol = Math.max(startColIndex, endColIndex);
-                for (var i = startRow; i <= endRow; i++) {
-                    for (var j = minCol; j <= maxCol; j++) {
-                        var targetCode = allProductCodes[j];
-                        var position = (facilityData.value[updated] || []).findIndex(item => item.product_code && item.product_code.toUpperCase() === targetCode);
-                        if (position !== -1) {
-                            facilityData.value[updated][position]['secondary_qty'] = valueToFill;
-                        }
-                    }
-                }
-            }
-        }
-        const finishDrag = () => {
-            dragStart.value = null;
-            dragField.value = null;
-            facilityName.value = null;
-            product.value = null;
-            window.removeEventListener('mouseup', finishDrag);
-        }
-        const getCellClass = (rowIndex) => {
-            return { 'drag-target': dragStart.value !== null && rowIndex !== dragStart.value };
-        }
-        const resetIssues = () => { facilityData.value = JSON.parse(JSON.stringify(tempFacilityData.value)); };
-        const cancelIssue = () => {
-            if (isUpdated.value) {
-                $.confirm({
-                    title: 'WARNING!',
-                    content: 'Are you sure you want to discard the changes made?',
-                    buttons: {
-                        discard: { text: 'Discard', btnClass: 'btn btn-danger mr-1', action: () => { goToIssueTable(); } },
-                        cancel: () => {},
-                    },
-                });
-            } else {
+      }
+    };
+    const finishDrag = () => {
+      dragStart.value = null;
+      dragField.value = null;
+      facilityName.value = null;
+      product.value = null;
+      window.removeEventListener("mouseup", finishDrag);
+    };
+    const getCellClass = (rowIndex) => {
+      return {
+        "drag-target": dragStart.value !== null && rowIndex !== dragStart.value,
+      };
+    };
+    const resetIssues = () => {
+      facilityData.value = JSON.parse(JSON.stringify(tempFacilityData.value));
+    };
+    const cancelIssue = () => {
+      if (isUpdated.value) {
+        $.confirm({
+          title: "WARNING!",
+          content: "Are you sure you want to discard the changes made?",
+          buttons: {
+            discard: {
+              text: "Discard",
+              btnClass: "btn btn-danger mr-1",
+              action: () => {
                 goToIssueTable();
-            }
-        }
-
-        const groupedProductSummary = computed(() => {
-            var totals = {};
-            Object.values(facilityData.value || {}).forEach(records => {
-                (records || []).forEach(r => {
-                    var code = r && r.product_code && r.product_code.toUpperCase();
-                    if (!code) return;
-                    totals[code] = (totals[code] || 0) + (Number(r.secondary_qty) || 0);
-                });
-            });
-            return (appState.productData || []).map(p => {
-                var code = p.product_code && p.product_code.toUpperCase();
-                return { product_code: code, total: totals[code] || 0 };
-            });
+              },
+            },
+            cancel: () => {},
+          },
         });
-        const hasFacilityData = computed(() => facilityData.value && Object.values(facilityData.value).flat().length > 0);
+      } else {
+        goToIssueTable();
+      }
+    };
 
-        watch(facilityData, () => {
-            isUpdated.value = JSON.stringify(facilityData.value) !== JSON.stringify(tempFacilityData.value);
-        }, { deep: true });
-
-        onMounted(() => {
-            getSysDefaultDataSettings();
-            getAllPeriodLists();
-            bus.on('g-event-reset-form', resetForm);
+    const groupedProductSummary = computed(() => {
+      var totals = {};
+      Object.values(facilityData.value || {}).forEach((records) => {
+        (records || []).forEach((r) => {
+          var code = r && r.product_code && r.product_code.toUpperCase();
+          if (!code) return;
+          totals[code] = (totals[code] || 0) + (Number(r.secondary_qty) || 0);
         });
-        onBeforeUnmount(() => {
-            bus.off('g-event-reset-form', resetForm);
-        });
+      });
+      return (appState.productData || []).map((p) => {
+        var code = p.product_code && p.product_code.toUpperCase();
+        return { product_code: code, total: totals[code] || 0 };
+      });
+    });
+    const hasFacilityData = computed(
+      () =>
+        facilityData.value &&
+        Object.values(facilityData.value).flat().length > 0,
+    );
 
-        return {
-            appState, facilityData, tempFacilityData, editingCell, isUpdated,
-            dragStart, dragField, facilityName, product,
-            groupedProductSummary, hasFacilityData,
-            getSysDefaultDataSettings, getAllLga, getAllPeriodLists,
-            groupAndFillMissingProducts, getFacilityIssueByPeriod,
-            isEditing, stopEdit, prepareIssues, submitIssues,
-            goToIssueTable, resetForm,
-            startDrag, onDragOver, finishDrag, getCellClass,
-            resetIssues, cancelIssue, setSelectedLga,
-            capitalize: fmtUtils.capitalize,
-            displayDate: fmtUtils.displayDate,
-            formatNumber: fmtUtils.formatNumber,
-            convertStringNumberToFigures: fmtUtils.convertStringNumberToFigures,
-            numbersOnlyWithoutDot: fmtUtils.numbersOnlyWithoutDot,
-            validatePaste: fmtUtils.validatePaste,
-        };
-    },
-    template: `
+    watch(
+      facilityData,
+      () => {
+        isUpdated.value =
+          JSON.stringify(facilityData.value) !==
+          JSON.stringify(tempFacilityData.value);
+      },
+      { deep: true },
+    );
+
+    onMounted(() => {
+      getSysDefaultDataSettings();
+      getAllPeriodLists();
+      bus.on("g-event-reset-form", resetForm);
+    });
+    onBeforeUnmount(() => {
+      bus.off("g-event-reset-form", resetForm);
+    });
+
+    return {
+      appState,
+      facilityData,
+      tempFacilityData,
+      editingCell,
+      isUpdated,
+      dragStart,
+      dragField,
+      facilityName,
+      product,
+      groupedProductSummary,
+      hasFacilityData,
+      getSysDefaultDataSettings,
+      getAllLga,
+      getAllPeriodLists,
+      groupAndFillMissingProducts,
+      getFacilityIssueByPeriod,
+      isEditing,
+      stopEdit,
+      prepareIssues,
+      submitIssues,
+      goToIssueTable,
+      resetForm,
+      startDrag,
+      onDragOver,
+      finishDrag,
+      getCellClass,
+      resetIssues,
+      cancelIssue,
+      setSelectedLga,
+      capitalize: fmtUtils.capitalize,
+      displayDate: fmtUtils.displayDate,
+      formatNumber: fmtUtils.formatNumber,
+      convertStringNumberToFigures: fmtUtils.convertStringNumberToFigures,
+      numbersOnlyWithoutDot: fmtUtils.numbersOnlyWithoutDot,
+      validatePaste: fmtUtils.validatePaste,
+    };
+  },
+  template: `
         <div class="row">
             <div class="col-md-8 col-sm-12 col-12 mb-0">
                 <h2 class="content-header-title header-txt float-left mb-0">SMC</h2>
@@ -761,14 +951,16 @@ const PageCreateIssue = {
 };
 
 useApp({
-    template: `
+  template: `
         <div>
             <div v-show="appState.pageState.page == 'table'"><page-table/></div>
             <div v-show="appState.pageState.page == 'create-issues'"><page-create-issue/></div>
         </div>
     `,
-    setup() { return { appState }; },
+  setup() {
+    return { appState };
+  },
 })
-    .component('page-table', PageTable)
-    .component('page-create-issue', PageCreateIssue)
-    .mount('#app');
+  .component("page-table", PageTable)
+  .component("page-create-issue", PageCreateIssue)
+  .mount("#app");

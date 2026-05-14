@@ -11,14 +11,20 @@ const { ref, reactive, onMounted, onBeforeUnmount } = Vue;
 const { useApp, useFormat, bus, safeMessage } = window.utils;
 
 const PageBody = {
-    setup() {
-        const page = ref('list');
-        const gotoPageHandler = (data) => { page.value = data && data.page; };
-        onMounted(() => { bus.on('g-event-goto-page', gotoPageHandler); });
-        onBeforeUnmount(() => { bus.off('g-event-goto-page', gotoPageHandler); });
-        return { page };
-    },
-    template: `
+  setup() {
+    const page = ref("list");
+    const gotoPageHandler = (data) => {
+      page.value = data && data.page;
+    };
+    onMounted(() => {
+      bus.on("g-event-goto-page", gotoPageHandler);
+    });
+    onBeforeUnmount(() => {
+      bus.off("g-event-goto-page", gotoPageHandler);
+    });
+    return { page };
+  },
+  template: `
         <div>
             <div class="content-body">
                 <div v-show="page == 'list'"><child_list/></div>
@@ -28,282 +34,430 @@ const PageBody = {
 };
 
 const ChildList = {
-    setup() {
-        const fmtUtils = useFormat();
+  setup() {
+    const fmtUtils = useFormat();
 
-        const url = ref(window.common && window.common.BadgeService);
-        const tableData = ref([]);
-        const geoData = ref([]);
-        const permission = ref(
-            (typeof getPermission === 'function')
-                ? (getPermission(typeof per !== 'undefined' ? per : null, 'smc') || { permission_value: 0 })
-                : { permission_value: 0 }
+    const url = ref(window.common && window.common.BadgeService);
+    const tableData = ref([]);
+    const geoData = ref([]);
+    const permission = ref(
+      typeof getPermission === "function"
+        ? getPermission(typeof per !== "undefined" ? per : null, "smc") || {
+            permission_value: 0,
+          }
+        : { permission_value: 0 },
+    );
+    const periodData = ref([]);
+    const checkToggle = ref(false);
+    const filterState = ref(false);
+    const filters = ref(false);
+    const tableOptions = reactive({
+      total: 1,
+      pageLength: 1,
+      perPage: 10,
+      currentPage: 1,
+      orderDir: "desc",
+      orderField: 10,
+      limitStart: 0,
+      isNext: false,
+      isPrev: false,
+      aLength: [10, 20, 50, 100, 150, 200],
+      filterParam: {
+        periodid: "",
+        periodTitle: "",
+        beneficiary_id: "",
+        eligibility: "",
+        redose: "",
+        created: "",
+        geo_level: "",
+        geo_level_id: "",
+        geo_string: "",
+      },
+    });
+
+    const reloadUserListOnUpdate = () => {
+      paginationDefault();
+      loadTableData();
+    };
+    const loadTableData = () => {
+      overlay.show();
+      axios
+        .get(
+          common.TableService +
+            "?qid=702&draw=" +
+            tableOptions.currentPage +
+            "&order_column=" +
+            tableOptions.orderField +
+            "&length=" +
+            tableOptions.perPage +
+            "&start=" +
+            tableOptions.limitStart +
+            "&order_dir=" +
+            tableOptions.orderDir +
+            "&glv=" +
+            tableOptions.filterParam.geo_level +
+            "&gid=" +
+            tableOptions.filterParam.geo_level_id +
+            "&pid=" +
+            tableOptions.filterParam.periodid +
+            "&ise=" +
+            tableOptions.filterParam.eligibility +
+            "&isr=" +
+            tableOptions.filterParam.redose +
+            "&bid=" +
+            tableOptions.filterParam.beneficiary_id +
+            "&rda=" +
+            tableOptions.filterParam.created,
+        )
+        .then((response) => {
+          var d = response && response.data;
+          tableData.value = Array.isArray(d && d.data) ? d.data : [];
+          tableOptions.total = (d && d.recordsTotal) || 0;
+          if (tableOptions.currentPage == 1) paginationDefault();
+          overlay.hide();
+        })
+        .catch((error) => {
+          overlay.hide();
+          alert.Error("ERROR", safeMessage(error));
+        });
+    };
+
+    const selectAll = () => {
+      for (var i = 0; i < tableData.value.length; i++)
+        tableData.value[i].pick = true;
+    };
+    const uncheckAll = () => {
+      for (var i = 0; i < tableData.value.length; i++)
+        tableData.value[i].pick = false;
+    };
+    const selectToggle = () => {
+      if (checkToggle.value === false) {
+        selectAll();
+        checkToggle.value = true;
+      } else {
+        uncheckAll();
+        checkToggle.value = false;
+      }
+    };
+    const checkedBg = (p) => {
+      return p != "" ? "bg-select" : "";
+    };
+    const toggleFilter = () => {
+      if (filterState.value === false) filters.value = false;
+      return (filterState.value = !filterState.value);
+    };
+    const paginationDefault = () => {
+      tableOptions.pageLength = Math.ceil(
+        tableOptions.total / tableOptions.perPage,
+      );
+      tableOptions.limitStart = Math.ceil(
+        (tableOptions.currentPage - 1) * tableOptions.perPage,
+      );
+      tableOptions.isNext = tableOptions.currentPage < tableOptions.pageLength;
+      tableOptions.isPrev = tableOptions.currentPage > 1;
+    };
+    const nextPage = () => {
+      tableOptions.currentPage += 1;
+      paginationDefault();
+      loadTableData();
+    };
+    const prevPage = () => {
+      tableOptions.currentPage -= 1;
+      paginationDefault();
+      loadTableData();
+    };
+    const currentPage = () => {
+      paginationDefault();
+      if (tableOptions.currentPage < 1)
+        alert.Error("ERROR", "The Page requested doesn't exist");
+      else if (tableOptions.currentPage > tableOptions.pageLength)
+        alert.Error("ERROR", "The Page requested doesn't exist");
+      else loadTableData();
+    };
+    const changePerPage = (val) => {
+      var maxPerPage = Math.ceil(tableOptions.total / val);
+      if (maxPerPage < tableOptions.currentPage)
+        tableOptions.currentPage = maxPerPage;
+      tableOptions.perPage = val;
+      paginationDefault();
+      loadTableData();
+    };
+    const sort = (col) => {
+      if (tableOptions.orderField === col)
+        tableOptions.orderDir =
+          tableOptions.orderDir === "asc" ? "desc" : "asc";
+      else tableOptions.orderField = col;
+      paginationDefault();
+      loadTableData();
+    };
+    const applyFilter = () => {
+      var checkFill = 0;
+      [
+        "geo_level",
+        "geo_level_id",
+        "periodid",
+        "beneficiary_id",
+        "eligibility",
+        "redose",
+        "created",
+      ].forEach((k) => {
+        if (tableOptions.filterParam[k] != "") checkFill++;
+      });
+      if (checkFill > 0) {
+        toggleFilter();
+        filters.value = true;
+        paginationDefault();
+        loadTableData();
+      } else {
+        alert.Error("ERROR", "Invalid required data");
+      }
+    };
+    const removeSingleFilter = (column_name) => {
+      tableOptions.filterParam[column_name] = "";
+      if (column_name == "geo_level" || column_name == "geo_level_id") {
+        tableOptions.filterParam.geo_level = "";
+        tableOptions.filterParam.geo_level_id = "";
+      }
+      if (column_name == "periodid") {
+        tableOptions.filterParam.periodid = "";
+        tableOptions.filterParam.periodTitle = "";
+      }
+      var g = 0;
+      for (var k in tableOptions.filterParam) {
+        if (tableOptions.filterParam[k] != "") g++;
+      }
+      if (g == 0) filters.value = false;
+      paginationDefault();
+      loadTableData();
+    };
+    const clearAllFilter = () => {
+      filters.value = false;
+      [
+        "geo_level",
+        "geo_level_id",
+        "periodid",
+        "beneficiary_id",
+        "eligibility",
+        "redose",
+        "created",
+        "periodTitle",
+      ].forEach((k) => {
+        tableOptions.filterParam[k] = "";
+      });
+      paginationDefault();
+      loadTableData();
+    };
+    const refreshData = () => {
+      paginationDefault();
+      loadTableData();
+    };
+    const getGeoLocation = () => {
+      overlay.show();
+      axios
+        .get(common.DataService + "?qid=gen009")
+        .then((response) => {
+          geoData.value = (response.data && response.data.data) || [];
+          overlay.hide();
+        })
+        .catch((error) => {
+          overlay.hide();
+          alert.Error("ERROR", safeMessage(error));
+        });
+    };
+    const getAllPeriodLists = () => {
+      overlay.show();
+      axios
+        .get(common.DataService + "?qid=1004")
+        .then((response) => {
+          periodData.value = (response.data && response.data.data) || [];
+          overlay.hide();
+        })
+        .catch((error) => {
+          overlay.hide();
+          alert.Error("ERROR", safeMessage(error));
+        });
+    };
+    const setLocation = (select_index) => {
+      var i = select_index || 0;
+      var row = geoData.value[i];
+      if (!row) return;
+      tableOptions.filterParam.geo_level = row.geo_level;
+      tableOptions.filterParam.geo_level_id = row.geo_level_id;
+      tableOptions.filterParam.geo_string = row.title;
+    };
+    const setPeriodTitle = (event) => {
+      tableOptions.filterParam.periodTitle =
+        event.target.options[event.target.options.selectedIndex].text;
+    };
+    const displayDayMonthYear = (d) => {
+      var date = new Date(d);
+      return date.toLocaleString("en-us", {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      });
+    };
+    const calculateTotalMonths = (dob) => {
+      var d = new Date(dob);
+      var c = new Date();
+      var months = (c.getFullYear() - d.getFullYear()) * 12;
+      months -= d.getMonth() + 1;
+      months += c.getMonth() + 1;
+      if (c.getDate() < d.getDate()) months--;
+      return months + " Month" + (months > 1 ? "s" : "") + " Old";
+    };
+    const exportDrugAdministration = async () => {
+      var qp = new URLSearchParams({
+        draw: tableOptions.currentPage,
+        order_column: tableOptions.orderField,
+        length: tableOptions.perPage,
+        start: tableOptions.limitStart,
+        order_dir: tableOptions.orderDir,
+        glv: tableOptions.filterParam.geo_level,
+        gid: tableOptions.filterParam.geo_level_id,
+        pid: tableOptions.filterParam.periodid,
+        ise: tableOptions.filterParam.eligibility,
+        isr: tableOptions.filterParam.redose,
+        bid: tableOptions.filterParam.beneficiary_id,
+        rda: tableOptions.filterParam.created,
+      });
+      var veriUrl = "qid=1124&" + qp.toString();
+      var dlString = "qid=801&" + qp.toString();
+      var formattedDate = new Date()
+        .toLocaleString("en-GB", {
+          day: "2-digit",
+          month: "2-digit",
+          year: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+        })
+        .replace(/[\s,\/:]/g, "_");
+      var filename =
+        (tableOptions.filterParam.geo_string || "") +
+        "Drug_Admin_List_" +
+        (tableOptions.filterParam.periodid
+          ? "_Visit_" + tableOptions.filterParam.periodid
+          : "") +
+        (tableOptions.filterParam.eligibility
+          ? "_Eligible_" + tableOptions.filterParam.eligibility
+          : "") +
+        (tableOptions.filterParam.redose
+          ? "_Redose_" + tableOptions.filterParam.redose
+          : "") +
+        "_" +
+        formattedDate;
+
+      overlay.show();
+      try {
+        var countResponse = await $.ajax({
+          url: common.DataService,
+          type: "POST",
+          data: veriUrl,
+          dataType: "json",
+        });
+        var count = parseInt(countResponse.total, 10);
+        var downloadMax =
+          (window.common && window.common.ExportDownloadLimit) || 25000;
+        if (count > downloadMax) {
+          alert.Error(
+            "Download Error",
+            "Unable to download data because it has exceeded the download limit of " +
+              downloadMax,
+          );
+        } else if (count === 0) {
+          alert.Error("Download Error", "No data found");
+        } else {
+          alert.Info("DOWNLOADING...", "Downloading " + count + " record(s)");
+          var dl = await $.ajax({
+            url: common.ExportService,
+            type: "POST",
+            data: dlString,
+          });
+          var exportData = JSON.parse(dl);
+          if (window.Jhxlsx && typeof window.Jhxlsx.export === "function") {
+            window.Jhxlsx.export(exportData, { fileName: filename });
+          }
+        }
+      } catch (error) {
+        console.error("Error during export:", error);
+        alert.Error("Export Error", "An error occurred while exporting data.");
+      } finally {
+        overlay.hide();
+      }
+    };
+
+    onMounted(() => {
+      getGeoLocation();
+      getAllPeriodLists();
+      loadTableData();
+      bus.on("g-event-update-user", reloadUserListOnUpdate);
+      try {
+        $(".select2").each(function () {
+          var $this = $(this);
+          $this.wrap('<div class="position-relative"></div>');
+          $this
+            .select2({
+              dropdownAutoWidth: true,
+              width: "100%",
+              dropdownParent: $this.parent(),
+            })
+            .on("change", function () {
+              setLocation(this.value);
+            });
+        });
+        $(".select2-selection__arrow").html(
+          '<i class="feather icon-chevron-down"></i>',
         );
-        const periodData = ref([]);
-        const checkToggle = ref(false);
-        const filterState = ref(false);
-        const filters = ref(false);
-        const tableOptions = reactive({
-            total: 1, pageLength: 1, perPage: 10, currentPage: 1,
-            orderDir: 'desc', orderField: 10, limitStart: 0,
-            isNext: false, isPrev: false,
-            aLength: [10, 20, 50, 100, 150, 200],
-            filterParam: {
-                periodid: '', periodTitle: '', beneficiary_id: '',
-                eligibility: '', redose: '', created: '',
-                geo_level: '', geo_level_id: '', geo_string: '',
-            },
+        $(".date").flatpickr({
+          altInput: true,
+          altFormat: "F j, Y",
+          dateFormat: "Y-m-d",
         });
+      } catch (e) {}
+    });
+    onBeforeUnmount(() => {
+      bus.off("g-event-update-user", reloadUserListOnUpdate);
+    });
 
-        const reloadUserListOnUpdate = () => { paginationDefault(); loadTableData(); };
-        const loadTableData = () => {
-            overlay.show();
-            axios.get(
-                common.TableService +
-                '?qid=702&draw=' + tableOptions.currentPage +
-                '&order_column=' + tableOptions.orderField +
-                '&length=' + tableOptions.perPage +
-                '&start=' + tableOptions.limitStart +
-                '&order_dir=' + tableOptions.orderDir +
-                '&glv=' + tableOptions.filterParam.geo_level +
-                '&gid=' + tableOptions.filterParam.geo_level_id +
-                '&pid=' + tableOptions.filterParam.periodid +
-                '&ise=' + tableOptions.filterParam.eligibility +
-                '&isr=' + tableOptions.filterParam.redose +
-                '&bid=' + tableOptions.filterParam.beneficiary_id +
-                '&rda=' + tableOptions.filterParam.created
-            )
-                .then(response => {
-                    var d = response && response.data;
-                    tableData.value = Array.isArray(d && d.data) ? d.data : [];
-                    tableOptions.total = (d && d.recordsTotal) || 0;
-                    if (tableOptions.currentPage == 1) paginationDefault();
-                    overlay.hide();
-                })
-                .catch(error => {
-                    overlay.hide();
-                    alert.Error('ERROR', safeMessage(error));
-                });
-        }
-
-        const selectAll = () => { for (var i = 0; i < tableData.value.length; i++) tableData.value[i].pick = true; };
-        const uncheckAll = () => { for (var i = 0; i < tableData.value.length; i++) tableData.value[i].pick = false; };
-        const selectToggle = () => {
-            if (checkToggle.value === false) { selectAll(); checkToggle.value = true; }
-            else                              { uncheckAll(); checkToggle.value = false; }
-        }
-        const checkedBg = (p) => { return p != '' ? 'bg-select' : ''; };
-        const toggleFilter = () => {
-            if (filterState.value === false) filters.value = false;
-            return (filterState.value = !filterState.value);
-        }
-        const paginationDefault = () => {
-            tableOptions.pageLength = Math.ceil(tableOptions.total / tableOptions.perPage);
-            tableOptions.limitStart = Math.ceil((tableOptions.currentPage - 1) * tableOptions.perPage);
-            tableOptions.isNext = tableOptions.currentPage < tableOptions.pageLength;
-            tableOptions.isPrev = tableOptions.currentPage > 1;
-        }
-        const nextPage = () => { tableOptions.currentPage += 1; paginationDefault(); loadTableData(); };
-        const prevPage = () => { tableOptions.currentPage -= 1; paginationDefault(); loadTableData(); };
-        const currentPage = () => {
-            paginationDefault();
-            if (tableOptions.currentPage < 1)                            alert.Error('ERROR', "The Page requested doesn't exist");
-            else if (tableOptions.currentPage > tableOptions.pageLength) alert.Error('ERROR', "The Page requested doesn't exist");
-            else                                                         loadTableData();
-        }
-        const changePerPage = (val) => {
-            var maxPerPage = Math.ceil(tableOptions.total / val);
-            if (maxPerPage < tableOptions.currentPage) tableOptions.currentPage = maxPerPage;
-            tableOptions.perPage = val;
-            paginationDefault();
-            loadTableData();
-        }
-        const sort = (col) => {
-            if (tableOptions.orderField === col) tableOptions.orderDir = tableOptions.orderDir === 'asc' ? 'desc' : 'asc';
-            else                                  tableOptions.orderField = col;
-            paginationDefault();
-            loadTableData();
-        }
-        const applyFilter = () => {
-            var checkFill = 0;
-            ['geo_level', 'geo_level_id', 'periodid', 'beneficiary_id', 'eligibility', 'redose', 'created'].forEach(k => {
-                if (tableOptions.filterParam[k] != '') checkFill++;
-            });
-            if (checkFill > 0) {
-                toggleFilter();
-                filters.value = true;
-                paginationDefault();
-                loadTableData();
-            } else {
-                alert.Error('ERROR', 'Invalid required data');
-            }
-        }
-        const removeSingleFilter = (column_name) => {
-            tableOptions.filterParam[column_name] = '';
-            if (column_name == 'geo_level' || column_name == 'geo_level_id') {
-                tableOptions.filterParam.geo_level = '';
-                tableOptions.filterParam.geo_level_id = '';
-            }
-            if (column_name == 'periodid') {
-                tableOptions.filterParam.periodid = '';
-                tableOptions.filterParam.periodTitle = '';
-            }
-            var g = 0;
-            for (var k in tableOptions.filterParam) {
-                if (tableOptions.filterParam[k] != '') g++;
-            }
-            if (g == 0) filters.value = false;
-            paginationDefault();
-            loadTableData();
-        }
-        const clearAllFilter = () => {
-            filters.value = false;
-            ['geo_level', 'geo_level_id', 'periodid', 'beneficiary_id', 'eligibility', 'redose', 'created', 'periodTitle'].forEach(k => {
-                tableOptions.filterParam[k] = '';
-            });
-            paginationDefault();
-            loadTableData();
-        }
-        const refreshData = () => { paginationDefault(); loadTableData(); };
-        const getGeoLocation = () => {
-            overlay.show();
-            axios.get(common.DataService + '?qid=gen009')
-                .then(response => {
-                    geoData.value = (response.data && response.data.data) || [];
-                    overlay.hide();
-                })
-                .catch(error => {
-                    overlay.hide();
-                    alert.Error('ERROR', safeMessage(error));
-                });
-        }
-        const getAllPeriodLists = () => {
-            overlay.show();
-            axios.get(common.DataService + '?qid=1004')
-                .then(response => {
-                    periodData.value = (response.data && response.data.data) || [];
-                    overlay.hide();
-                })
-                .catch(error => {
-                    overlay.hide();
-                    alert.Error('ERROR', safeMessage(error));
-                });
-        }
-        const setLocation = (select_index) => {
-            var i = select_index || 0;
-            var row = geoData.value[i];
-            if (!row) return;
-            tableOptions.filterParam.geo_level = row.geo_level;
-            tableOptions.filterParam.geo_level_id = row.geo_level_id;
-            tableOptions.filterParam.geo_string = row.title;
-        }
-        const setPeriodTitle = (event) => {
-            tableOptions.filterParam.periodTitle = event.target.options[event.target.options.selectedIndex].text;
-        }
-        const displayDayMonthYear = (d) => {
-            var date = new Date(d);
-            return date.toLocaleString('en-us', { year: 'numeric', month: 'long', day: 'numeric' });
-        }
-        const calculateTotalMonths = (dob) => {
-            var d = new Date(dob);
-            var c = new Date();
-            var months = (c.getFullYear() - d.getFullYear()) * 12;
-            months -= d.getMonth() + 1;
-            months += c.getMonth() + 1;
-            if (c.getDate() < d.getDate()) months--;
-            return months + ' Month' + (months > 1 ? 's' : '') + ' Old';
-        }
-        const exportDrugAdministration = async () => {
-            var qp = new URLSearchParams({
-                draw: tableOptions.currentPage,
-                order_column: tableOptions.orderField,
-                length: tableOptions.perPage,
-                start: tableOptions.limitStart,
-                order_dir: tableOptions.orderDir,
-                glv: tableOptions.filterParam.geo_level,
-                gid: tableOptions.filterParam.geo_level_id,
-                pid: tableOptions.filterParam.periodid,
-                ise: tableOptions.filterParam.eligibility,
-                isr: tableOptions.filterParam.redose,
-                bid: tableOptions.filterParam.beneficiary_id,
-                rda: tableOptions.filterParam.created,
-            });
-            var veriUrl = 'qid=1124&' + qp.toString();
-            var dlString = 'qid=801&' + qp.toString();
-            var formattedDate = new Date().toLocaleString('en-GB', {
-                day: '2-digit', month: '2-digit', year: 'numeric',
-                hour: '2-digit', minute: '2-digit',
-            }).replace(/[\s,\/:]/g, '_');
-            var filename = (tableOptions.filterParam.geo_string || '') +
-                'Drug_Admin_List_' +
-                (tableOptions.filterParam.periodid ? '_Visit_' + tableOptions.filterParam.periodid : '') +
-                (tableOptions.filterParam.eligibility ? '_Eligible_' + tableOptions.filterParam.eligibility : '') +
-                (tableOptions.filterParam.redose ? '_Redose_' + tableOptions.filterParam.redose : '') +
-                '_' + formattedDate;
-
-            overlay.show();
-            try {
-                var countResponse = await $.ajax({
-                    url: common.DataService, type: 'POST', data: veriUrl, dataType: 'json',
-                });
-                var count = parseInt(countResponse.total, 10);
-                var downloadMax = (window.common && window.common.ExportDownloadLimit) || 25000;
-                if (count > downloadMax) {
-                    alert.Error('Download Error', 'Unable to download data because it has exceeded the download limit of ' + downloadMax);
-                } else if (count === 0) {
-                    alert.Error('Download Error', 'No data found');
-                } else {
-                    alert.Info('DOWNLOADING...', 'Downloading ' + count + ' record(s)');
-                    var dl = await $.ajax({ url: common.ExportService, type: 'POST', data: dlString });
-                    var exportData = JSON.parse(dl);
-                    if (window.Jhxlsx && typeof window.Jhxlsx.export === 'function') {
-                        window.Jhxlsx.export(exportData, { fileName: filename });
-                    }
-                }
-            } catch (error) {
-                console.error('Error during export:', error);
-                alert.Error('Export Error', 'An error occurred while exporting data.');
-            } finally {
-                overlay.hide();
-            }
-        }
-
-        onMounted(() => {
-            getGeoLocation();
-            getAllPeriodLists();
-            loadTableData();
-            bus.on('g-event-update-user', reloadUserListOnUpdate);
-            try {
-                $('.select2').each(function () {
-                    var $this = $(this);
-                    $this.wrap('<div class="position-relative"></div>');
-                    $this.select2({
-                        dropdownAutoWidth: true, width: '100%',
-                        dropdownParent: $this.parent(),
-                    }).on('change', function () { setLocation(this.value); });
-                });
-                $('.select2-selection__arrow').html('<i class="feather icon-chevron-down"></i>');
-                $('.date').flatpickr({ altInput: true, altFormat: 'F j, Y', dateFormat: 'Y-m-d' });
-            } catch (e) {}
-        });
-        onBeforeUnmount(() => {
-            bus.off('g-event-update-user', reloadUserListOnUpdate);
-        });
-
-        return {
-            url, tableData, geoData, permission, periodData,
-            checkToggle, filterState, filters, tableOptions,
-            reloadUserListOnUpdate, loadTableData,
-            selectAll, uncheckAll, selectToggle, checkedBg, toggleFilter,
-            paginationDefault, nextPage, prevPage, currentPage,
-            changePerPage, sort, applyFilter, removeSingleFilter, clearAllFilter,
-            refreshData, getGeoLocation, getAllPeriodLists, setLocation, setPeriodTitle,
-            displayDayMonthYear, calculateTotalMonths, exportDrugAdministration,
-            capitalize: fmtUtils.capitalize,
-            displayDate: fmtUtils.displayDate,
-        };
-    },
-    template: `
+    return {
+      url,
+      tableData,
+      geoData,
+      permission,
+      periodData,
+      checkToggle,
+      filterState,
+      filters,
+      tableOptions,
+      reloadUserListOnUpdate,
+      loadTableData,
+      selectAll,
+      uncheckAll,
+      selectToggle,
+      checkedBg,
+      toggleFilter,
+      paginationDefault,
+      nextPage,
+      prevPage,
+      currentPage,
+      changePerPage,
+      sort,
+      applyFilter,
+      removeSingleFilter,
+      clearAllFilter,
+      refreshData,
+      getGeoLocation,
+      getAllPeriodLists,
+      setLocation,
+      setPeriodTitle,
+      displayDayMonthYear,
+      calculateTotalMonths,
+      exportDrugAdministration,
+      capitalize: fmtUtils.capitalize,
+      displayDate: fmtUtils.displayDate,
+    };
+  },
+  template: `
         <div class="row" id="basic-table">
             <div class="col-md-8 col-sm-12 col-12 mb-0">
                 <h2 class="content-header-title header-txt float-left mb-0">SMC</h2>
@@ -467,6 +621,6 @@ const ChildList = {
 };
 
 useApp({ template: `<div><page-body/></div>` })
-    .component('page-body', PageBody)
-    .component('child_list', ChildList)
-    .mount('#app');
+  .component("page-body", PageBody)
+  .component("child_list", ChildList)
+  .mount("#app");

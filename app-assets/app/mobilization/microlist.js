@@ -9,8 +9,10 @@ const { ref, reactive, onMounted } = Vue;
 const { useApp, useFormat, safeMessage } = window.utils;
 
 const PageBody = {
-    setup() { return {}; },
-    template: `
+  setup() {
+    return {};
+  },
+  template: `
         <div>
             <div class="content-body">
                 <dashboard_container/>
@@ -20,136 +22,184 @@ const PageBody = {
 };
 
 const DashboardContainer = {
-    setup() {
-        const fmtUtils = useFormat();
+  setup() {
+    const fmtUtils = useFormat();
 
-        const geoIndicator = reactive({
-            state: 50, currentLevelId: 0, lga: '', lgaName: '',
+    const geoIndicator = reactive({
+      state: 50,
+      currentLevelId: 0,
+      lga: "",
+      lgaName: "",
+    });
+    const checkToggle = ref(false);
+    const sysDefaultData = ref([]);
+    const lgaLevelData = ref([]);
+    const wardLevelData = ref([]);
+    const tableData = ref([]);
+    const bulkUserForm = reactive({ geoLevel: "", geoLevelId: 0 });
+
+    const getsysDefaultDataSettings = () => {
+      overlay.show();
+      axios
+        .get(common.DataService + "?qid=gen007")
+        .then((response) => {
+          if (response.data.data && response.data.data.length > 0) {
+            sysDefaultData.value = response.data.data[0];
+            getLgasLevel(response.data.data[0].stateid);
+            bulkUserForm.geoLevel = "state";
+            bulkUserForm.geoLevelId = response.data.data[0].stateid;
+          }
+          overlay.hide();
+        })
+        .catch((error) => {
+          overlay.hide();
+          alert.Error("ERROR", safeMessage(error));
         });
-        const checkToggle = ref(false);
-        const sysDefaultData = ref([]);
-        const lgaLevelData = ref([]);
-        const wardLevelData = ref([]);
-        const tableData = ref([]);
-        const bulkUserForm = reactive({ geoLevel: '', geoLevelId: 0 });
-
-        const getsysDefaultDataSettings = () => {
-            overlay.show();
-            axios.get(common.DataService + '?qid=gen007')
-                .then(response => {
-                    if (response.data.data && response.data.data.length > 0) {
-                        sysDefaultData.value = response.data.data[0];
-                        getLgasLevel(response.data.data[0].stateid);
-                        bulkUserForm.geoLevel = 'state';
-                        bulkUserForm.geoLevelId = response.data.data[0].stateid;
-                    }
-                    overlay.hide();
-                })
-                .catch(error => {
-                    overlay.hide();
-                    alert.Error('ERROR', safeMessage(error));
-                });
-        }
-        const getLgasLevel = (stateid) => {
-            overlay.show();
-            axios.post(common.DataService + '?qid=gen003', JSON.stringify(stateid))
-                .then(response => {
-                    lgaLevelData.value = (response.data && response.data.data) || [];
-                    overlay.hide();
-                })
-                .catch(error => {
-                    overlay.hide();
-                    alert.Error('ERROR', safeMessage(error));
-                });
-        }
-        const getAllStat = () => {
-            overlay.show();
-            if (geoIndicator.lga == '') {
-                overlay.hide();
-                alert.Error('Error', 'No LGA was Selected');
-                return;
-            }
-            var endpoints = [common.DataService + '?qid=303&lgaid=' + geoIndicator.lga];
-            Promise.all(endpoints.map(e => axios.get(e))).then(
-                axios.spread((...allData) => {
-                    tableData.value = (allData[0] && allData[0].data && allData[0].data.data) || [];
-                    overlay.hide();
-                })
-            ).catch(error => {
-                overlay.hide();
-                alert.Error('ERROR', safeMessage(error));
-            });
-        }
-
-        const exportMicroPosition = async () => {
-            if (geoIndicator.lga == '') {
-                overlay.hide();
-                alert.Error('Error', 'No LGA was Selected');
-                return;
-            }
-            if (tableData.value.length < 1) {
-                alert.Error('No Data', 'No DP Data to Download for ' + geoIndicator.lgaName + ' LGA');
-                return;
-            }
-            var veriUrl = 'qid=305&lgaid=' + geoIndicator.lga;
-            var dlString = 'qid=304&lgaid=' + geoIndicator.lga;
-            var today = new Date();
-            var date = today.getDate() + '-' + (today.getMonth() + 1) + '-' + today.getFullYear();
-            var time = today.getHours() + ':' + today.getMinutes() + ':' + today.getSeconds();
-            var filename = geoIndicator.lgaName + ' Micro Positioning List (' + date + ' ' + time + ')';
-            overlay.show();
-
-            var count = await new Promise(resolve => {
-                $.ajax({
-                    url: common.DataService, type: 'POST', data: veriUrl, dataType: 'json',
-                    success: (data) => { resolve(data.total); },
-                });
-            });
-            var downloadMax = (window.common && window.common.ExportDownloadLimit) || 25000;
-            if (parseInt(count) > downloadMax) {
-                alert.Error('Download Error', 'Unable to download data because it has exceeded download limit, download limit is ' + downloadMax);
-            } else if (parseInt(count) == 0) {
-                alert.Error('Download Error', 'No data found');
-            } else {
-                alert.Info('DOWNLOADING...', 'Downloading ' + count + ' record(s)');
-                var outcome = await new Promise(resolve => {
-                    $.ajax({
-                        url: common.DataService, type: 'POST', data: dlString,
-                        success: (data) => { resolve(data); },
-                    });
-                });
-                var exportData = JSON.parse(outcome);
-                if (window.Jhxlsx && typeof window.Jhxlsx.export === 'function') {
-                    window.Jhxlsx.export(exportData, { fileName: filename });
-                }
-            }
+    };
+    const getLgasLevel = (stateid) => {
+      overlay.show();
+      axios
+        .post(common.DataService + "?qid=gen003", JSON.stringify(stateid))
+        .then((response) => {
+          lgaLevelData.value = (response.data && response.data.data) || [];
+          overlay.hide();
+        })
+        .catch((error) => {
+          overlay.hide();
+          alert.Error("ERROR", safeMessage(error));
+        });
+    };
+    const getAllStat = () => {
+      overlay.show();
+      if (geoIndicator.lga == "") {
+        overlay.hide();
+        alert.Error("Error", "No LGA was Selected");
+        return;
+      }
+      var endpoints = [
+        common.DataService + "?qid=303&lgaid=" + geoIndicator.lga,
+      ];
+      Promise.all(endpoints.map((e) => axios.get(e)))
+        .then(
+          axios.spread((...allData) => {
+            tableData.value =
+              (allData[0] && allData[0].data && allData[0].data.data) || [];
             overlay.hide();
-        }
-
-        const setLgaName = (event) => {
-            geoIndicator.lgaName = event.target.options[event.target.options.selectedIndex].text;
-        }
-
-        onMounted(() => {
-            getsysDefaultDataSettings();
-            $('#dp-search').on('keyup', function () {
-                var value = $(this).val().toLowerCase();
-                $('#dpTable tbody tr').filter(function () {
-                    $(this).toggle($(this).text().toLowerCase().indexOf(value) > -1);
-                });
-            });
+          }),
+        )
+        .catch((error) => {
+          overlay.hide();
+          alert.Error("ERROR", safeMessage(error));
         });
+    };
 
-        return {
-            geoIndicator, checkToggle, sysDefaultData, lgaLevelData,
-            wardLevelData, tableData, bulkUserForm,
-            getsysDefaultDataSettings, getLgasLevel, getAllStat,
-            exportMicroPosition, setLgaName,
-            capitalize: fmtUtils.capitalize,
-            formatNumber: fmtUtils.formatNumber,
-        };
-    },
-    template: `
+    const exportMicroPosition = async () => {
+      if (geoIndicator.lga == "") {
+        overlay.hide();
+        alert.Error("Error", "No LGA was Selected");
+        return;
+      }
+      if (tableData.value.length < 1) {
+        alert.Error(
+          "No Data",
+          "No DP Data to Download for " + geoIndicator.lgaName + " LGA",
+        );
+        return;
+      }
+      var veriUrl = "qid=305&lgaid=" + geoIndicator.lga;
+      var dlString = "qid=304&lgaid=" + geoIndicator.lga;
+      var today = new Date();
+      var date =
+        today.getDate() +
+        "-" +
+        (today.getMonth() + 1) +
+        "-" +
+        today.getFullYear();
+      var time =
+        today.getHours() + ":" + today.getMinutes() + ":" + today.getSeconds();
+      var filename =
+        geoIndicator.lgaName +
+        " Micro Positioning List (" +
+        date +
+        " " +
+        time +
+        ")";
+      overlay.show();
+
+      var count = await new Promise((resolve) => {
+        $.ajax({
+          url: common.DataService,
+          type: "POST",
+          data: veriUrl,
+          dataType: "json",
+          success: (data) => {
+            resolve(data.total);
+          },
+        });
+      });
+      var downloadMax =
+        (window.common && window.common.ExportDownloadLimit) || 25000;
+      if (parseInt(count) > downloadMax) {
+        alert.Error(
+          "Download Error",
+          "Unable to download data because it has exceeded download limit, download limit is " +
+            downloadMax,
+        );
+      } else if (parseInt(count) == 0) {
+        alert.Error("Download Error", "No data found");
+      } else {
+        alert.Info("DOWNLOADING...", "Downloading " + count + " record(s)");
+        var outcome = await new Promise((resolve) => {
+          $.ajax({
+            url: common.DataService,
+            type: "POST",
+            data: dlString,
+            success: (data) => {
+              resolve(data);
+            },
+          });
+        });
+        var exportData = JSON.parse(outcome);
+        if (window.Jhxlsx && typeof window.Jhxlsx.export === "function") {
+          window.Jhxlsx.export(exportData, { fileName: filename });
+        }
+      }
+      overlay.hide();
+    };
+
+    const setLgaName = (event) => {
+      geoIndicator.lgaName =
+        event.target.options[event.target.options.selectedIndex].text;
+    };
+
+    onMounted(() => {
+      getsysDefaultDataSettings();
+      $("#dp-search").on("keyup", function () {
+        var value = $(this).val().toLowerCase();
+        $("#dpTable tbody tr").filter(function () {
+          $(this).toggle($(this).text().toLowerCase().indexOf(value) > -1);
+        });
+      });
+    });
+
+    return {
+      geoIndicator,
+      checkToggle,
+      sysDefaultData,
+      lgaLevelData,
+      wardLevelData,
+      tableData,
+      bulkUserForm,
+      getsysDefaultDataSettings,
+      getLgasLevel,
+      getAllStat,
+      exportMicroPosition,
+      setLgaName,
+      capitalize: fmtUtils.capitalize,
+      formatNumber: fmtUtils.formatNumber,
+    };
+  },
+  template: `
         <div>
             <div class="row">
                 <div class="col-12 mb-2">
@@ -226,6 +276,6 @@ const DashboardContainer = {
 };
 
 useApp({ template: `<div><page-body/></div>` })
-    .component('page-body', PageBody)
-    .component('dashboard_container', DashboardContainer)
-    .mount('#app');
+  .component("page-body", PageBody)
+  .component("dashboard_container", DashboardContainer)
+  .mount("#app");

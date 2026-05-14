@@ -6,14 +6,22 @@
 const { useApp } = window.utils;
 
 useApp({
-    setup() {
-        const clickInfo = () => { alert.Info('Testa', 'Testing to know if this will work'); };
-        const clickError = () => { alert.Error('Testa', 'Testing to know if this will work'); };
-        const clickSuccess = () => { alert.Success('Testa', 'Testing to know if this will work'); };
-        const clickWarning = () => { alert.Warning('Testa', 'Testing to know if this will work'); };
-        return { clickInfo, clickError, clickSuccess, clickWarning };
-    },
-    template: `
+  setup() {
+    const clickInfo = () => {
+      alert.Info("Testa", "Testing to know if this will work");
+    };
+    const clickError = () => {
+      alert.Error("Testa", "Testing to know if this will work");
+    };
+    const clickSuccess = () => {
+      alert.Success("Testa", "Testing to know if this will work");
+    };
+    const clickWarning = () => {
+      alert.Warning("Testa", "Testing to know if this will work");
+    };
+    return { clickInfo, clickError, clickSuccess, clickWarning };
+  },
+  template: `
         <div>
             <h1>Ipolongo is now Vue compatible</h1>
             <p>
@@ -24,4 +32,4 @@ useApp({
             </p>
         </div>
     `,
-}).mount('#app');
+}).mount("#app");

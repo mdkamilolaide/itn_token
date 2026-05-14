@@ -15,14 +15,20 @@ const { useApp, useFormat, bus, safeMessage } = window.utils;
 /* page-body                                                            */
 /* ------------------------------------------------------------------ */
 const PageBody = {
-    setup() {
-        const page = ref('training');
-        const gotoPageHandler = (data) => { page.value = data.page; };
-        onMounted(() => { bus.on('g-event-goto-page', gotoPageHandler); });
-        onBeforeUnmount(() => { bus.off('g-event-goto-page', gotoPageHandler); });
-        return { page };
-    },
-    template: `
+  setup() {
+    const page = ref("training");
+    const gotoPageHandler = (data) => {
+      page.value = data.page;
+    };
+    onMounted(() => {
+      bus.on("g-event-goto-page", gotoPageHandler);
+    });
+    onBeforeUnmount(() => {
+      bus.off("g-event-goto-page", gotoPageHandler);
+    });
+    return { page };
+  },
+  template: `
         <div>
             <div class="content-body">
                 <div v-show="page == 'training'"><training_list/></div>
@@ -38,433 +44,589 @@ const PageBody = {
 /* training_list                                                        */
 /* ------------------------------------------------------------------ */
 const TrainingList = {
-    setup() {
-        const fmtUtils = useFormat();
+  setup() {
+    const fmtUtils = useFormat();
 
-        const tableData = ref([]);
-        const checkToggle = ref(false);
-        const filterState = ref(false);
-        const filters = ref(false);
-        const url = ref(window.common && window.common.TableService);
-        const tableOptions = reactive({
-            total: 1, pageLength: 1, perPage: 10, currentPage: 1,
-            orderDir: 'desc', orderField: 0, limitStart: 0,
-            isNext: false, isPrev: false,
-            aLength: [10, 20, 50, 100],
-            filterParam: { trainingid: '', title: '', active: '' },
+    const tableData = ref([]);
+    const checkToggle = ref(false);
+    const filterState = ref(false);
+    const filters = ref(false);
+    const url = ref(window.common && window.common.TableService);
+    const tableOptions = reactive({
+      total: 1,
+      pageLength: 1,
+      perPage: 10,
+      currentPage: 1,
+      orderDir: "desc",
+      orderField: 0,
+      limitStart: 0,
+      isNext: false,
+      isPrev: false,
+      aLength: [10, 20, 50, 100],
+      filterParam: { trainingid: "", title: "", active: "" },
+    });
+    const permission = ref(
+      typeof getPermission === "function"
+        ? getPermission(
+            typeof per !== "undefined" ? per : null,
+            "activity",
+          ) || { permission_value: 0 }
+        : { permission_value: 0 },
+    );
+    const errors = ref([]);
+    const trainingBtn = ref("");
+    const addTrainingModal = ref(false);
+    const trainingForm = reactive({
+      training_id: "",
+      title: "",
+      description: "",
+      start_date: "2022-03-21",
+      end_date: "2022-03-23",
+      geoLevel: "state",
+      geoLevelId: 0,
+    });
+    const geoIndicator = reactive({ state: 50, currentLevelId: 0, ward: "" });
+    const geoLevelData = ref([]);
+    const sysDefaultData = ref({});
+    const lgaLevelData = ref([]);
+    const clusterLevelData = ref([]);
+    const wardLevelData = ref([]);
+    const dpLevelData = ref([]);
+    const defaultStateId = ref(0);
+
+    let dateFlatpickr = null;
+    let startDateFlatpickr = null;
+    let endDateFlatpickr = null;
+
+    const loadTableData = () => {
+      overlay.show();
+      var u = common.TableService;
+      axios
+        .get(
+          u +
+            "?qid=101&draw=" +
+            tableOptions.currentPage +
+            "&order_column=" +
+            tableOptions.orderField +
+            "&length=" +
+            tableOptions.perPage +
+            "&start=" +
+            tableOptions.limitStart +
+            "&order_dir=" +
+            tableOptions.orderDir +
+            "&ac=" +
+            tableOptions.filterParam.active +
+            "&id=" +
+            tableOptions.filterParam.trainingid +
+            "&tr=" +
+            tableOptions.filterParam.title,
+        )
+        .then((response) => {
+          var d = response && response.data;
+          tableData.value = Array.isArray(d && d.data) ? d.data : [];
+          tableOptions.total = (d && d.recordsTotal) || 0;
+          if (tableOptions.currentPage == 1) paginationDefault();
+          overlay.hide();
+        })
+        .catch((error) => {
+          overlay.hide();
+          alert.Error("ERROR", safeMessage(error));
         });
-        const permission = ref(
-            (typeof getPermission === 'function')
-                ? (getPermission(typeof per !== 'undefined' ? per : null, 'activity') || { permission_value: 0 })
-                : { permission_value: 0 }
+    };
+
+    const selectAll = () => {
+      for (var i = 0; i < tableData.value.length; i++)
+        tableData.value[i].pick = true;
+    };
+    const uncheckAll = () => {
+      for (var i = 0; i < tableData.value.length; i++)
+        tableData.value[i].pick = false;
+    };
+    const selectToggle = () => {
+      if (checkToggle.value === false) {
+        selectAll();
+        checkToggle.value = true;
+      } else {
+        uncheckAll();
+        checkToggle.value = false;
+      }
+    };
+    const checkedBg = (pickOne) => {
+      return pickOne != "" ? "bg-select" : "";
+    };
+    const toggleFilter = () => {
+      if (filterState.value === false) filters.value = false;
+      return (filterState.value = !filterState.value);
+    };
+    const selectedItems = () => {
+      return tableData.value.filter((r) => r.pick);
+    };
+    const selectedID = () => {
+      return tableData.value.filter((r) => r.pick).map((r) => r.userid);
+    };
+
+    const paginationDefault = () => {
+      tableOptions.pageLength = Math.ceil(
+        tableOptions.total / tableOptions.perPage,
+      );
+      tableOptions.limitStart = Math.ceil(
+        (tableOptions.currentPage - 1) * tableOptions.perPage,
+      );
+      tableOptions.isNext = tableOptions.currentPage < tableOptions.pageLength;
+      tableOptions.isPrev = tableOptions.currentPage > 1;
+    };
+    const nextPage = () => {
+      tableOptions.currentPage += 1;
+      paginationDefault();
+      loadTableData();
+    };
+    const prevPage = () => {
+      tableOptions.currentPage -= 1;
+      paginationDefault();
+      loadTableData();
+    };
+    const currentPage = () => {
+      paginationDefault();
+      if (tableOptions.currentPage < 1)
+        alert.Error("ERROR", "The Page requested doesn't exist");
+      else if (tableOptions.currentPage > tableOptions.pageLength)
+        alert.Error("ERROR", "The Page requested doesn't exist");
+      else loadTableData();
+    };
+    const changePerPage = (val) => {
+      tableOptions.perPage = val;
+      paginationDefault();
+      loadTableData();
+    };
+    const sort = (col) => {
+      if (tableOptions.orderField === col)
+        tableOptions.orderDir =
+          tableOptions.orderDir === "asc" ? "desc" : "asc";
+      else tableOptions.orderField = col;
+      paginationDefault();
+      loadTableData();
+    };
+    const applyFilter = () => {
+      var checkFill = 0;
+      checkFill += tableOptions.filterParam.title != "" ? 1 : 0;
+      checkFill += tableOptions.filterParam.trainingid != "" ? 1 : 0;
+      checkFill += tableOptions.filterParam.active != "" ? 1 : 0;
+      if (checkFill > 0) {
+        toggleFilter();
+        filters.value = true;
+        paginationDefault();
+        loadTableData();
+      } else {
+        alert.Error("ERROR", "Invalid required data");
+      }
+    };
+    const removeSingleFilter = (column_name) => {
+      tableOptions.filterParam[column_name] = "";
+      var g = 0;
+      for (var k in tableOptions.filterParam) {
+        if (tableOptions.filterParam[k] != "") g++;
+      }
+      if (g == 0) filters.value = false;
+      paginationDefault();
+      loadTableData();
+    };
+    const clearAllFilter = () => {
+      filters.value = false;
+      tableOptions.filterParam.title = "";
+      tableOptions.filterParam.trainingid = "";
+      tableOptions.filterParam.active = "";
+      paginationDefault();
+      loadTableData();
+    };
+    const refreshData = () => {
+      paginationDefault();
+      loadTableData();
+    };
+
+    const deActivateUser = (training_id, status, ui_id) => {
+      var u = common.DataService;
+      var message, btn_text, btn_class, response_txt;
+      if (status == "1") {
+        message =
+          "Are you sure you want to Deactivate the Activity with ID <b>" +
+          ui_id +
+          "</b>?";
+        btn_text = "Deactivate";
+        btn_class = " btn-danger ";
+        response_txt =
+          "Activity with ID <b>" + ui_id + "</b> Successfully Deactivated";
+      } else {
+        message =
+          "Are you sure you want to Activate an Activity with ID <b>" +
+          ui_id +
+          "</b>?";
+        btn_text = "Activate";
+        btn_class = " btn-success ";
+        response_txt =
+          "Activity with ID <b>" + ui_id + "</b> Successfully Activated";
+      }
+      $.confirm({
+        title: "WARNING!",
+        content: message,
+        buttons: {
+          delete: {
+            text: btn_text,
+            btnClass: "btn mr-1" + btn_class,
+            action: () => {
+              axios
+                .post(u + "?qid=103&e=" + training_id)
+                .then((response) => {
+                  overlay.hide();
+                  if (response.data.result_code == "200") {
+                    loadTableData();
+                    alert.Success("SUCCESS", response_txt);
+                  } else {
+                    alert.Error(
+                      "ERROR",
+                      "Unable to De/Activate Activity with ID <b>" +
+                        ui_id +
+                        "</b>",
+                    );
+                  }
+                })
+                .catch((error) => {
+                  overlay.hide();
+                  alert.Error("ERROR", safeMessage(error));
+                });
+            },
+          },
+          cancel: () => {
+            overlay.hide();
+          },
+        },
+      });
+    };
+
+    const showaddTrainingModal = () => {
+      resettrainingForm();
+      $("#addNewTraining").modal("show");
+      addTrainingModal.value = true;
+      trainingBtn.value = "Create";
+    };
+    const hideaddTrainingModal = () => {
+      resettrainingForm();
+      addTrainingModal.value = false;
+      trainingBtn.value = "";
+      $("#addNewTraining").modal("hide");
+    };
+    const goToSessionLists = (trainingid) => {
+      bus.emit("g-event-goto-page", {
+        trainingid: trainingid,
+        page: "session",
+      });
+    };
+    const goToParticipantList = (trainingid) => {
+      bus.emit("g-event-goto-page", {
+        trainingid: trainingid,
+        page: "participant",
+      });
+    };
+
+    const getsysDefaultDataSettings = () => {
+      overlay.show();
+      axios
+        .get(common.DataService + "?qid=gen007")
+        .then((response) => {
+          if (response.data.data && response.data.data.length > 0) {
+            sysDefaultData.value = response.data.data[0];
+            trainingForm.geoLevel = "state";
+            trainingForm.geoLevelId = response.data.data[0].stateid;
+          }
+          overlay.hide();
+        })
+        .catch((error) => {
+          overlay.hide();
+          alert.Error("ERROR", safeMessage(error));
+        });
+    };
+    const getGeoLevel = () => {
+      overlay.show();
+      axios
+        .get(common.DataService + "?qid=gen001")
+        .then((response) => {
+          geoLevelData.value = (response.data && response.data.data) || [];
+          overlay.hide();
+        })
+        .catch((error) => {
+          overlay.hide();
+          alert.Error("ERROR", safeMessage(error));
+        });
+    };
+    const getLgasLevel = (stateid) => {
+      overlay.show();
+      axios
+        .post(common.DataService + "?qid=gen003", JSON.stringify(stateid))
+        .then((response) => {
+          lgaLevelData.value = (response.data && response.data.data) || [];
+          overlay.hide();
+        })
+        .catch((error) => {
+          overlay.hide();
+          alert.Error("ERROR", safeMessage(error));
+        });
+    };
+    const getClusterLevel = () => {
+      overlay.show();
+      axios
+        .get(
+          common.DataService + "?qid=gen004&e=" + (geoIndicator.cluster || ""),
+        )
+        .then((response) => {
+          clusterLevelData.value = (response.data && response.data.data) || [];
+          overlay.hide();
+        })
+        .catch((error) => {
+          overlay.hide();
+          alert.Error("ERROR", safeMessage(error));
+        });
+    };
+    const getWardLevel = () => {
+      overlay.show();
+      axios
+        .get(common.DataService + "?qid=gen005&e=" + (geoIndicator.lga || ""))
+        .then((response) => {
+          wardLevelData.value = (response.data && response.data.data) || [];
+          overlay.hide();
+        })
+        .catch((error) => {
+          overlay.hide();
+          alert.Error("ERROR", safeMessage(error));
+        });
+    };
+    const getDpLevel = () => {
+      overlay.show();
+      axios
+        .get(common.DataService + "?qid=gen006")
+        .then((response) => {
+          dpLevelData.value = (response.data && response.data.data) || [];
+          overlay.hide();
+        })
+        .catch((error) => {
+          overlay.hide();
+          alert.Error("ERROR", safeMessage(error));
+        });
+    };
+    const changeGeoLevel = () => {
+      if (trainingForm.geoLevel == "country" || trainingForm.geoLevel == "dp") {
+        alert.Error(
+          "ERROR",
+          "Invalid Geo-Level selected, please select a valid Geo-Level",
         );
-        const errors = ref([]);
-        const trainingBtn = ref('');
-        const addTrainingModal = ref(false);
-        const trainingForm = reactive({
-            training_id: '', title: '', description: '',
-            start_date: '2022-03-21', end_date: '2022-03-23',
-            geoLevel: 'state', geoLevelId: 0,
-        });
-        const geoIndicator = reactive({ state: 50, currentLevelId: 0, ward: '' });
-        const geoLevelData = ref([]);
-        const sysDefaultData = ref({});
-        const lgaLevelData = ref([]);
-        const clusterLevelData = ref([]);
-        const wardLevelData = ref([]);
-        const dpLevelData = ref([]);
-        const defaultStateId = ref(0);
+      }
+    };
 
-        let dateFlatpickr = null;
-        let startDateFlatpickr = null;
-        let endDateFlatpickr = null;
-
-        const loadTableData = () => {
-            overlay.show();
-            var u = common.TableService;
-            axios.get(
-                u +
-                '?qid=101&draw=' + tableOptions.currentPage +
-                '&order_column=' + tableOptions.orderField +
-                '&length=' + tableOptions.perPage +
-                '&start=' + tableOptions.limitStart +
-                '&order_dir=' + tableOptions.orderDir +
-                '&ac=' + tableOptions.filterParam.active +
-                '&id=' + tableOptions.filterParam.trainingid +
-                '&tr=' + tableOptions.filterParam.title
-            )
-                .then(response => {
-                    var d = response && response.data;
-                    tableData.value = Array.isArray(d && d.data) ? d.data : [];
-                    tableOptions.total = (d && d.recordsTotal) || 0;
-                    if (tableOptions.currentPage == 1) paginationDefault();
-                    overlay.hide();
-                })
-                .catch(error => {
-                    overlay.hide();
-                    alert.Error('ERROR', safeMessage(error));
-                });
-        }
-
-        const selectAll = () => { for (var i = 0; i < tableData.value.length; i++) tableData.value[i].pick = true; };
-        const uncheckAll = () => { for (var i = 0; i < tableData.value.length; i++) tableData.value[i].pick = false; };
-        const selectToggle = () => {
-            if (checkToggle.value === false) { selectAll(); checkToggle.value = true; }
-            else                              { uncheckAll(); checkToggle.value = false; }
-        }
-        const checkedBg = (pickOne) => { return pickOne != '' ? 'bg-select' : ''; };
-        const toggleFilter = () => {
-            if (filterState.value === false) filters.value = false;
-            return (filterState.value = !filterState.value);
-        }
-        const selectedItems = () => { return tableData.value.filter(r => r.pick); };
-        const selectedID = () => { return tableData.value.filter(r => r.pick).map(r => r.userid); };
-
-        const paginationDefault = () => {
-            tableOptions.pageLength = Math.ceil(tableOptions.total / tableOptions.perPage);
-            tableOptions.limitStart = Math.ceil((tableOptions.currentPage - 1) * tableOptions.perPage);
-            tableOptions.isNext = tableOptions.currentPage < tableOptions.pageLength;
-            tableOptions.isPrev = tableOptions.currentPage > 1;
-        }
-        const nextPage = () => { tableOptions.currentPage += 1; paginationDefault(); loadTableData(); };
-        const prevPage = () => { tableOptions.currentPage -= 1; paginationDefault(); loadTableData(); };
-        const currentPage = () => {
-            paginationDefault();
-            if (tableOptions.currentPage < 1)                            alert.Error('ERROR', "The Page requested doesn't exist");
-            else if (tableOptions.currentPage > tableOptions.pageLength) alert.Error('ERROR', "The Page requested doesn't exist");
-            else                                                         loadTableData();
-        }
-        const changePerPage = (val) => {
-            tableOptions.perPage = val;
-            paginationDefault();
-            loadTableData();
-        }
-        const sort = (col) => {
-            if (tableOptions.orderField === col) tableOptions.orderDir = tableOptions.orderDir === 'asc' ? 'desc' : 'asc';
-            else                                  tableOptions.orderField = col;
-            paginationDefault();
-            loadTableData();
-        }
-        const applyFilter = () => {
-            var checkFill = 0;
-            checkFill += tableOptions.filterParam.title      != '' ? 1 : 0;
-            checkFill += tableOptions.filterParam.trainingid != '' ? 1 : 0;
-            checkFill += tableOptions.filterParam.active     != '' ? 1 : 0;
-            if (checkFill > 0) {
-                toggleFilter();
-                filters.value = true;
-                paginationDefault();
-                loadTableData();
+    const onSubmitCreateTraining = (action) => {
+      var u = common.DataService;
+      if (action == "Create") {
+        overlay.show();
+        axios
+          .post(u + "?qid=101", JSON.stringify(trainingForm))
+          .then((response) => {
+            if (response.data.result_code == "201") {
+              resettrainingForm();
+              addTrainingModal.value = false;
+              $("#addNewTraining").modal("hide");
+              loadTableData();
+              alert.Success("Success", response.data.message);
+              overlay.hide();
             } else {
-                alert.Error('ERROR', 'Invalid required data');
+              overlay.hide();
+              alert.Error("Error", response.data.message);
             }
-        }
-        const removeSingleFilter = (column_name) => {
-            tableOptions.filterParam[column_name] = '';
-            var g = 0;
-            for (var k in tableOptions.filterParam) {
-                if (tableOptions.filterParam[k] != '') g++;
-            }
-            if (g == 0) filters.value = false;
-            paginationDefault();
-            loadTableData();
-        }
-        const clearAllFilter = () => {
-            filters.value = false;
-            tableOptions.filterParam.title = '';
-            tableOptions.filterParam.trainingid = '';
-            tableOptions.filterParam.active = '';
-            paginationDefault();
-            loadTableData();
-        }
-        const refreshData = () => { paginationDefault(); loadTableData(); };
-
-        const deActivateUser = (training_id, status, ui_id) => {
-            var u = common.DataService;
-            var message, btn_text, btn_class, response_txt;
-            if (status == '1') {
-                message = 'Are you sure you want to Deactivate the Activity with ID <b>' + ui_id + '</b>?';
-                btn_text = 'Deactivate';
-                btn_class = ' btn-danger ';
-                response_txt = 'Activity with ID <b>' + ui_id + '</b> Successfully Deactivated';
-            } else {
-                message = 'Are you sure you want to Activate an Activity with ID <b>' + ui_id + '</b>?';
-                btn_text = 'Activate';
-                btn_class = ' btn-success ';
-                response_txt = 'Activity with ID <b>' + ui_id + '</b> Successfully Activated';
-            }
-            $.confirm({
-                title: 'WARNING!',
-                content: message,
-                buttons: {
-                    delete: {
-                        text: btn_text,
-                        btnClass: 'btn mr-1' + btn_class,
-                        action: () => {
-                            axios.post(u + '?qid=103&e=' + training_id)
-                                .then(response => {
-                                    overlay.hide();
-                                    if (response.data.result_code == '200') {
-                                        loadTableData();
-                                        alert.Success('SUCCESS', response_txt);
-                                    } else {
-                                        alert.Error('ERROR', 'Unable to De/Activate Activity with ID <b>' + ui_id + '</b>');
-                                    }
-                                })
-                                .catch(error => {
-                                    overlay.hide();
-                                    alert.Error('ERROR', safeMessage(error));
-                                });
-                        },
-                    },
-                    cancel: () => { overlay.hide(); },
-                },
-            });
-        }
-
-        const showaddTrainingModal = () => {
-            resettrainingForm();
-            $('#addNewTraining').modal('show');
-            addTrainingModal.value = true;
-            trainingBtn.value = 'Create';
-        }
-        const hideaddTrainingModal = () => {
-            resettrainingForm();
-            addTrainingModal.value = false;
-            trainingBtn.value = '';
-            $('#addNewTraining').modal('hide');
-        }
-        const goToSessionLists = (trainingid) => {
-            bus.emit('g-event-goto-page', { trainingid: trainingid, page: 'session' });
-        }
-        const goToParticipantList = (trainingid) => {
-            bus.emit('g-event-goto-page', { trainingid: trainingid, page: 'participant' });
-        }
-
-        const getsysDefaultDataSettings = () => {
-            overlay.show();
-            axios.get(common.DataService + '?qid=gen007')
-                .then(response => {
-                    if (response.data.data && response.data.data.length > 0) {
-                        sysDefaultData.value = response.data.data[0];
-                        trainingForm.geoLevel = 'state';
-                        trainingForm.geoLevelId = response.data.data[0].stateid;
-                    }
-                    overlay.hide();
-                })
-                .catch(error => {
-                    overlay.hide();
-                    alert.Error('ERROR', safeMessage(error));
-                });
-        }
-        const getGeoLevel = () => {
-            overlay.show();
-            axios.get(common.DataService + '?qid=gen001')
-                .then(response => {
-                    geoLevelData.value = (response.data && response.data.data) || [];
-                    overlay.hide();
-                })
-                .catch(error => {
-                    overlay.hide();
-                    alert.Error('ERROR', safeMessage(error));
-                });
-        }
-        const getLgasLevel = (stateid) => {
-            overlay.show();
-            axios.post(common.DataService + '?qid=gen003', JSON.stringify(stateid))
-                .then(response => {
-                    lgaLevelData.value = (response.data && response.data.data) || [];
-                    overlay.hide();
-                })
-                .catch(error => {
-                    overlay.hide();
-                    alert.Error('ERROR', safeMessage(error));
-                });
-        }
-        const getClusterLevel = () => {
-            overlay.show();
-            axios.get(common.DataService + '?qid=gen004&e=' + (geoIndicator.cluster || ''))
-                .then(response => {
-                    clusterLevelData.value = (response.data && response.data.data) || [];
-                    overlay.hide();
-                })
-                .catch(error => {
-                    overlay.hide();
-                    alert.Error('ERROR', safeMessage(error));
-                });
-        }
-        const getWardLevel = () => {
-            overlay.show();
-            axios.get(common.DataService + '?qid=gen005&e=' + (geoIndicator.lga || ''))
-                .then(response => {
-                    wardLevelData.value = (response.data && response.data.data) || [];
-                    overlay.hide();
-                })
-                .catch(error => {
-                    overlay.hide();
-                    alert.Error('ERROR', safeMessage(error));
-                });
-        }
-        const getDpLevel = () => {
-            overlay.show();
-            axios.get(common.DataService + '?qid=gen006')
-                .then(response => {
-                    dpLevelData.value = (response.data && response.data.data) || [];
-                    overlay.hide();
-                })
-                .catch(error => {
-                    overlay.hide();
-                    alert.Error('ERROR', safeMessage(error));
-                });
-        }
-        const changeGeoLevel = () => {
-            if (trainingForm.geoLevel == 'country' || trainingForm.geoLevel == 'dp') {
-                alert.Error('ERROR', 'Invalid Geo-Level selected, please select a valid Geo-Level');
-            }
-        }
-
-        const onSubmitCreateTraining = (action) => {
-            var u = common.DataService;
-            if (action == 'Create') {
-                overlay.show();
-                axios.post(u + '?qid=101', JSON.stringify(trainingForm))
-                    .then(response => {
-                        if (response.data.result_code == '201') {
-                            resettrainingForm();
-                            addTrainingModal.value = false;
-                            $('#addNewTraining').modal('hide');
-                            loadTableData();
-                            alert.Success('Success', response.data.message);
-                            overlay.hide();
-                        } else {
-                            overlay.hide();
-                            alert.Error('Error', response.data.message);
-                        }
-                    })
-                    .catch(error => {
-                        alert.Error('ERROR', safeMessage(error));
-                        overlay.hide();
-                    });
-            } else {
-                updateTraining();
-            }
-        }
-        const resettrainingForm = () => {
-            try {
-                if (startDateFlatpickr && startDateFlatpickr.clear) startDateFlatpickr.clear();
-                if (endDateFlatpickr && endDateFlatpickr.clear) endDateFlatpickr.clear();
-            } catch (e) {}
-            trainingBtn.value = '';
-            trainingForm.training_id = '';
-            trainingForm.title = '';
-            trainingForm.description = '';
-            trainingForm.start_date = '';
-            trainingForm.end_date = '';
-            trainingForm.geoLevel = 'state';
-            trainingForm.geoLevelId = 0;
+          })
+          .catch((error) => {
+            alert.Error("ERROR", safeMessage(error));
             overlay.hide();
-        }
-        const editTraining = (training_id, training_pos) => {
-            overlay.show();
-            addTrainingModal.value = true;
-            trainingBtn.value = 'Update';
-            trainingForm.training_id = training_id;
-            var row = tableData.value[training_pos] || {};
-            trainingForm.title = row.title;
-            trainingForm.description = row.description;
-            trainingForm.start_date = row.db_start_date;
-            trainingForm.end_date = row.db_end_date;
-            trainingForm.geoLevel = row.geo_location;
-            trainingForm.geoLevelId = row.location_id;
+          });
+      } else {
+        updateTraining();
+      }
+    };
+    const resettrainingForm = () => {
+      try {
+        if (startDateFlatpickr && startDateFlatpickr.clear)
+          startDateFlatpickr.clear();
+        if (endDateFlatpickr && endDateFlatpickr.clear)
+          endDateFlatpickr.clear();
+      } catch (e) {}
+      trainingBtn.value = "";
+      trainingForm.training_id = "";
+      trainingForm.title = "";
+      trainingForm.description = "";
+      trainingForm.start_date = "";
+      trainingForm.end_date = "";
+      trainingForm.geoLevel = "state";
+      trainingForm.geoLevelId = 0;
+      overlay.hide();
+    };
+    const editTraining = (training_id, training_pos) => {
+      overlay.show();
+      addTrainingModal.value = true;
+      trainingBtn.value = "Update";
+      trainingForm.training_id = training_id;
+      var row = tableData.value[training_pos] || {};
+      trainingForm.title = row.title;
+      trainingForm.description = row.description;
+      trainingForm.start_date = row.db_start_date;
+      trainingForm.end_date = row.db_end_date;
+      trainingForm.geoLevel = row.geo_location;
+      trainingForm.geoLevelId = row.location_id;
+      overlay.hide();
+    };
+    const updateTraining = () => {
+      var u = common.DataService;
+      $.confirm({
+        title: "WARNING!",
+        content:
+          "Are you sure you want to Update an Activity with ID:" +
+          trainingForm.training_id +
+          "?",
+        buttons: {
+          delete: {
+            text: "Update",
+            btnClass: "btn btn-danger mr-1 text-capitalize",
+            action: () => {
+              axios
+                .post(u + "?qid=102", JSON.stringify(trainingForm))
+                .then((response) => {
+                  if (response.data.result_code == "201") {
+                    resettrainingForm();
+                    addTrainingModal.value = false;
+                    $("#addNewTraining").modal("hide");
+                    loadTableData();
+                    alert.Success("Success", response.data.message);
+                    overlay.hide();
+                  } else {
+                    overlay.hide();
+                    alert.Error("Error", response.data.message);
+                  }
+                })
+                .catch((error) => {
+                  alert.Error("ERROR", safeMessage(error));
+                  overlay.hide();
+                });
+            },
+          },
+          cancel: () => {
+            resettrainingForm();
+            $("#addNewTraining").modal("hide");
             overlay.hide();
+          },
+        },
+      });
+    };
+
+    onMounted(() => {
+      getGeoLevel();
+      getsysDefaultDataSettings();
+      loadTableData();
+      bus.on("g-event-update", loadTableData);
+
+      // Initialize flatpickr for both date inputs.
+      try {
+        if ($("#start-date").length && typeof $.fn.flatpickr === "function") {
+          startDateFlatpickr = $("#start-date").flatpickr({
+            altInput: true,
+            altFormat: "F j, Y",
+            dateFormat: "Y-m-d",
+            minDate: "today",
+            onChange: (selectedDates, dateStr) => {
+              trainingForm.start_date = dateStr;
+            },
+          });
         }
-        const updateTraining = () => {
-            var u = common.DataService;
-            $.confirm({
-                title: 'WARNING!',
-                content: 'Are you sure you want to Update an Activity with ID:' + trainingForm.training_id + '?',
-                buttons: {
-                    delete: {
-                        text: 'Update',
-                        btnClass: 'btn btn-danger mr-1 text-capitalize',
-                        action: () => {
-                            axios.post(u + '?qid=102', JSON.stringify(trainingForm))
-                                .then(response => {
-                                    if (response.data.result_code == '201') {
-                                        resettrainingForm();
-                                        addTrainingModal.value = false;
-                                        $('#addNewTraining').modal('hide');
-                                        loadTableData();
-                                        alert.Success('Success', response.data.message);
-                                        overlay.hide();
-                                    } else {
-                                        overlay.hide();
-                                        alert.Error('Error', response.data.message);
-                                    }
-                                })
-                                .catch(error => {
-                                    alert.Error('ERROR', safeMessage(error));
-                                    overlay.hide();
-                                });
-                        },
-                    },
-                    cancel: () => {
-                        resettrainingForm();
-                        $('#addNewTraining').modal('hide');
-                        overlay.hide();
-                    },
-                },
-            });
+        if ($("#end-date").length && typeof $.fn.flatpickr === "function") {
+          endDateFlatpickr = $("#end-date").flatpickr({
+            altInput: true,
+            altFormat: "F j, Y",
+            dateFormat: "Y-m-d",
+            minDate: "today",
+            onChange: (selectedDates, dateStr) => {
+              trainingForm.end_date = dateStr;
+            },
+          });
         }
+      } catch (e) {
+        /* swallow */
+      }
+    });
+    onBeforeUnmount(() => {
+      bus.off("g-event-update", loadTableData);
+      try {
+        if (startDateFlatpickr && startDateFlatpickr.destroy)
+          startDateFlatpickr.destroy();
+      } catch (e) {}
+      try {
+        if (endDateFlatpickr && endDateFlatpickr.destroy)
+          endDateFlatpickr.destroy();
+      } catch (e) {}
+    });
 
-        onMounted(() => {
-            getGeoLevel();
-            getsysDefaultDataSettings();
-            loadTableData();
-            bus.on('g-event-update', loadTableData);
-
-            // Initialize flatpickr for both date inputs.
-            try {
-                if ($('#start-date').length && typeof $.fn.flatpickr === 'function') {
-                    startDateFlatpickr = $('#start-date').flatpickr({
-                        altInput: true, altFormat: 'F j, Y', dateFormat: 'Y-m-d', minDate: 'today',
-                        onChange: (selectedDates, dateStr) => { trainingForm.start_date = dateStr; },
-                    });
-                }
-                if ($('#end-date').length && typeof $.fn.flatpickr === 'function') {
-                    endDateFlatpickr = $('#end-date').flatpickr({
-                        altInput: true, altFormat: 'F j, Y', dateFormat: 'Y-m-d', minDate: 'today',
-                        onChange: (selectedDates, dateStr) => { trainingForm.end_date = dateStr; },
-                    });
-                }
-            } catch (e) { /* swallow */ }
-        });
-        onBeforeUnmount(() => {
-            bus.off('g-event-update', loadTableData);
-            try { if (startDateFlatpickr && startDateFlatpickr.destroy) startDateFlatpickr.destroy(); } catch (e) {}
-            try { if (endDateFlatpickr   && endDateFlatpickr.destroy)   endDateFlatpickr.destroy(); }   catch (e) {}
-        });
-
-        return {
-            tableData, checkToggle, filterState, filters, url, tableOptions,
-            permission, errors, trainingBtn, addTrainingModal, trainingForm,
-            geoIndicator, geoLevelData, sysDefaultData, lgaLevelData,
-            clusterLevelData, wardLevelData, dpLevelData, defaultStateId,
-            loadTableData, selectAll, uncheckAll, selectToggle, checkedBg,
-            toggleFilter, selectedItems, selectedID,
-            nextPage, prevPage, currentPage, paginationDefault, changePerPage,
-            sort, applyFilter, removeSingleFilter, clearAllFilter, refreshData,
-            deActivateUser, showaddTrainingModal, hideaddTrainingModal,
-            goToSessionLists, goToParticipantList,
-            getsysDefaultDataSettings, getGeoLevel, getLgasLevel, getClusterLevel,
-            getWardLevel, getDpLevel, changeGeoLevel,
-            onSubmitCreateTraining, resettrainingForm, editTraining, updateTraining,
-            capitalize: fmtUtils.capitalize,
-            formatNumber: fmtUtils.formatNumber,
-            displayDate: fmtUtils.displayDate,
-        };
-    },
-    template: `
+    return {
+      tableData,
+      checkToggle,
+      filterState,
+      filters,
+      url,
+      tableOptions,
+      permission,
+      errors,
+      trainingBtn,
+      addTrainingModal,
+      trainingForm,
+      geoIndicator,
+      geoLevelData,
+      sysDefaultData,
+      lgaLevelData,
+      clusterLevelData,
+      wardLevelData,
+      dpLevelData,
+      defaultStateId,
+      loadTableData,
+      selectAll,
+      uncheckAll,
+      selectToggle,
+      checkedBg,
+      toggleFilter,
+      selectedItems,
+      selectedID,
+      nextPage,
+      prevPage,
+      currentPage,
+      paginationDefault,
+      changePerPage,
+      sort,
+      applyFilter,
+      removeSingleFilter,
+      clearAllFilter,
+      refreshData,
+      deActivateUser,
+      showaddTrainingModal,
+      hideaddTrainingModal,
+      goToSessionLists,
+      goToParticipantList,
+      getsysDefaultDataSettings,
+      getGeoLevel,
+      getLgasLevel,
+      getClusterLevel,
+      getWardLevel,
+      getDpLevel,
+      changeGeoLevel,
+      onSubmitCreateTraining,
+      resettrainingForm,
+      editTraining,
+      updateTraining,
+      capitalize: fmtUtils.capitalize,
+      formatNumber: fmtUtils.formatNumber,
+      displayDate: fmtUtils.displayDate,
+    };
+  },
+  template: `
         <div class="row" id="basic-table">
             <div class="col-md-8 col-sm-12 col-12 mb-0">
                 <h2 class="content-header-title header-txt float-left mb-0">Activity Mgmt.</h2>
@@ -677,256 +839,308 @@ const TrainingList = {
 /* training_session                                                     */
 /* ------------------------------------------------------------------ */
 const TrainingSession = {
-    setup() {
-        const fmtUtils = useFormat();
+  setup() {
+    const fmtUtils = useFormat();
 
-        const tableData = ref([]);
-        const addSessionModal = ref(false);
-        const sessionBtn = ref('');
-        const sessionForm = reactive({
-            trainingid: '', sessionid: '', title: '', date: '', altdate: '',
+    const tableData = ref([]);
+    const addSessionModal = ref(false);
+    const sessionBtn = ref("");
+    const sessionForm = reactive({
+      trainingid: "",
+      sessionid: "",
+      title: "",
+      date: "",
+      altdate: "",
+    });
+    const permission = ref(
+      typeof getPermission === "function"
+        ? getPermission(
+            typeof per !== "undefined" ? per : null,
+            "activity",
+          ) || { permission_value: 0 }
+        : { permission_value: 0 },
+    );
+
+    let dateFlatpickr = null;
+
+    const gotoPageHandler = (data) => {
+      sessionForm.trainingid = data.trainingid;
+      sessionForm.sessionid = data.sessionid;
+      sessionForm.title = data.title;
+      loadTableData();
+    };
+    const goToTrainingList = () => {
+      bus.emit("g-event-goto-page", { page: "training", trainingid: "" });
+    };
+    const goToAttendanceList = (sessionid, title) => {
+      bus.emit("g-event-goto-page", {
+        page: "attendance",
+        trainingid: sessionForm.trainingid,
+        sessionid: sessionid,
+        title: title,
+      });
+    };
+
+    const loadTableData = () => {
+      overlay.show();
+      axios
+        .get(common.DataService + "?qid=104&e=" + sessionForm.trainingid)
+        .then((response) => {
+          tableData.value = (response.data && response.data.data) || [];
+          overlay.hide();
+        })
+        .catch((error) => {
+          overlay.hide();
+          alert.Error("ERROR", safeMessage(error));
         });
-        const permission = ref(
-            (typeof getPermission === 'function')
-                ? (getPermission(typeof per !== 'undefined' ? per : null, 'activity') || { permission_value: 0 })
-                : { permission_value: 0 }
-        );
+    };
 
-        let dateFlatpickr = null;
+    const resetForm = () => {
+      try {
+        if (dateFlatpickr && dateFlatpickr.clear) dateFlatpickr.clear();
+      } catch (e) {}
+      sessionBtn.value = "";
+      sessionForm.title = "";
+      sessionForm.sessionid = "";
+      sessionForm.date = "";
+      overlay.hide();
+    };
+    const refreshData = () => {
+      loadTableData();
+    };
 
-        const gotoPageHandler = (data) => {
-            sessionForm.trainingid = data.trainingid;
-            sessionForm.sessionid = data.sessionid;
-            sessionForm.title = data.title;
-            loadTableData();
-        }
-        const goToTrainingList = () => {
-            bus.emit('g-event-goto-page', { page: 'training', trainingid: '' });
-        }
-        const goToAttendanceList = (sessionid, title) => {
-            bus.emit('g-event-goto-page', {
-                page: 'attendance',
-                trainingid: sessionForm.trainingid,
-                sessionid: sessionid,
-                title: title,
+    const showSessionModal = () => {
+      resetForm();
+      addSessionModal.value = true;
+      sessionBtn.value = "Create";
+      $("#addSession").modal("show");
+    };
+    const hideaddSessionModal = () => {
+      resetForm();
+      addSessionModal.value = false;
+      sessionBtn.value = "";
+      $("#addSession").modal("hide");
+    };
+    const onSubmitCreateSession = (action) => {
+      var u = common.DataService;
+      if (action == "Create") {
+        if (sessionForm.date != "") {
+          overlay.show();
+          axios
+            .post(u + "?qid=105", JSON.stringify(sessionForm))
+            .then((response) => {
+              if (response.data.result_code == "201") {
+                resetForm();
+                addSessionModal.value = false;
+                $("#addSession").modal("hide");
+                loadTableData();
+                alert.Success("Success", response.data.message);
+                overlay.hide();
+              } else {
+                overlay.hide();
+                alert.Error("Error", response.data.message);
+              }
+            })
+            .catch((error) => {
+              alert.Error("ERROR", safeMessage(error));
+              overlay.hide();
             });
+        } else {
+          alert.Error(
+            "Required Fields",
+            "All fields are required to be filled",
+          );
         }
-
-        const loadTableData = () => {
-            overlay.show();
-            axios.get(common.DataService + '?qid=104&e=' + sessionForm.trainingid)
-                .then(response => {
-                    tableData.value = (response.data && response.data.data) || [];
+      } else {
+        updateSession();
+      }
+    };
+    const editSession = (session_id, session_pos) => {
+      overlay.show();
+      addSessionModal.value = true;
+      sessionBtn.value = "Update";
+      sessionForm.sessionid = session_id;
+      var row = tableData.value[session_pos] || {};
+      sessionForm.title = row.title;
+      sessionForm.date = row.session_date;
+      overlay.hide();
+    };
+    const updateSession = () => {
+      var u = common.DataService;
+      $.confirm({
+        title: "WARNING!",
+        content: "Are you sure you want to Update the Activity Session?",
+        buttons: {
+          delete: {
+            text: "Update",
+            btnClass: "btn btn-danger mr-1 text-capitalize",
+            action: () => {
+              axios
+                .post(u + "?qid=106", JSON.stringify(sessionForm))
+                .then((response) => {
+                  if (response.data.result_code == "201") {
+                    resetForm();
+                    addSessionModal.value = false;
+                    $("#addSession").modal("hide");
+                    loadTableData();
+                    alert.Success("Success", response.data.message);
                     overlay.hide();
+                  } else {
+                    overlay.hide();
+                    alert.Error("Error", response.data.message);
+                  }
                 })
-                .catch(error => {
-                    overlay.hide();
-                    alert.Error('ERROR', safeMessage(error));
+                .catch((error) => {
+                  alert.Error("ERROR", safeMessage(error));
+                  overlay.hide();
                 });
-        }
-
-        const resetForm = () => {
-            try { if (dateFlatpickr && dateFlatpickr.clear) dateFlatpickr.clear(); } catch (e) {}
-            sessionBtn.value = '';
-            sessionForm.title = '';
-            sessionForm.sessionid = '';
-            sessionForm.date = '';
-            overlay.hide();
-        }
-        const refreshData = () => { loadTableData(); };
-
-        const showSessionModal = () => {
-            resetForm();
-            addSessionModal.value = true;
-            sessionBtn.value = 'Create';
-            $('#addSession').modal('show');
-        }
-        const hideaddSessionModal = () => {
+            },
+          },
+          cancel: () => {
             resetForm();
             addSessionModal.value = false;
-            sessionBtn.value = '';
-            $('#addSession').modal('hide');
-        }
-        const onSubmitCreateSession = (action) => {
-            var u = common.DataService;
-            if (action == 'Create') {
-                if (sessionForm.date != '') {
-                    overlay.show();
-                    axios.post(u + '?qid=105', JSON.stringify(sessionForm))
-                        .then(response => {
-                            if (response.data.result_code == '201') {
-                                resetForm();
-                                addSessionModal.value = false;
-                                $('#addSession').modal('hide');
-                                loadTableData();
-                                alert.Success('Success', response.data.message);
-                                overlay.hide();
-                            } else {
-                                overlay.hide();
-                                alert.Error('Error', response.data.message);
-                            }
-                        })
-                        .catch(error => {
-                            alert.Error('ERROR', safeMessage(error));
-                            overlay.hide();
-                        });
-                } else {
-                    alert.Error('Required Fields', 'All fields are required to be filled');
-                }
-            } else {
-                updateSession();
-            }
-        }
-        const editSession = (session_id, session_pos) => {
-            overlay.show();
-            addSessionModal.value = true;
-            sessionBtn.value = 'Update';
-            sessionForm.sessionid = session_id;
-            var row = tableData.value[session_pos] || {};
-            sessionForm.title = row.title;
-            sessionForm.date = row.session_date;
+            $("#addSession").modal("hide");
             overlay.hide();
-        }
-        const updateSession = () => {
-            var u = common.DataService;
-            $.confirm({
-                title: 'WARNING!',
-                content: 'Are you sure you want to Update the Activity Session?',
-                buttons: {
-                    delete: {
-                        text: 'Update',
-                        btnClass: 'btn btn-danger mr-1 text-capitalize',
-                        action: () => {
-                            axios.post(u + '?qid=106', JSON.stringify(sessionForm))
-                                .then(response => {
-                                    if (response.data.result_code == '201') {
-                                        resetForm();
-                                        addSessionModal.value = false;
-                                        $('#addSession').modal('hide');
-                                        loadTableData();
-                                        alert.Success('Success', response.data.message);
-                                        overlay.hide();
-                                    } else {
-                                        overlay.hide();
-                                        alert.Error('Error', response.data.message);
-                                    }
-                                })
-                                .catch(error => {
-                                    alert.Error('ERROR', safeMessage(error));
-                                    overlay.hide();
-                                });
-                        },
-                    },
-                    cancel: () => {
-                        resetForm();
-                        addSessionModal.value = false;
-                        $('#addSession').modal('hide');
-                        overlay.hide();
-                    },
-                },
-            });
-        }
-        const deleteSession = (session_id) => {
-            var u = common.DataService;
-            $.confirm({
-                title: 'WARNING!',
-                content: 'Are you sure you want to Delete an Activity Session?',
-                buttons: {
-                    delete: {
-                        text: 'Delete',
-                        btnClass: 'btn btn-danger mr-1 text-capitalize',
-                        action: () => {
-                            axios.post(u + '?qid=107&e=' + session_id)
-                                .then(response => {
-                                    if (response.data.result_code == '200') {
-                                        resetForm();
-                                        addSessionModal.value = false;
-                                        $('#addSession').modal('hide');
-                                        loadTableData();
-                                        alert.Success('Success', response.data.message);
-                                        overlay.hide();
-                                    } else {
-                                        overlay.hide();
-                                        alert.Error('Error', response.data.message);
-                                    }
-                                })
-                                .catch(error => {
-                                    alert.Error('ERROR', safeMessage(error));
-                                    overlay.hide();
-                                });
-                        },
-                    },
-                    cancel: () => {
-                        resetForm();
-                        $('#addSession').modal('hide');
-                        overlay.hide();
-                    },
-                },
-            });
-        }
-
-        const downlodAttendance = async (session_id, title) => {
-            var sid = session_id;
-            var veriUrl = 'qid=115&sid=' + sid;
-            var dlString = 'qid=102&id=' + sid;
-            var filename = title + ' Attendance - (' + sid + ')';
-            overlay.show();
-
-            var count = await new Promise(resolve => {
-                $.ajax({
-                    url: common.DataService, type: 'POST', data: veriUrl, dataType: 'json',
-                    success: (data) => { resolve(data.total); },
+          },
+        },
+      });
+    };
+    const deleteSession = (session_id) => {
+      var u = common.DataService;
+      $.confirm({
+        title: "WARNING!",
+        content: "Are you sure you want to Delete an Activity Session?",
+        buttons: {
+          delete: {
+            text: "Delete",
+            btnClass: "btn btn-danger mr-1 text-capitalize",
+            action: () => {
+              axios
+                .post(u + "?qid=107&e=" + session_id)
+                .then((response) => {
+                  if (response.data.result_code == "200") {
+                    resetForm();
+                    addSessionModal.value = false;
+                    $("#addSession").modal("hide");
+                    loadTableData();
+                    alert.Success("Success", response.data.message);
+                    overlay.hide();
+                  } else {
+                    overlay.hide();
+                    alert.Error("Error", response.data.message);
+                  }
+                })
+                .catch((error) => {
+                  alert.Error("ERROR", safeMessage(error));
+                  overlay.hide();
                 });
-            });
-            var downloadMax = (window.common && window.common.ExportDownloadLimit) || 25000;
-            if (parseInt(count) > downloadMax) {
-                alert.Error('Download Error', 'Unable to download data because it has exceeded download limit, download limit is ' + downloadMax);
-            } else if (parseInt(count) == 0) {
-                alert.Error('Download Error', 'No data found');
-            } else {
-                alert.Info('DOWNLOADING...', 'Downloading ' + count + ' record(s)');
-                var outcome = await new Promise(resolve => {
-                    $.ajax({
-                        url: common.ExportService, type: 'POST', data: dlString,
-                        success: (data) => { resolve(data); },
-                    });
-                });
-                var exportData = JSON.parse(outcome);
-                if (window.Jhxlsx && typeof window.Jhxlsx.export === 'function') {
-                    window.Jhxlsx.export(exportData, { fileName: filename });
-                }
-            }
+            },
+          },
+          cancel: () => {
+            resetForm();
+            $("#addSession").modal("hide");
             overlay.hide();
+          },
+        },
+      });
+    };
+
+    const downlodAttendance = async (session_id, title) => {
+      var sid = session_id;
+      var veriUrl = "qid=115&sid=" + sid;
+      var dlString = "qid=102&id=" + sid;
+      var filename = title + " Attendance - (" + sid + ")";
+      overlay.show();
+
+      var count = await new Promise((resolve) => {
+        $.ajax({
+          url: common.DataService,
+          type: "POST",
+          data: veriUrl,
+          dataType: "json",
+          success: (data) => {
+            resolve(data.total);
+          },
+        });
+      });
+      var downloadMax =
+        (window.common && window.common.ExportDownloadLimit) || 25000;
+      if (parseInt(count) > downloadMax) {
+        alert.Error(
+          "Download Error",
+          "Unable to download data because it has exceeded download limit, download limit is " +
+            downloadMax,
+        );
+      } else if (parseInt(count) == 0) {
+        alert.Error("Download Error", "No data found");
+      } else {
+        alert.Info("DOWNLOADING...", "Downloading " + count + " record(s)");
+        var outcome = await new Promise((resolve) => {
+          $.ajax({
+            url: common.ExportService,
+            type: "POST",
+            data: dlString,
+            success: (data) => {
+              resolve(data);
+            },
+          });
+        });
+        var exportData = JSON.parse(outcome);
+        if (window.Jhxlsx && typeof window.Jhxlsx.export === "function") {
+          window.Jhxlsx.export(exportData, { fileName: filename });
         }
+      }
+      overlay.hide();
+    };
 
-        onMounted(() => {
-            bus.on('g-event-goto-page', gotoPageHandler);
-            loadTableData();
-            try {
-                if ($('#d').length && typeof $.fn.flatpickr === 'function') {
-                    dateFlatpickr = $('#d').flatpickr({
-                        altInput: true, altFormat: 'F j, Y', dateFormat: 'Y-m-d', minDate: 'today',
-                        onChange: (selectedDates, dateStr) => { sessionForm.date = dateStr; },
-                    });
-                }
-            } catch (e) {}
-        });
-        onBeforeUnmount(() => {
-            bus.off('g-event-goto-page', gotoPageHandler);
-            try { if (dateFlatpickr && dateFlatpickr.destroy) dateFlatpickr.destroy(); } catch (e) {}
-        });
+    onMounted(() => {
+      bus.on("g-event-goto-page", gotoPageHandler);
+      loadTableData();
+      try {
+        if ($("#d").length && typeof $.fn.flatpickr === "function") {
+          dateFlatpickr = $("#d").flatpickr({
+            altInput: true,
+            altFormat: "F j, Y",
+            dateFormat: "Y-m-d",
+            minDate: "today",
+            onChange: (selectedDates, dateStr) => {
+              sessionForm.date = dateStr;
+            },
+          });
+        }
+      } catch (e) {}
+    });
+    onBeforeUnmount(() => {
+      bus.off("g-event-goto-page", gotoPageHandler);
+      try {
+        if (dateFlatpickr && dateFlatpickr.destroy) dateFlatpickr.destroy();
+      } catch (e) {}
+    });
 
-        return {
-            tableData, addSessionModal, sessionBtn, sessionForm, permission,
-            gotoPageHandler, goToTrainingList, goToAttendanceList, loadTableData,
-            resetForm, refreshData, showSessionModal, hideaddSessionModal,
-            onSubmitCreateSession, editSession, updateSession, deleteSession,
-            downlodAttendance,
-            capitalize: fmtUtils.capitalize,
-            formatNumber: fmtUtils.formatNumber,
-        };
-    },
-    template: `
+    return {
+      tableData,
+      addSessionModal,
+      sessionBtn,
+      sessionForm,
+      permission,
+      gotoPageHandler,
+      goToTrainingList,
+      goToAttendanceList,
+      loadTableData,
+      resetForm,
+      refreshData,
+      showSessionModal,
+      hideaddSessionModal,
+      onSubmitCreateSession,
+      editSession,
+      updateSession,
+      deleteSession,
+      downlodAttendance,
+      capitalize: fmtUtils.capitalize,
+      formatNumber: fmtUtils.formatNumber,
+    };
+  },
+  template: `
         <div class="row">
             <div class="col-md-8 col-sm-12 col-12 mb-0">
                 <h2 class="content-header-title header-txt float-left mb-0">Activity Mgmt.</h2>
@@ -1012,411 +1226,553 @@ const TrainingSession = {
 /* participant_list                                                     */
 /* ------------------------------------------------------------------ */
 const ParticipantList = {
-    setup() {
-        const fmtUtils = useFormat();
+  setup() {
+    const fmtUtils = useFormat();
 
-        const tableData = ref([]);
-        const groupData = ref([]);
-        const geoData = ref([]);
-        const addBulkParticipantModal = ref(false);
-        const participantBtn = ref('');
-        const participantForm = reactive({
-            trainingid: '', group_name: '', session_id: '',
+    const tableData = ref([]);
+    const groupData = ref([]);
+    const geoData = ref([]);
+    const addBulkParticipantModal = ref(false);
+    const participantBtn = ref("");
+    const participantForm = reactive({
+      trainingid: "",
+      group_name: "",
+      session_id: "",
+    });
+    const permission = ref(
+      typeof getPermission === "function"
+        ? getPermission(
+            typeof per !== "undefined" ? per : null,
+            "activity",
+          ) || { permission_value: 0 }
+        : { permission_value: 0 },
+    );
+    const checkToggle = ref(false);
+    const filterState = ref(false);
+    const filters = ref(false);
+    const url = ref(window.common && window.common.TableService);
+    const tableOptions = reactive({
+      total: 1,
+      pageLength: 1,
+      perPage: 10,
+      currentPage: 1,
+      orderDir: "asc",
+      orderField: 1,
+      limitStart: 0,
+      isNext: false,
+      isPrev: false,
+      aLength: [10, 20, 50, 100, 200, 300],
+      filterParam: { name: "", loginid: "", geo_level: "", geo_level_id: "" },
+    });
+
+    const gotoPageHandler = (data) => {
+      participantForm.trainingid = data.trainingid;
+      loadTableData();
+    };
+    const goToTrainingList = () => {
+      bus.emit("g-event-goto-page", { page: "training", trainingid: "" });
+    };
+
+    const loadTableData = () => {
+      overlay.show();
+      var u = common.TableService;
+      axios
+        .get(
+          u +
+            "?qid=102&draw=" +
+            tableOptions.currentPage +
+            "&order_column=" +
+            tableOptions.orderField +
+            "&length=" +
+            tableOptions.perPage +
+            "&start=" +
+            tableOptions.limitStart +
+            "&order_dir=" +
+            tableOptions.orderDir +
+            "&na=" +
+            tableOptions.filterParam.name +
+            "&id=" +
+            participantForm.trainingid +
+            "&lo=" +
+            tableOptions.filterParam.loginid +
+            "&gl=" +
+            tableOptions.filterParam.geo_level +
+            "&glid=" +
+            tableOptions.filterParam.geo_level_id,
+        )
+        .then((response) => {
+          var d = response && response.data;
+          tableData.value = Array.isArray(d && d.data) ? d.data : [];
+          tableOptions.total = (d && d.recordsTotal) || 0;
+          if (tableOptions.currentPage == 1) paginationDefault();
+          overlay.hide();
+        })
+        .catch((error) => {
+          overlay.hide();
+          alert.Error("ERROR", safeMessage(error));
         });
-        const permission = ref(
-            (typeof getPermission === 'function')
-                ? (getPermission(typeof per !== 'undefined' ? per : null, 'activity') || { permission_value: 0 })
-                : { permission_value: 0 }
-        );
-        const checkToggle = ref(false);
-        const filterState = ref(false);
-        const filters = ref(false);
-        const url = ref(window.common && window.common.TableService);
-        const tableOptions = reactive({
-            total: 1, pageLength: 1, perPage: 10, currentPage: 1,
-            orderDir: 'asc', orderField: 1, limitStart: 0,
-            isNext: false, isPrev: false,
-            aLength: [10, 20, 50, 100, 200, 300],
-            filterParam: { name: '', loginid: '', geo_level: '', geo_level_id: '' },
+    };
+
+    const selectAll = () => {
+      for (var i = 0; i < tableData.value.length; i++)
+        tableData.value[i].pick = true;
+    };
+    const uncheckAll = () => {
+      for (var i = 0; i < tableData.value.length; i++)
+        tableData.value[i].pick = false;
+    };
+    const selectToggle = () => {
+      if (checkToggle.value === false) {
+        selectAll();
+        checkToggle.value = true;
+      } else {
+        uncheckAll();
+        checkToggle.value = false;
+      }
+    };
+    const checkedBg = (pickOne) => {
+      return pickOne != "" ? "bg-select" : "";
+    };
+    const toggleFilter = () => {
+      if (filterState.value === false) filters.value = false;
+      return (filterState.value = !filterState.value);
+    };
+    const selectedItems = () => {
+      return tableData.value.filter((r) => r.pick);
+    };
+    const selectedID = () => {
+      return tableData.value.filter((r) => r.pick).map((r) => r.participant_id);
+    };
+    const selectedUserID = () => {
+      return tableData.value.filter((r) => r.pick).map((r) => r.userid);
+    };
+
+    const paginationDefault = () => {
+      tableOptions.pageLength = Math.ceil(
+        tableOptions.total / tableOptions.perPage,
+      );
+      tableOptions.limitStart = Math.ceil(
+        (tableOptions.currentPage - 1) * tableOptions.perPage,
+      );
+      tableOptions.isNext = tableOptions.currentPage < tableOptions.pageLength;
+      tableOptions.isPrev = tableOptions.currentPage > 1;
+    };
+    const nextPage = () => {
+      tableOptions.currentPage += 1;
+      paginationDefault();
+      loadTableData();
+    };
+    const prevPage = () => {
+      tableOptions.currentPage -= 1;
+      paginationDefault();
+      loadTableData();
+    };
+    const currentPage = () => {
+      paginationDefault();
+      if (tableOptions.currentPage < 1)
+        alert.Error("ERROR", "The Page requested doesn't exist");
+      else if (tableOptions.currentPage > tableOptions.pageLength)
+        alert.Error("ERROR", "The Page requested doesn't exist");
+      else loadTableData();
+    };
+    const changePerPage = (val) => {
+      tableOptions.perPage = val;
+      paginationDefault();
+      loadTableData();
+    };
+    const sort = (col) => {
+      if (tableOptions.orderField === col)
+        tableOptions.orderDir =
+          tableOptions.orderDir === "asc" ? "desc" : "asc";
+      else tableOptions.orderField = col;
+      paginationDefault();
+      loadTableData();
+    };
+    const applyFilter = () => {
+      var checkFill = 0;
+      checkFill += tableOptions.filterParam.loginid != "" ? 1 : 0;
+      checkFill += tableOptions.filterParam.name != "" ? 1 : 0;
+      checkFill += tableOptions.filterParam.geo_level != "" ? 1 : 0;
+      checkFill += tableOptions.filterParam.geo_level_id != "" ? 1 : 0;
+      if (checkFill > 0) {
+        toggleFilter();
+        filters.value = true;
+        paginationDefault();
+        loadTableData();
+      } else {
+        alert.Error("ERROR", "Invalid required data");
+      }
+    };
+    const removeSingleFilter = (column_name) => {
+      tableOptions.filterParam[column_name] = "";
+      if (column_name == "geo_string") {
+        tableOptions.filterParam.geo_level = "";
+        tableOptions.filterParam.geo_level_id = "";
+      }
+      var g = 0;
+      for (var k in tableOptions.filterParam) {
+        if (tableOptions.filterParam[k] != "") g++;
+      }
+      if (g == 0) filters.value = false;
+      paginationDefault();
+      loadTableData();
+    };
+    const clearAllFilter = () => {
+      filters.value = false;
+      tableOptions.filterParam.loginid = "";
+      tableOptions.filterParam.name = "";
+      paginationDefault();
+      loadTableData();
+    };
+
+    const checkIfEmpty = (data) => {
+      return data === null || data === "" ? "Nil" : data;
+    };
+
+    const showParticipantModal = () => {
+      resetForm();
+      addBulkParticipantModal.value = true;
+      participantBtn.value = "Create";
+      $("#addParticipant").modal("show");
+    };
+    const getGroupData = () => {
+      overlay.show();
+      axios
+        .get(common.DataService + "?qid=010")
+        .then((response) => {
+          groupData.value = (response.data && response.data.data) || [];
+          overlay.hide();
+        })
+        .catch((error) => {
+          overlay.hide();
+          alert.Error("ERROR", safeMessage(error));
         });
+    };
+    const hideParticipantModal = () => {
+      resetForm();
+      addBulkParticipantModal.value = false;
+      participantBtn.value = "";
+      participantForm.group_name = "";
+      $("#addParticipant").modal("hide");
+    };
+    const resetForm = () => {
+      participantBtn.value = "";
+      participantForm.group_name = "";
+      participantForm.session_id = "";
+      overlay.hide();
+    };
+    const refreshData = () => {
+      loadTableData();
+    };
 
-        const gotoPageHandler = (data) => {
-            participantForm.trainingid = data.trainingid;
-            loadTableData();
-        }
-        const goToTrainingList = () => {
-            bus.emit('g-event-goto-page', { page: 'training', trainingid: '' });
-        }
-
-        const loadTableData = () => {
-            overlay.show();
-            var u = common.TableService;
-            axios.get(
-                u +
-                '?qid=102&draw=' + tableOptions.currentPage +
-                '&order_column=' + tableOptions.orderField +
-                '&length=' + tableOptions.perPage +
-                '&start=' + tableOptions.limitStart +
-                '&order_dir=' + tableOptions.orderDir +
-                '&na=' + tableOptions.filterParam.name +
-                '&id=' + participantForm.trainingid +
-                '&lo=' + tableOptions.filterParam.loginid +
-                '&gl=' + tableOptions.filterParam.geo_level +
-                '&glid=' + tableOptions.filterParam.geo_level_id
-            )
-                .then(response => {
-                    var d = response && response.data;
-                    tableData.value = Array.isArray(d && d.data) ? d.data : [];
-                    tableOptions.total = (d && d.recordsTotal) || 0;
-                    if (tableOptions.currentPage == 1) paginationDefault();
+    const removeParticipant = (action, login_id) => {
+      var u = common.DataService;
+      var participantData;
+      if (action != "all") {
+        participantData = {
+          trainingid: participantForm.trainingid,
+          selectedid: [action],
+        };
+        $.confirm({
+          title: "WARNING!",
+          content:
+            "Are you sure you want to Remove <b>" +
+            login_id +
+            "</b> from the Activity?",
+          buttons: {
+            delete: {
+              text: "Remove",
+              btnClass: "btn btn-danger mr-1 text-capitalize",
+              action: () => {
+                axios
+                  .post(u + "?qid=109", JSON.stringify(participantData))
+                  .then((response) => {
+                    if (response.data.result_code == "200") {
+                      loadTableData();
+                      bus.emit("g-event-update", {});
+                      alert.Success("Success", response.data.message);
+                      overlay.hide();
+                    } else {
+                      overlay.hide();
+                      alert.Error("Error", response.data.message);
+                    }
+                  })
+                  .catch((error) => {
+                    alert.Error("ERROR", safeMessage(error));
                     overlay.hide();
+                  });
+              },
+            },
+            cancel: () => {
+              overlay.hide();
+            },
+          },
+        });
+      } else {
+        var ids = selectedID();
+        participantData = {
+          trainingid: participantForm.trainingid,
+          selectedid: ids,
+        };
+        if (ids.length > 0) {
+          $.confirm({
+            title: "WARNING!",
+            content:
+              "Are you sure you want to Remove <b>" +
+              ids.length +
+              "</b> participants from the Activity?",
+            buttons: {
+              delete: {
+                text: "Remove",
+                btnClass: "btn btn-danger mr-1 text-capitalize",
+                action: () => {
+                  axios
+                    .post(u + "?qid=109", JSON.stringify(participantData))
+                    .then((response) => {
+                      if (response.data.result_code == "200") {
+                        bus.emit("g-event-update", {});
+                        loadTableData();
+                        alert.Success("Success", response.data.message);
+                        overlay.hide();
+                      } else {
+                        overlay.hide();
+                        alert.Error("Error", response.data.message);
+                      }
+                    })
+                    .catch((error) => {
+                      alert.Error("ERROR", safeMessage(error));
+                      overlay.hide();
+                    });
+                },
+              },
+              cancel: () => {
+                overlay.hide();
+              },
+            },
+          });
+        } else {
+          alert.Error("Error", "No Participant Selected");
+          overlay.hide();
+        }
+      }
+    };
+    const addParticipant = () => {
+      var u = common.DataService;
+      $.confirm({
+        title: "WARNING!",
+        content:
+          "Are you sure you want to Add all the user in <b>" +
+          participantForm.group_name +
+          "</b> to the Activity?",
+        buttons: {
+          delete: {
+            text: "Add Group",
+            btnClass: "btn btn-danger mr-1 text-capitalize",
+            action: () => {
+              axios
+                .post(u + "?qid=110", JSON.stringify(participantForm))
+                .then((response) => {
+                  if (response.data.result_code == "200") {
+                    resetForm();
+                    addBulkParticipantModal.value = false;
+                    $("#addParticipant").modal("hide");
+                    bus.emit("g-event-update", {});
+                    loadTableData();
+                    alert.Success("Success", response.data.message);
+                    overlay.hide();
+                  } else {
+                    overlay.hide();
+                    alert.Error("Error", response.data.message);
+                  }
                 })
-                .catch(error => {
-                    overlay.hide();
-                    alert.Error('ERROR', safeMessage(error));
+                .catch((error) => {
+                  alert.Error("ERROR", safeMessage(error));
+                  overlay.hide();
                 });
-        }
-
-        const selectAll = () => { for (var i = 0; i < tableData.value.length; i++) tableData.value[i].pick = true; };
-        const uncheckAll = () => { for (var i = 0; i < tableData.value.length; i++) tableData.value[i].pick = false; };
-        const selectToggle = () => {
-            if (checkToggle.value === false) { selectAll(); checkToggle.value = true; }
-            else                              { uncheckAll(); checkToggle.value = false; }
-        }
-        const checkedBg = (pickOne) => { return pickOne != '' ? 'bg-select' : ''; };
-        const toggleFilter = () => {
-            if (filterState.value === false) filters.value = false;
-            return (filterState.value = !filterState.value);
-        }
-        const selectedItems = () => { return tableData.value.filter(r => r.pick); };
-        const selectedID = () => { return tableData.value.filter(r => r.pick).map(r => r.participant_id); };
-        const selectedUserID = () => { return tableData.value.filter(r => r.pick).map(r => r.userid); };
-
-        const paginationDefault = () => {
-            tableOptions.pageLength = Math.ceil(tableOptions.total / tableOptions.perPage);
-            tableOptions.limitStart = Math.ceil((tableOptions.currentPage - 1) * tableOptions.perPage);
-            tableOptions.isNext = tableOptions.currentPage < tableOptions.pageLength;
-            tableOptions.isPrev = tableOptions.currentPage > 1;
-        }
-        const nextPage = () => { tableOptions.currentPage += 1; paginationDefault(); loadTableData(); };
-        const prevPage = () => { tableOptions.currentPage -= 1; paginationDefault(); loadTableData(); };
-        const currentPage = () => {
-            paginationDefault();
-            if (tableOptions.currentPage < 1)                            alert.Error('ERROR', "The Page requested doesn't exist");
-            else if (tableOptions.currentPage > tableOptions.pageLength) alert.Error('ERROR', "The Page requested doesn't exist");
-            else                                                         loadTableData();
-        }
-        const changePerPage = (val) => { tableOptions.perPage = val; paginationDefault(); loadTableData(); };
-        const sort = (col) => {
-            if (tableOptions.orderField === col) tableOptions.orderDir = tableOptions.orderDir === 'asc' ? 'desc' : 'asc';
-            else                                  tableOptions.orderField = col;
-            paginationDefault();
-            loadTableData();
-        }
-        const applyFilter = () => {
-            var checkFill = 0;
-            checkFill += tableOptions.filterParam.loginid    != '' ? 1 : 0;
-            checkFill += tableOptions.filterParam.name       != '' ? 1 : 0;
-            checkFill += tableOptions.filterParam.geo_level  != '' ? 1 : 0;
-            checkFill += tableOptions.filterParam.geo_level_id != '' ? 1 : 0;
-            if (checkFill > 0) {
-                toggleFilter();
-                filters.value = true;
-                paginationDefault();
-                loadTableData();
-            } else {
-                alert.Error('ERROR', 'Invalid required data');
-            }
-        }
-        const removeSingleFilter = (column_name) => {
-            tableOptions.filterParam[column_name] = '';
-            if (column_name == 'geo_string') {
-                tableOptions.filterParam.geo_level = '';
-                tableOptions.filterParam.geo_level_id = '';
-            }
-            var g = 0;
-            for (var k in tableOptions.filterParam) {
-                if (tableOptions.filterParam[k] != '') g++;
-            }
-            if (g == 0) filters.value = false;
-            paginationDefault();
-            loadTableData();
-        }
-        const clearAllFilter = () => {
-            filters.value = false;
-            tableOptions.filterParam.loginid = '';
-            tableOptions.filterParam.name = '';
-            paginationDefault();
-            loadTableData();
-        }
-
-        const checkIfEmpty = (data) => { return data === null || data === '' ? 'Nil' : data; };
-
-        const showParticipantModal = () => {
-            resetForm();
-            addBulkParticipantModal.value = true;
-            participantBtn.value = 'Create';
-            $('#addParticipant').modal('show');
-        }
-        const getGroupData = () => {
-            overlay.show();
-            axios.get(common.DataService + '?qid=010')
-                .then(response => {
-                    groupData.value = (response.data && response.data.data) || [];
-                    overlay.hide();
-                })
-                .catch(error => {
-                    overlay.hide();
-                    alert.Error('ERROR', safeMessage(error));
-                });
-        }
-        const hideParticipantModal = () => {
+            },
+          },
+          cancel: () => {
             resetForm();
             addBulkParticipantModal.value = false;
-            participantBtn.value = '';
-            participantForm.group_name = '';
-            $('#addParticipant').modal('hide');
-        }
-        const resetForm = () => {
-            participantBtn.value = '';
-            participantForm.group_name = '';
-            participantForm.session_id = '';
+            $("#addParticipant").modal("hide");
             overlay.hide();
-        }
-        const refreshData = () => { loadTableData(); };
+          },
+        },
+      });
+    };
 
-        const removeParticipant = (action, login_id) => {
-            var u = common.DataService;
-            var participantData;
-            if (action != 'all') {
-                participantData = {
-                    trainingid: participantForm.trainingid,
-                    selectedid: [action],
-                };
-                $.confirm({
-                    title: 'WARNING!',
-                    content: 'Are you sure you want to Remove <b>' + login_id + '</b> from the Activity?',
-                    buttons: {
-                        delete: {
-                            text: 'Remove',
-                            btnClass: 'btn btn-danger mr-1 text-capitalize',
-                            action: () => {
-                                axios.post(u + '?qid=109', JSON.stringify(participantData))
-                                    .then(response => {
-                                        if (response.data.result_code == '200') {
-                                            loadTableData();
-                                            bus.emit('g-event-update', {});
-                                            alert.Success('Success', response.data.message);
-                                            overlay.hide();
-                                        } else {
-                                            overlay.hide();
-                                            alert.Error('Error', response.data.message);
-                                        }
-                                    })
-                                    .catch(error => {
-                                        alert.Error('ERROR', safeMessage(error));
-                                        overlay.hide();
-                                    });
-                            },
-                        },
-                        cancel: () => { overlay.hide(); },
-                    },
-                });
-            } else {
-                var ids = selectedID();
-                participantData = { trainingid: participantForm.trainingid, selectedid: ids };
-                if (ids.length > 0) {
-                    $.confirm({
-                        title: 'WARNING!',
-                        content: 'Are you sure you want to Remove <b>' + ids.length + '</b> participants from the Activity?',
-                        buttons: {
-                            delete: {
-                                text: 'Remove',
-                                btnClass: 'btn btn-danger mr-1 text-capitalize',
-                                action: () => {
-                                    axios.post(u + '?qid=109', JSON.stringify(participantData))
-                                        .then(response => {
-                                            if (response.data.result_code == '200') {
-                                                bus.emit('g-event-update', {});
-                                                loadTableData();
-                                                alert.Success('Success', response.data.message);
-                                                overlay.hide();
-                                            } else {
-                                                overlay.hide();
-                                                alert.Error('Error', response.data.message);
-                                            }
-                                        })
-                                        .catch(error => {
-                                            alert.Error('ERROR', safeMessage(error));
-                                            overlay.hide();
-                                        });
-                                },
-                            },
-                            cancel: () => { overlay.hide(); },
-                        },
-                    });
-                } else {
-                    alert.Error('Error', 'No Participant Selected');
-                    overlay.hide();
-                }
-            }
-        }
-        const addParticipant = () => {
-            var u = common.DataService;
-            $.confirm({
-                title: 'WARNING!',
-                content: 'Are you sure you want to Add all the user in <b>' + participantForm.group_name + '</b> to the Activity?',
-                buttons: {
-                    delete: {
-                        text: 'Add Group',
-                        btnClass: 'btn btn-danger mr-1 text-capitalize',
-                        action: () => {
-                            axios.post(u + '?qid=110', JSON.stringify(participantForm))
-                                .then(response => {
-                                    if (response.data.result_code == '200') {
-                                        resetForm();
-                                        addBulkParticipantModal.value = false;
-                                        $('#addParticipant').modal('hide');
-                                        bus.emit('g-event-update', {});
-                                        loadTableData();
-                                        alert.Success('Success', response.data.message);
-                                        overlay.hide();
-                                    } else {
-                                        overlay.hide();
-                                        alert.Error('Error', response.data.message);
-                                    }
-                                })
-                                .catch(error => {
-                                    alert.Error('ERROR', safeMessage(error));
-                                    overlay.hide();
-                                });
-                        },
-                    },
-                    cancel: () => {
-                        resetForm();
-                        addBulkParticipantModal.value = false;
-                        $('#addParticipant').modal('hide');
-                        overlay.hide();
-                    },
-                },
-            });
-        }
+    const exportParticipant = async () => {
+      var t_id = participantForm.trainingid;
+      var veriUrl = "qid=114&tid=" + t_id;
+      var dlString = "qid=101&id=" + t_id;
+      var filename =
+        "Participant List (Activity ID - " +
+        String(t_id).padStart(3, "0") +
+        ")";
+      overlay.show();
 
-        const exportParticipant = async () => {
-            var t_id = participantForm.trainingid;
-            var veriUrl = 'qid=114&tid=' + t_id;
-            var dlString = 'qid=101&id=' + t_id;
-            var filename = 'Participant List (Activity ID - ' + String(t_id).padStart(3, '0') + ')';
-            overlay.show();
-
-            var count = await new Promise(resolve => {
-                $.ajax({
-                    url: common.DataService, type: 'POST', data: veriUrl, dataType: 'json',
-                    success: (data) => { resolve(data.total); },
-                });
-            });
-            var downloadMax = (window.common && window.common.ExportDownloadLimit) || 25000;
-            if (parseInt(count) > downloadMax) {
-                alert.Error('Download Error', 'Unable to download data because it has exceeded download limit, download limit is ' + downloadMax);
-            } else if (parseInt(count) == 0) {
-                alert.Error('Download Error', 'No data found');
-            } else {
-                alert.Info('DOWNLOADING...', 'Downloading ' + count + ' record(s)');
-                var outcome = await new Promise(resolve => {
-                    $.ajax({
-                        url: common.ExportService, type: 'POST', data: dlString,
-                        success: (data) => { resolve(data); },
-                    });
-                });
-                var exportData = JSON.parse(outcome);
-                if (window.Jhxlsx && typeof window.Jhxlsx.export === 'function') {
-                    window.Jhxlsx.export(exportData, { fileName: filename });
-                }
-            }
-            overlay.hide();
-        }
-
-        const downloadBadge = (userid) => {
-            var u = common.BadgeService;
-            overlay.show();
-            window.open(u + '?qid=002&e=' + userid, '_parent');
-            overlay.hide();
-        }
-        const downloadBadges = () => {
-            var u = common.BadgeService;
-            overlay.show();
-            if (parseInt(selectedUserID().length) > 0) {
-                window.open(u + '?qid=003&e=' + selectedUserID(), '_parent');
-            } else {
-                alert.Error('Badge Download Failed', 'No user selected');
-            }
-            overlay.hide();
-        }
-
-        const getGeoLocation = () => {
-            overlay.show();
-            axios.get(common.DataService + '?qid=gen009')
-                .then(response => {
-                    geoData.value = (response.data && response.data.data) || [];
-                    overlay.hide();
-                })
-                .catch(error => {
-                    overlay.hide();
-                    alert.Error('ERROR', safeMessage(error));
-                });
-        }
-        const setLocation = (select_index) => {
-            var i = select_index ? select_index : 0;
-            var row = geoData.value[i];
-            if (!row) return;
-            tableOptions.filterParam.geo_level = row.geo_level;
-            tableOptions.filterParam.geo_level_id = row.geo_level_id;
-            tableOptions.filterParam.geo_string = row.geo_string;
-        }
-
-        onMounted(() => {
-            bus.on('g-event-goto-page', gotoPageHandler);
-            getGeoLocation();
-            getGroupData();
-
-            // jQuery select2 init for the filter geo dropdown.
-            try {
-                var select = $('.select2');
-                select.each(function () {
-                    var $this = $(this);
-                    $this.wrap('<div class="position-relative"></div>');
-                    $this.select2({
-                        dropdownAutoWidth: true,
-                        width: '100%',
-                        dropdownParent: $this.parent(),
-                    }).on('change', function () { setLocation(this.value); });
-                });
-                $('.select2-selection__arrow').html('<i class="feather icon-chevron-down"></i>');
-            } catch (e) {}
+      var count = await new Promise((resolve) => {
+        $.ajax({
+          url: common.DataService,
+          type: "POST",
+          data: veriUrl,
+          dataType: "json",
+          success: (data) => {
+            resolve(data.total);
+          },
         });
-        onBeforeUnmount(() => {
-            bus.off('g-event-goto-page', gotoPageHandler);
+      });
+      var downloadMax =
+        (window.common && window.common.ExportDownloadLimit) || 25000;
+      if (parseInt(count) > downloadMax) {
+        alert.Error(
+          "Download Error",
+          "Unable to download data because it has exceeded download limit, download limit is " +
+            downloadMax,
+        );
+      } else if (parseInt(count) == 0) {
+        alert.Error("Download Error", "No data found");
+      } else {
+        alert.Info("DOWNLOADING...", "Downloading " + count + " record(s)");
+        var outcome = await new Promise((resolve) => {
+          $.ajax({
+            url: common.ExportService,
+            type: "POST",
+            data: dlString,
+            success: (data) => {
+              resolve(data);
+            },
+          });
         });
+        var exportData = JSON.parse(outcome);
+        if (window.Jhxlsx && typeof window.Jhxlsx.export === "function") {
+          window.Jhxlsx.export(exportData, { fileName: filename });
+        }
+      }
+      overlay.hide();
+    };
 
-        return {
-            tableData, groupData, geoData, addBulkParticipantModal, participantBtn,
-            participantForm, permission, checkToggle, filterState, filters,
-            url, tableOptions,
-            gotoPageHandler, goToTrainingList, loadTableData,
-            selectAll, uncheckAll, selectToggle, checkedBg, toggleFilter,
-            selectedItems, selectedID, selectedUserID,
-            nextPage, prevPage, currentPage, paginationDefault, changePerPage,
-            sort, applyFilter, removeSingleFilter, clearAllFilter,
-            checkIfEmpty, showParticipantModal, getGroupData, hideParticipantModal,
-            resetForm, refreshData,
-            removeParticipant, addParticipant, exportParticipant,
-            downloadBadge, downloadBadges, getGeoLocation, setLocation,
-            capitalize: fmtUtils.capitalize,
-            formatNumber: fmtUtils.formatNumber,
-            displayDate: fmtUtils.displayDate,
-        };
-    },
-    template: `
+    const downloadBadge = (userid) => {
+      var u = common.BadgeService;
+      overlay.show();
+      window.open(u + "?qid=002&e=" + userid, "_parent");
+      overlay.hide();
+    };
+    const downloadBadges = () => {
+      var u = common.BadgeService;
+      overlay.show();
+      if (parseInt(selectedUserID().length) > 0) {
+        window.open(u + "?qid=003&e=" + selectedUserID(), "_parent");
+      } else {
+        alert.Error("Badge Download Failed", "No user selected");
+      }
+      overlay.hide();
+    };
+
+    const getGeoLocation = () => {
+      overlay.show();
+      axios
+        .get(common.DataService + "?qid=gen009")
+        .then((response) => {
+          geoData.value = (response.data && response.data.data) || [];
+          overlay.hide();
+        })
+        .catch((error) => {
+          overlay.hide();
+          alert.Error("ERROR", safeMessage(error));
+        });
+    };
+    const setLocation = (select_index) => {
+      var i = select_index ? select_index : 0;
+      var row = geoData.value[i];
+      if (!row) return;
+      tableOptions.filterParam.geo_level = row.geo_level;
+      tableOptions.filterParam.geo_level_id = row.geo_level_id;
+      tableOptions.filterParam.geo_string = row.geo_string;
+    };
+
+    onMounted(() => {
+      bus.on("g-event-goto-page", gotoPageHandler);
+      getGeoLocation();
+      getGroupData();
+
+      // jQuery select2 init for the filter geo dropdown.
+      try {
+        var select = $(".select2");
+        select.each(function () {
+          var $this = $(this);
+          $this.wrap('<div class="position-relative"></div>');
+          $this
+            .select2({
+              dropdownAutoWidth: true,
+              width: "100%",
+              dropdownParent: $this.parent(),
+            })
+            .on("change", function () {
+              setLocation(this.value);
+            });
+        });
+        $(".select2-selection__arrow").html(
+          '<i class="feather icon-chevron-down"></i>',
+        );
+      } catch (e) {}
+    });
+    onBeforeUnmount(() => {
+      bus.off("g-event-goto-page", gotoPageHandler);
+    });
+
+    return {
+      tableData,
+      groupData,
+      geoData,
+      addBulkParticipantModal,
+      participantBtn,
+      participantForm,
+      permission,
+      checkToggle,
+      filterState,
+      filters,
+      url,
+      tableOptions,
+      gotoPageHandler,
+      goToTrainingList,
+      loadTableData,
+      selectAll,
+      uncheckAll,
+      selectToggle,
+      checkedBg,
+      toggleFilter,
+      selectedItems,
+      selectedID,
+      selectedUserID,
+      nextPage,
+      prevPage,
+      currentPage,
+      paginationDefault,
+      changePerPage,
+      sort,
+      applyFilter,
+      removeSingleFilter,
+      clearAllFilter,
+      checkIfEmpty,
+      showParticipantModal,
+      getGroupData,
+      hideParticipantModal,
+      resetForm,
+      refreshData,
+      removeParticipant,
+      addParticipant,
+      exportParticipant,
+      downloadBadge,
+      downloadBadges,
+      getGeoLocation,
+      setLocation,
+      capitalize: fmtUtils.capitalize,
+      formatNumber: fmtUtils.formatNumber,
+      displayDate: fmtUtils.displayDate,
+    };
+  },
+  template: `
         <div class="row">
             <div class="col-md-8 col-sm-12 col-12 mb-0">
                 <h2 class="content-header-title header-txt float-left mb-0">Activity Mgmt.</h2>
@@ -1604,296 +1960,410 @@ const ParticipantList = {
 /* attendance_list                                                      */
 /* ------------------------------------------------------------------ */
 const AttendanceList = {
-    setup() {
-        const fmtUtils = useFormat();
+  setup() {
+    const fmtUtils = useFormat();
 
-        const tableData = ref([]);
-        const geoData = ref([]);
-        const sessionid = ref('');
-        const trainingid = ref('');
-        const title = ref('');
-        const permission = ref(
-            (typeof getPermission === 'function')
-                ? (getPermission(typeof per !== 'undefined' ? per : null, 'activity') || { permission_value: 0 })
-                : { permission_value: 0 }
-        );
-        const searchTxt = ref('');
-        const checkToggle = ref(false);
-        const filterState = ref(false);
-        const filters = ref(false);
-        const url = ref(window.common && window.common.TableService);
-        const tableOptions = reactive({
-            total: 1, pageLength: 1, perPage: 10, currentPage: 1,
-            orderDir: 'desc', orderField: 0, limitStart: 0,
-            isNext: false, isPrev: false,
-            aLength: [10, 20, 50, 100, 200, 300],
-            filterParam: { geo_level: '', geo_level_id: '' },
+    const tableData = ref([]);
+    const geoData = ref([]);
+    const sessionid = ref("");
+    const trainingid = ref("");
+    const title = ref("");
+    const permission = ref(
+      typeof getPermission === "function"
+        ? getPermission(
+            typeof per !== "undefined" ? per : null,
+            "activity",
+          ) || { permission_value: 0 }
+        : { permission_value: 0 },
+    );
+    const searchTxt = ref("");
+    const checkToggle = ref(false);
+    const filterState = ref(false);
+    const filters = ref(false);
+    const url = ref(window.common && window.common.TableService);
+    const tableOptions = reactive({
+      total: 1,
+      pageLength: 1,
+      perPage: 10,
+      currentPage: 1,
+      orderDir: "desc",
+      orderField: 0,
+      limitStart: 0,
+      isNext: false,
+      isPrev: false,
+      aLength: [10, 20, 50, 100, 200, 300],
+      filterParam: { geo_level: "", geo_level_id: "" },
+    });
+
+    const gotoPageHandler = (data) => {
+      trainingid.value = data.trainingid;
+      sessionid.value = data.sessionid;
+      title.value = data.title;
+      loadTableData();
+    };
+    const goToTrainingList = () => {
+      bus.emit("g-event-goto-page", {
+        page: "training",
+        trainingid: trainingid.value,
+      });
+    };
+    const goToSessionLists = (tid) => {
+      bus.emit("g-event-goto-page", {
+        trainingid: tid,
+        page: "session",
+        sessionid: "",
+      });
+    };
+
+    const filterEarliestInLatestOut = (data) => {
+      var result = {};
+      data.forEach((entry) => {
+        var key = entry.userid;
+        if (!result[key]) result[key] = {};
+        var time = new Date(entry.collected).getTime();
+        if (entry.at_type === "clock-in") {
+          if (
+            !result[key]["clock-in"] ||
+            time < new Date(result[key]["clock-in"].collected).getTime()
+          ) {
+            result[key]["clock-in"] = entry;
+          }
+        }
+        if (entry.at_type === "clock-out") {
+          if (
+            !result[key]["clock-out"] ||
+            time > new Date(result[key]["clock-out"].collected).getTime()
+          ) {
+            result[key]["clock-out"] = entry;
+          }
+        }
+      });
+      return Object.values(result).flatMap((types) => Object.values(types));
+    };
+
+    const loadTableData = () => {
+      overlay.show();
+      var u = common.TableService;
+      axios
+        .get(
+          u +
+            "?qid=103&draw=" +
+            tableOptions.currentPage +
+            "&order_column=" +
+            tableOptions.orderField +
+            "&length=" +
+            tableOptions.perPage +
+            "&start=" +
+            tableOptions.limitStart +
+            "&order_dir=" +
+            tableOptions.orderDir +
+            "&se=" +
+            sessionid.value +
+            "&gl=" +
+            tableOptions.filterParam.geo_level +
+            "&glid=" +
+            tableOptions.filterParam.geo_level_id,
+        )
+        .then((response) => {
+          var d = response && response.data;
+          tableData.value = filterEarliestInLatestOut(
+            Array.isArray(d && d.data) ? d.data : [],
+          );
+          tableOptions.total = (d && d.recordsTotal) || 0;
+          if (tableOptions.currentPage == 1) paginationDefault();
+          overlay.hide();
+        })
+        .catch((error) => {
+          overlay.hide();
+          alert.Error("ERROR", safeMessage(error));
         });
+    };
 
-        const gotoPageHandler = (data) => {
-            trainingid.value = data.trainingid;
-            sessionid.value = data.sessionid;
-            title.value = data.title;
-            loadTableData();
-        }
-        const goToTrainingList = () => {
-            bus.emit('g-event-goto-page', { page: 'training', trainingid: trainingid.value });
-        }
-        const goToSessionLists = (tid) => {
-            bus.emit('g-event-goto-page', { trainingid: tid, page: 'session', sessionid: '' });
-        }
+    const refreshData = () => {
+      loadTableData();
+    };
+    const nextPage = () => {
+      tableOptions.currentPage += 1;
+      paginationDefault();
+      loadTableData();
+    };
+    const prevPage = () => {
+      tableOptions.currentPage -= 1;
+      paginationDefault();
+      loadTableData();
+    };
+    const currentPage = () => {
+      paginationDefault();
+      if (tableOptions.currentPage < 1)
+        alert.Error("ERROR", "The Page requested doesn't exist");
+      else if (tableOptions.currentPage > tableOptions.pageLength)
+        alert.Error("ERROR", "The Page requested doesn't exist");
+      else loadTableData();
+    };
+    const paginationDefault = () => {
+      tableOptions.pageLength = Math.ceil(
+        tableOptions.total / tableOptions.perPage,
+      );
+      tableOptions.limitStart = Math.ceil(
+        (tableOptions.currentPage - 1) * tableOptions.perPage,
+      );
+      tableOptions.isNext = tableOptions.currentPage < tableOptions.pageLength;
+      tableOptions.isPrev = tableOptions.currentPage > 1;
+    };
+    const changePerPage = (val) => {
+      var maxPerPage = Math.ceil(tableOptions.total / val);
+      if (maxPerPage < tableOptions.currentPage)
+        tableOptions.currentPage = maxPerPage;
+      tableOptions.perPage = val;
+      paginationDefault();
+      loadTableData();
+    };
+    const sort = (col) => {
+      if (tableOptions.orderField === col)
+        tableOptions.orderDir =
+          tableOptions.orderDir === "asc" ? "desc" : "asc";
+      else tableOptions.orderField = col;
+      paginationDefault();
+      loadTableData();
+    };
+    const applyFilter = () => {
+      var checkFill = tableOptions.filterParam.geo_level_id != "" ? 1 : 0;
+      if (checkFill > 0) {
+        toggleFilter();
+        filters.value = true;
+        paginationDefault();
+        loadTableData();
+      } else {
+        alert.Error("ERROR", "Invalid required data");
+      }
+    };
+    const removeSingleFilter = (column_name) => {
+      tableOptions.filterParam[column_name] = "";
+      var g = 0;
+      for (var k in tableOptions.filterParam) {
+        if (tableOptions.filterParam[k] != "") g++;
+      }
+      if (g == 0) filters.value = false;
+      paginationDefault();
+      loadTableData();
+    };
+    const clearAllFilter = () => {
+      filters.value = false;
+      try {
+        $(".select2").val("").trigger("change");
+      } catch (e) {}
+      tableOptions.filterParam.geo_level = "";
+      tableOptions.filterParam.geo_level_id = "";
+      paginationDefault();
+      loadTableData();
+    };
+    const toggleFilter = () => {
+      if (filterState.value === false) filters.value = false;
+      return (filterState.value = !filterState.value);
+    };
 
-        const filterEarliestInLatestOut = (data) => {
-            var result = {};
-            data.forEach(entry => {
-                var key = entry.userid;
-                if (!result[key]) result[key] = {};
-                var time = new Date(entry.collected).getTime();
-                if (entry.at_type === 'clock-in') {
-                    if (!result[key]['clock-in'] || time < new Date(result[key]['clock-in'].collected).getTime()) {
-                        result[key]['clock-in'] = entry;
-                    }
-                }
-                if (entry.at_type === 'clock-out') {
-                    if (!result[key]['clock-out'] || time > new Date(result[key]['clock-out'].collected).getTime()) {
-                        result[key]['clock-out'] = entry;
-                    }
-                }
-            });
-            return Object.values(result).flatMap(types => Object.values(types));
-        }
-
-        const loadTableData = () => {
-            overlay.show();
-            var u = common.TableService;
-            axios.get(
-                u +
-                '?qid=103&draw=' + tableOptions.currentPage +
-                '&order_column=' + tableOptions.orderField +
-                '&length=' + tableOptions.perPage +
-                '&start=' + tableOptions.limitStart +
-                '&order_dir=' + tableOptions.orderDir +
-                '&se=' + sessionid.value +
-                '&gl=' + tableOptions.filterParam.geo_level +
-                '&glid=' + tableOptions.filterParam.geo_level_id
-            )
-                .then(response => {
-                    var d = response && response.data;
-                    tableData.value = filterEarliestInLatestOut(Array.isArray(d && d.data) ? d.data : []);
-                    tableOptions.total = (d && d.recordsTotal) || 0;
-                    if (tableOptions.currentPage == 1) paginationDefault();
+    const deleteSession = (session_id) => {
+      var u = common.DataService;
+      $.confirm({
+        title: "WARNING!",
+        content: "Are you sure you want to Delete a Activity Session?",
+        buttons: {
+          delete: {
+            text: "Delete",
+            btnClass: "btn btn-danger mr-1 text-capitalize",
+            action: () => {
+              axios
+                .post(u + "?qid=107&e=" + session_id)
+                .then((response) => {
+                  if (response.data.result_code == "200") {
+                    $("#addSession").modal("hide");
+                    loadTableData();
+                    alert.Success("Success", response.data.message);
                     overlay.hide();
+                  } else {
+                    overlay.hide();
+                    alert.Error("Error", response.data.message);
+                  }
                 })
-                .catch(error => {
-                    overlay.hide();
-                    alert.Error('ERROR', safeMessage(error));
+                .catch((error) => {
+                  alert.Error("ERROR", safeMessage(error));
+                  overlay.hide();
                 });
-        }
-
-        const refreshData = () => { loadTableData(); };
-        const nextPage = () => { tableOptions.currentPage += 1; paginationDefault(); loadTableData(); };
-        const prevPage = () => { tableOptions.currentPage -= 1; paginationDefault(); loadTableData(); };
-        const currentPage = () => {
-            paginationDefault();
-            if (tableOptions.currentPage < 1)                            alert.Error('ERROR', "The Page requested doesn't exist");
-            else if (tableOptions.currentPage > tableOptions.pageLength) alert.Error('ERROR', "The Page requested doesn't exist");
-            else                                                         loadTableData();
-        }
-        const paginationDefault = () => {
-            tableOptions.pageLength = Math.ceil(tableOptions.total / tableOptions.perPage);
-            tableOptions.limitStart = Math.ceil((tableOptions.currentPage - 1) * tableOptions.perPage);
-            tableOptions.isNext = tableOptions.currentPage < tableOptions.pageLength;
-            tableOptions.isPrev = tableOptions.currentPage > 1;
-        }
-        const changePerPage = (val) => {
-            var maxPerPage = Math.ceil(tableOptions.total / val);
-            if (maxPerPage < tableOptions.currentPage) tableOptions.currentPage = maxPerPage;
-            tableOptions.perPage = val;
-            paginationDefault();
-            loadTableData();
-        }
-        const sort = (col) => {
-            if (tableOptions.orderField === col) tableOptions.orderDir = tableOptions.orderDir === 'asc' ? 'desc' : 'asc';
-            else                                  tableOptions.orderField = col;
-            paginationDefault();
-            loadTableData();
-        }
-        const applyFilter = () => {
-            var checkFill = tableOptions.filterParam.geo_level_id != '' ? 1 : 0;
-            if (checkFill > 0) {
-                toggleFilter();
-                filters.value = true;
-                paginationDefault();
-                loadTableData();
-            } else {
-                alert.Error('ERROR', 'Invalid required data');
-            }
-        }
-        const removeSingleFilter = (column_name) => {
-            tableOptions.filterParam[column_name] = '';
-            var g = 0;
-            for (var k in tableOptions.filterParam) {
-                if (tableOptions.filterParam[k] != '') g++;
-            }
-            if (g == 0) filters.value = false;
-            paginationDefault();
-            loadTableData();
-        }
-        const clearAllFilter = () => {
-            filters.value = false;
-            try { $('.select2').val('').trigger('change'); } catch (e) {}
-            tableOptions.filterParam.geo_level = '';
-            tableOptions.filterParam.geo_level_id = '';
-            paginationDefault();
-            loadTableData();
-        }
-        const toggleFilter = () => {
-            if (filterState.value === false) filters.value = false;
-            return (filterState.value = !filterState.value);
-        }
-
-        const deleteSession = (session_id) => {
-            var u = common.DataService;
-            $.confirm({
-                title: 'WARNING!',
-                content: 'Are you sure you want to Delete a Activity Session?',
-                buttons: {
-                    delete: {
-                        text: 'Delete',
-                        btnClass: 'btn btn-danger mr-1 text-capitalize',
-                        action: () => {
-                            axios.post(u + '?qid=107&e=' + session_id)
-                                .then(response => {
-                                    if (response.data.result_code == '200') {
-                                        $('#addSession').modal('hide');
-                                        loadTableData();
-                                        alert.Success('Success', response.data.message);
-                                        overlay.hide();
-                                    } else {
-                                        overlay.hide();
-                                        alert.Error('Error', response.data.message);
-                                    }
-                                })
-                                .catch(error => {
-                                    alert.Error('ERROR', safeMessage(error));
-                                    overlay.hide();
-                                });
-                        },
-                    },
-                    cancel: () => {
-                        $('#addSession').modal('hide');
-                        overlay.hide();
-                    },
-                },
-            });
-        }
-
-        const downlodAttendance = async (session_id, t) => {
-            var sid = session_id;
-            var veriUrl = 'qid=115&sid=' + sid + '&gl=' + tableOptions.filterParam.geo_level + '&glid=' + tableOptions.filterParam.geo_level_id;
-            var dlString = 'qid=102&id=' + sid + '&gl=' + tableOptions.filterParam.geo_level + '&glid=' + tableOptions.filterParam.geo_level_id;
-            var filename = t + ' Attendance - (' + sid + ')';
-            overlay.show();
-
-            var count = await new Promise(resolve => {
-                $.ajax({
-                    url: common.DataService, type: 'POST', data: veriUrl, dataType: 'json',
-                    success: (data) => { resolve(data.total); },
-                });
-            });
-            var downloadMax = (window.common && window.common.ExportDownloadLimit) || 25000;
-            if (parseInt(count) > downloadMax) {
-                alert.Error('Download Error', 'Unable to download data because it has exceeded download limit, download limit is ' + downloadMax);
-            } else if (parseInt(count) == 0) {
-                alert.Error('Download Error', 'No data found');
-            } else {
-                alert.Info('DOWNLOADING...', 'Downloading ' + count + ' record(s)');
-                var outcome = await new Promise(resolve => {
-                    $.ajax({
-                        url: common.ExportService, type: 'POST', data: dlString,
-                        success: (data) => { resolve(data); },
-                    });
-                });
-                var exportData = JSON.parse(outcome);
-                if (window.Jhxlsx && typeof window.Jhxlsx.export === 'function') {
-                    window.Jhxlsx.export(exportData, { fileName: filename });
-                }
-            }
+            },
+          },
+          cancel: () => {
+            $("#addSession").modal("hide");
             overlay.hide();
-        }
+          },
+        },
+      });
+    };
 
-        const searchAttendance = () => {
-            var search = searchTxt.value;
-            var table = tableData.value.filter(obj => {
-                var flag = false;
-                Object.values(obj).forEach(val => {
-                    if (String(val).indexOf(search) > -1) flag = true;
-                });
-                if (flag) return obj;
+    const downlodAttendance = async (session_id, t) => {
+      var sid = session_id;
+      var veriUrl =
+        "qid=115&sid=" +
+        sid +
+        "&gl=" +
+        tableOptions.filterParam.geo_level +
+        "&glid=" +
+        tableOptions.filterParam.geo_level_id;
+      var dlString =
+        "qid=102&id=" +
+        sid +
+        "&gl=" +
+        tableOptions.filterParam.geo_level +
+        "&glid=" +
+        tableOptions.filterParam.geo_level_id;
+      var filename = t + " Attendance - (" + sid + ")";
+      overlay.show();
+
+      var count = await new Promise((resolve) => {
+        $.ajax({
+          url: common.DataService,
+          type: "POST",
+          data: veriUrl,
+          dataType: "json",
+          success: (data) => {
+            resolve(data.total);
+          },
+        });
+      });
+      var downloadMax =
+        (window.common && window.common.ExportDownloadLimit) || 25000;
+      if (parseInt(count) > downloadMax) {
+        alert.Error(
+          "Download Error",
+          "Unable to download data because it has exceeded download limit, download limit is " +
+            downloadMax,
+        );
+      } else if (parseInt(count) == 0) {
+        alert.Error("Download Error", "No data found");
+      } else {
+        alert.Info("DOWNLOADING...", "Downloading " + count + " record(s)");
+        var outcome = await new Promise((resolve) => {
+          $.ajax({
+            url: common.ExportService,
+            type: "POST",
+            data: dlString,
+            success: (data) => {
+              resolve(data);
+            },
+          });
+        });
+        var exportData = JSON.parse(outcome);
+        if (window.Jhxlsx && typeof window.Jhxlsx.export === "function") {
+          window.Jhxlsx.export(exportData, { fileName: filename });
+        }
+      }
+      overlay.hide();
+    };
+
+    const searchAttendance = () => {
+      var search = searchTxt.value;
+      var table = tableData.value.filter((obj) => {
+        var flag = false;
+        Object.values(obj).forEach((val) => {
+          if (String(val).indexOf(search) > -1) flag = true;
+        });
+        if (flag) return obj;
+      });
+      tableData.value = table;
+    };
+    const checkIfEmpty = () => {
+      if (searchTxt.value.length < 1) refreshData();
+    };
+
+    const getGeoLocation = () => {
+      overlay.show();
+      axios
+        .get(common.DataService + "?qid=gen009")
+        .then((response) => {
+          geoData.value = (response.data && response.data.data) || [];
+          overlay.hide();
+        })
+        .catch((error) => {
+          overlay.hide();
+          alert.Error("ERROR", safeMessage(error));
+        });
+    };
+    const setLocation = (select_index) => {
+      var i = select_index || 0;
+      var row = geoData.value[i];
+      if (!row) return;
+      tableOptions.filterParam.geo_level = row.geo_level;
+      tableOptions.filterParam.geo_level_id = row.geo_level_id;
+    };
+
+    onMounted(() => {
+      getGeoLocation();
+      try {
+        var select = $(".select2");
+        select.each(function () {
+          var $this = $(this);
+          $this.wrap('<div class="position-relative"></div>');
+          $this
+            .select2({
+              dropdownAutoWidth: true,
+              width: "100%",
+              dropdownParent: $this.parent(),
+            })
+            .on("change", function () {
+              setLocation(this.value);
             });
-            tableData.value = table;
-        }
-        const checkIfEmpty = () => {
-            if (searchTxt.value.length < 1) refreshData();
-        }
-
-        const getGeoLocation = () => {
-            overlay.show();
-            axios.get(common.DataService + '?qid=gen009')
-                .then(response => {
-                    geoData.value = (response.data && response.data.data) || [];
-                    overlay.hide();
-                })
-                .catch(error => {
-                    overlay.hide();
-                    alert.Error('ERROR', safeMessage(error));
-                });
-        }
-        const setLocation = (select_index) => {
-            var i = select_index || 0;
-            var row = geoData.value[i];
-            if (!row) return;
-            tableOptions.filterParam.geo_level = row.geo_level;
-            tableOptions.filterParam.geo_level_id = row.geo_level_id;
-        }
-
-        onMounted(() => {
-            getGeoLocation();
-            try {
-                var select = $('.select2');
-                select.each(function () {
-                    var $this = $(this);
-                    $this.wrap('<div class="position-relative"></div>');
-                    $this.select2({
-                        dropdownAutoWidth: true,
-                        width: '100%',
-                        dropdownParent: $this.parent(),
-                    }).on('change', function () { setLocation(this.value); });
-                });
-                $('.select2-selection__arrow').html('<i class="feather icon-chevron-down"></i>');
-            } catch (e) {}
-            bus.on('g-event-goto-page', gotoPageHandler);
-            loadTableData();
         });
-        onBeforeUnmount(() => {
-            bus.off('g-event-goto-page', gotoPageHandler);
-        });
+        $(".select2-selection__arrow").html(
+          '<i class="feather icon-chevron-down"></i>',
+        );
+      } catch (e) {}
+      bus.on("g-event-goto-page", gotoPageHandler);
+      loadTableData();
+    });
+    onBeforeUnmount(() => {
+      bus.off("g-event-goto-page", gotoPageHandler);
+    });
 
-        return {
-            tableData, geoData, sessionid, trainingid, title, permission,
-            searchTxt, checkToggle, filterState, filters, url, tableOptions,
-            gotoPageHandler, goToTrainingList, goToSessionLists,
-            filterEarliestInLatestOut, loadTableData, refreshData,
-            nextPage, prevPage, currentPage, paginationDefault, changePerPage,
-            sort, applyFilter, removeSingleFilter, clearAllFilter, toggleFilter,
-            deleteSession, downlodAttendance, searchAttendance, checkIfEmpty,
-            getGeoLocation, setLocation,
-            capitalize: fmtUtils.capitalize,
-            formatNumber: fmtUtils.formatNumber,
-            displayDate: fmtUtils.displayDate,
-        };
-    },
-    template: `
+    return {
+      tableData,
+      geoData,
+      sessionid,
+      trainingid,
+      title,
+      permission,
+      searchTxt,
+      checkToggle,
+      filterState,
+      filters,
+      url,
+      tableOptions,
+      gotoPageHandler,
+      goToTrainingList,
+      goToSessionLists,
+      filterEarliestInLatestOut,
+      loadTableData,
+      refreshData,
+      nextPage,
+      prevPage,
+      currentPage,
+      paginationDefault,
+      changePerPage,
+      sort,
+      applyFilter,
+      removeSingleFilter,
+      clearAllFilter,
+      toggleFilter,
+      deleteSession,
+      downlodAttendance,
+      searchAttendance,
+      checkIfEmpty,
+      getGeoLocation,
+      setLocation,
+      capitalize: fmtUtils.capitalize,
+      formatNumber: fmtUtils.formatNumber,
+      displayDate: fmtUtils.displayDate,
+    };
+  },
+  template: `
         <div class="row">
             <div class="col-md-8 col-sm-12 col-12 mb-0">
                 <h2 class="content-header-title header-txt float-left mb-0">Activity Mgmt.</h2>
@@ -2018,9 +2488,9 @@ const AttendanceList = {
 /* Mount                                                              */
 /* ------------------------------------------------------------------ */
 useApp({ template: `<div><page-body/></div>` })
-    .component('page-body', PageBody)
-    .component('training_list', TrainingList)
-    .component('training_session', TrainingSession)
-    .component('participant_list', ParticipantList)
-    .component('attendance_list', AttendanceList)
-    .mount('#app');
+  .component("page-body", PageBody)
+  .component("training_list", TrainingList)
+  .component("training_session", TrainingSession)
+  .component("participant_list", ParticipantList)
+  .component("attendance_list", AttendanceList)
+  .mount("#app");

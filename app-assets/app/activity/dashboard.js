@@ -9,11 +9,11 @@ const { useApp, useFormat, fmt: utilsFmt } = window.utils;
 
 /* ------------------------------------------------------------------ */
 const PageBody = {
-    setup() {
-        const page = ref('dashboard');
-        return { page };
-    },
-    template: `
+  setup() {
+    const page = ref("dashboard");
+    return { page };
+  },
+  template: `
         <div>
             <div class="content-body">
                 <dashboard_container/>
@@ -24,50 +24,52 @@ const PageBody = {
 
 /* ------------------------------------------------------------------ */
 const DashboardContainer = {
-    setup() {
-        const totalTraining = ref('');
-        const trainingStatus = reactive({ active: '', inactive: '' });
-        const totalSessions = ref('');
+  setup() {
+    const totalTraining = ref("");
+    const trainingStatus = reactive({ active: "", inactive: "" });
+    const totalSessions = ref("");
 
-        const fmt = utilsFmt;
+    const fmt = utilsFmt;
 
-        const getAllStat = () => {
-            var url = common.DataService;
-            var endpoints = [
-                url + '?qid=111', // Total Training [0]
-                url + '?qid=112', // Active and Inactive Users [1]
-                url + '?qid=113', // Geo Statistics distribution of users [2]
-            ];
+    const getAllStat = () => {
+      var url = common.DataService;
+      var endpoints = [
+        url + "?qid=111", // Total Training [0]
+        url + "?qid=112", // Active and Inactive Users [1]
+        url + "?qid=113", // Geo Statistics distribution of users [2]
+      ];
 
-            Promise.all(endpoints.map(e => axios.get(e))).then(
-                axios.spread((...allData) => {
-                    overlay.show();
+      Promise.all(endpoints.map((e) => axios.get(e)))
+        .then(
+          axios.spread((...allData) => {
+            overlay.show();
 
-                    var totalRow = allData[0]?.data?.data?.[0];
-                    totalTraining.value = totalRow ? fmt(totalRow.total) : '0';
+            var totalRow = allData[0]?.data?.data?.[0];
+            totalTraining.value = totalRow ? fmt(totalRow.total) : "0";
 
-                    var statusRow = allData[1]?.data?.data?.[0];
-                    trainingStatus.active   = statusRow ? fmt(statusRow.active)   : '0';
-                    trainingStatus.inactive = statusRow ? fmt(statusRow.inactive) : '0';
+            var statusRow = allData[1]?.data?.data?.[0];
+            trainingStatus.active = statusRow ? fmt(statusRow.active) : "0";
+            trainingStatus.inactive = statusRow ? fmt(statusRow.inactive) : "0";
 
-                    var sessionRow = allData[2]?.data?.data?.[0];
-                    totalSessions.value = sessionRow ? fmt(sessionRow.total) : '0';
+            var sessionRow = allData[2]?.data?.data?.[0];
+            totalSessions.value = sessionRow ? fmt(sessionRow.total) : "0";
 
-                    overlay.hide();
-                })
-            ).catch(error => {
-                overlay.hide();
-                console.error('[activity/dashboard] getAllStat error:', error);
-            });
-        }
-
-        onMounted(() => {
-            getAllStat();
+            overlay.hide();
+          }),
+        )
+        .catch((error) => {
+          overlay.hide();
+          console.error("[activity/dashboard] getAllStat error:", error);
         });
+    };
 
-        return { totalTraining, trainingStatus, totalSessions, getAllStat };
-    },
-    template: `
+    onMounted(() => {
+      getAllStat();
+    });
+
+    return { totalTraining, trainingStatus, totalSessions, getAllStat };
+  },
+  template: `
         <div>
             <div class="row">
                 <div class="col-12 mb-2">
@@ -147,6 +149,6 @@ const DashboardContainer = {
 };
 
 useApp({ template: `<div><page-body/></div>` })
-    .component('page-body', PageBody)
-    .component('dashboard_container', DashboardContainer)
-    .mount('#app');
+  .component("page-body", PageBody)
+  .component("dashboard_container", DashboardContainer)
+  .mount("#app");

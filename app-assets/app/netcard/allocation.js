@@ -16,14 +16,20 @@ const { ref, reactive, onMounted, onBeforeUnmount } = Vue;
 const { useApp, useFormat, bus, safeMessage } = window.utils;
 
 const PageBody = {
-    setup() {
-        const page = ref('allocation');
-        const gotoPageHandler = (data) => { page.value = data && data.page; };
-        onMounted(() => { bus.on('g-event-goto-page', gotoPageHandler); });
-        onBeforeUnmount(() => { bus.off('g-event-goto-page', gotoPageHandler); });
-        return { page };
-    },
-    template: `
+  setup() {
+    const page = ref("allocation");
+    const gotoPageHandler = (data) => {
+      page.value = data && data.page;
+    };
+    onMounted(() => {
+      bus.on("g-event-goto-page", gotoPageHandler);
+    });
+    onBeforeUnmount(() => {
+      bus.off("g-event-goto-page", gotoPageHandler);
+    });
+    return { page };
+  },
+  template: `
         <div>
             <div class="content-body">
                 <div v-show="page == 'allocation'"><necard_movement/></div>
@@ -33,610 +39,869 @@ const PageBody = {
 };
 
 const NecardMovement = {
-    setup() {
-        const fmtUtils = useFormat();
+  setup() {
+    const fmtUtils = useFormat();
 
-        const tableData = ref([]);
-        const checkToggle = ref(false);
-        const filterState = ref(false);
-        const filters = ref(false);
-        const permission = ref(
-            (typeof getPermission === 'function')
-                ? (getPermission(typeof per !== 'undefined' ? per : null, 'enetcard') || { permission_value: 0 })
-                : { permission_value: 0 }
+    const tableData = ref([]);
+    const checkToggle = ref(false);
+    const filterState = ref(false);
+    const filters = ref(false);
+    const permission = ref(
+      typeof getPermission === "function"
+        ? getPermission(
+            typeof per !== "undefined" ? per : null,
+            "enetcard",
+          ) || { permission_value: 0 }
+        : { permission_value: 0 },
+    );
+    const url = ref(window.common && window.common.TableService);
+    const tableOptions = reactive({
+      total: 1,
+      pageLength: 1,
+      perPage: 10,
+      currentPage: 1,
+      orderDir: "desc",
+      orderField: 0,
+      limitStart: 0,
+      isNext: false,
+      isPrev: false,
+      aLength: [10, 20, 50, 100, 150, 200],
+      filterParam: {
+        movementType: "Forward",
+        requester_loginid: "",
+        mobilizer_loginid: "",
+        request_date: "",
+      },
+    });
+    const currentWardBalance = reactive({
+      wardName: "",
+      balance: 0,
+      disbursed: 0,
+      received: 0,
+    });
+    const wardMovementForm = reactive({
+      totalNetcard: 1,
+      wardMoveBtn: "",
+      wardMoveModal: false,
+      lgaid: "",
+      wardid: "",
+      wardName: "",
+      wardBalance: "",
+    });
+    const movementForm = reactive({ geoLevel: "", geoLevelId: 0 });
+    const geoIndicator = reactive({
+      state: 50,
+      currentLevelId: 0,
+      lga: "",
+      cluster: "",
+      ward: "",
+    });
+    const geoLevelData = ref([]);
+    const sysDefaultData = ref({});
+    const lgaLevelData = ref([]);
+    const clusterLevelData = ref([]);
+    const wardLevelData = ref([]);
+    const lgaNetBalancesData = ref([]);
+    const wardNetBalancesData = ref([]);
+    const hhmBalanacesData = ref([]);
+    const isLgabalance = ref(true);
+    const isHHMbalance = ref(true);
+    const allStatistics = reactive({
+      stateBalance: 0,
+      lgaBalance: 0,
+      wardBalance: 0,
+      mobilizer: 0,
+      beneficiary: 0,
+    });
+
+    const loadTableData = () => {
+      overlay.show();
+      var qid;
+      if (tableOptions.filterParam.movementType == "Reverse") qid = "203";
+      else if (tableOptions.filterParam.movementType == "Forward") qid = "202";
+      else qid = "204";
+
+      var endpoint =
+        common.TableService +
+        "?qid=" +
+        qid +
+        "&draw=" +
+        tableOptions.currentPage +
+        "&order_column=" +
+        tableOptions.orderField +
+        "&length=" +
+        tableOptions.perPage +
+        "&start=" +
+        tableOptions.limitStart +
+        "&order_dir=" +
+        tableOptions.orderDir +
+        "&mt=" +
+        tableOptions.filterParam.movementType +
+        "&rid=" +
+        tableOptions.filterParam.requester_loginid +
+        "&mid=" +
+        tableOptions.filterParam.mobilizer_loginid +
+        "&rda=" +
+        tableOptions.filterParam.request_date;
+
+      axios
+        .get(endpoint)
+        .then((response) => {
+          var d = response && response.data;
+          tableData.value = Array.isArray(d && d.data) ? d.data : [];
+          tableOptions.total = (d && d.recordsTotal) || 0;
+          if (tableOptions.currentPage == 1) paginationDefault();
+          overlay.hide();
+        })
+        .catch((error) => {
+          overlay.hide();
+          alert.Error("ERROR", safeMessage(error));
+        });
+    };
+
+    const selectAll = () => {
+      for (var i = 0; i < hhmBalanacesData.value.length; i++)
+        hhmBalanacesData.value[i].pick = true;
+    };
+    const uncheckAll = () => {
+      for (var i = 0; i < hhmBalanacesData.value.length; i++)
+        hhmBalanacesData.value[i].pick = false;
+    };
+    const selectToggle = () => {
+      if (checkToggle.value === false) {
+        selectAll();
+        checkToggle.value = true;
+      } else {
+        uncheckAll();
+        checkToggle.value = false;
+      }
+    };
+    const selectedItemsCount = () => {
+      /* original was empty */
+    };
+    const checkedBg = (pickOne) => {
+      return pickOne != "" ? "bg-select" : "";
+    };
+    const toggleFilter = () => {
+      if (filterState.value === false) filters.value = false;
+      return (filterState.value = !filterState.value);
+    };
+    const selectedItems = () => {
+      return hhmBalanacesData.value.filter((r) => r.pick);
+    };
+
+    const forwardReverseSelectedID = () => {
+      var id = $("#v_g_id").val();
+      return hhmBalanacesData.value
+        .filter((r) => r.pick)
+        .map((row) => ({
+          total: wardMovementForm.totalNetcard,
+          wardid: wardMovementForm.wardid,
+          mobilizerid: row.userid,
+          mobilizer_balance: row.balance,
+          mobilizer_loginid: row.loginid,
+          userid: id,
+          device_serial: row.device_serial,
+        }));
+    };
+
+    const paginationDefault = () => {
+      tableOptions.pageLength = Math.ceil(
+        tableOptions.total / tableOptions.perPage,
+      );
+      tableOptions.limitStart = Math.ceil(
+        (tableOptions.currentPage - 1) * tableOptions.perPage,
+      );
+      tableOptions.isNext = tableOptions.currentPage < tableOptions.pageLength;
+      tableOptions.isPrev = tableOptions.currentPage > 1;
+    };
+    const nextPage = () => {
+      tableOptions.currentPage += 1;
+      paginationDefault();
+      loadTableData();
+    };
+    const prevPage = () => {
+      tableOptions.currentPage -= 1;
+      paginationDefault();
+      loadTableData();
+    };
+    const currentPage = () => {
+      paginationDefault();
+      if (tableOptions.currentPage < 1)
+        alert.Error("ERROR", "The Page requested doesn't exist");
+      else if (tableOptions.currentPage > tableOptions.pageLength)
+        alert.Error("ERROR", "The Page requested doesn't exist");
+      else loadTableData();
+    };
+    const changePerPage = (val) => {
+      var maxPerPage = Math.ceil(tableOptions.total / val);
+      if (maxPerPage < tableOptions.currentPage)
+        tableOptions.currentPage = maxPerPage;
+      tableOptions.perPage = val;
+      paginationDefault();
+      loadTableData();
+    };
+    const sort = (col) => {
+      if (tableOptions.orderField === col)
+        tableOptions.orderDir =
+          tableOptions.orderDir === "asc" ? "desc" : "asc";
+      else tableOptions.orderField = col;
+      paginationDefault();
+      loadTableData();
+    };
+    const applyFilter = () => {
+      var checkFill = 0;
+      checkFill += tableOptions.filterParam.requester_loginid != "" ? 1 : 0;
+      checkFill += tableOptions.filterParam.mobilizer_loginid != "" ? 1 : 0;
+      checkFill += tableOptions.filterParam.request_date != "" ? 1 : 0;
+      if (checkFill > 0) {
+        toggleFilter();
+        filters.value = true;
+        paginationDefault();
+        loadTableData();
+      } else {
+        alert.Error("ERROR", "Atleast one Filter field must be filled");
+      }
+    };
+    const removeSingleFilter = (column_name) => {
+      tableOptions.filterParam[column_name] = "";
+      if (column_name == "request_date") clearDate("request_date");
+      var g = 0;
+      for (var k in tableOptions.filterParam) {
+        if (tableOptions.filterParam[k] != "" && k != "movementType") g++;
+      }
+      if (g == 0) filters.value = false;
+      paginationDefault();
+      loadTableData();
+    };
+    const clearAllFilter = () => {
+      filters.value = false;
+      tableOptions.filterParam.requester_loginid = "";
+      tableOptions.filterParam.mobilizer_loginid = "";
+      tableOptions.filterParam.request_date = "";
+      clearDate("request_date");
+      paginationDefault();
+      loadTableData();
+    };
+    const clearDate = (id) => {
+      try {
+        $("#" + id)
+          .flatpickr({
+            altInput: true,
+            altFormat: "F j, Y",
+            dateFormat: "Y-m-d",
+          })
+          .clear();
+      } catch (e) {}
+    };
+
+    /* Ward modal show/hide --------------------------------------- */
+    const showWardMoveModal = (movement_type) => {
+      overlay.show();
+      scroll();
+      wardMovementForm.totalNetcard = 1;
+      wardMovementForm.wardMoveBtn = movement_type;
+      wardMovementForm.wardMoveModal = true;
+      wardMovementForm.lgaid = "";
+      wardMovementForm.wardid = "";
+      wardMovementForm.wardName = "";
+      wardMovementForm.wardBalance = "";
+      overlay.hide();
+    };
+    const hideWardMoveModal = () => {
+      overlay.show();
+      $("#wardMovement").modal("hide");
+      wardMovementForm.totalNetcard = 0;
+      wardMovementForm.wardMoveBtn = "";
+      wardMovementForm.wardMoveModal = false;
+      wardMovementForm.lgaid = "";
+      wardMovementForm.wardid = "";
+      wardMovementForm.wardName = "";
+      wardMovementForm.wardBalance = "";
+      geoIndicator.lga = "";
+      hhmBalanacesData.value = [];
+      wardNetBalancesData.value = [];
+      overlay.hide();
+    };
+    const hideHHMBalanceModal = () => {
+      overlay.show();
+      wardMovementForm.lgaid = "";
+      wardMovementForm.wardid = "";
+      $("#viewDetails").modal("hide");
+      overlay.hide();
+    };
+
+    /* Allocation / Reverse logic --------------------------------- */
+    const wardTransfer = () => {
+      var selectedId = forwardReverseSelectedID();
+      if (parseInt(wardMovementForm.totalNetcard) <= 0) {
+        alert.Error(
+          "Error",
+          "You can't " + wardMovementForm.wardMoveBtn + " <b>0</b> e-Netcard",
         );
-        const url = ref(window.common && window.common.TableService);
-        const tableOptions = reactive({
-            total: 1, pageLength: 1, perPage: 10, currentPage: 1,
-            orderDir: 'desc', orderField: 0, limitStart: 0,
-            isNext: false, isPrev: false,
-            aLength: [10, 20, 50, 100, 150, 200],
-            filterParam: {
-                movementType: 'Forward',
-                requester_loginid: '', mobilizer_loginid: '', request_date: '',
+        overlay.hide();
+        return;
+      }
+
+      if (wardMovementForm.wardMoveBtn == "Forward") {
+        if (!wardMovementForm.wardid || !wardMovementForm.totalNetcard) {
+          alert.Error("Require Fields", "All fields are required");
+          overlay.hide();
+          return;
+        }
+        if (!(wardMovementForm.wardBalance > 0)) {
+          alert.Error("Error", "You don't have e-Netcard to transfer");
+          overlay.hide();
+          return;
+        }
+        if (selectedId.length == 0) {
+          alert.Error("Error", "No Mobilizer Selected for transfer");
+          overlay.hide();
+          return;
+        }
+        var len = selectedId.length;
+        var checkIfSharable =
+          parseInt(wardMovementForm.wardBalance) /
+          parseInt(wardMovementForm.totalNetcard);
+        var totalSharable = Math.floor(wardMovementForm.wardBalance / len);
+
+        if (checkIfSharable < len) {
+          alert.Error(
+            "Balance Exceeded",
+            "You don't have enough e-Netcard to allocate. You can only share <b>" +
+              totalSharable +
+              "</b> e-Netcard for the <b>" +
+              len +
+              "</b> selected HHM",
+          );
+          return;
+        }
+        $.confirm({
+          title: "WARNING!",
+          content:
+            "Are you sure you want to allocate <b>" +
+            wardMovementForm.totalNetcard +
+            "</b> e-Netcard each to <b>" +
+            len +
+            "</b> selected HH Mobilizers?",
+          buttons: {
+            delete: {
+              text: "Allocate e-Netcard",
+              btnClass: "btn btn-danger mr-1 text-capitalize",
+              action: () => {
+                axios
+                  .post(
+                    common.DataService + "?qid=209",
+                    JSON.stringify(selectedId),
+                  )
+                  .then((response) => {
+                    if (response.data.result_code == "200") {
+                      tableOptions.filterParam.movementType = "Forward";
+                      refreshHHMList();
+                      refreshData();
+                      alert.Success(
+                        "Success",
+                        response.data.total +
+                          " e-Netcards has been successfully allocated to <b>" +
+                          len +
+                          "</b> HH Mobilizers",
+                      );
+                      wardMovementForm.totalNetcard = 1;
+                      overlay.hide();
+                    } else {
+                      overlay.hide();
+                      alert.Error("Error", response.data.message);
+                    }
+                  })
+                  .catch((error) => {
+                    alert.Error("ERROR", safeMessage(error));
+                    overlay.hide();
+                  });
+              },
             },
+            cancel: () => {
+              overlay.hide();
+            },
+          },
         });
-        const currentWardBalance = reactive({
-            wardName: '', balance: 0, disbursed: 0, received: 0,
-        });
-        const wardMovementForm = reactive({
-            totalNetcard: 1, wardMoveBtn: '', wardMoveModal: false,
-            lgaid: '', wardid: '', wardName: '', wardBalance: '',
-        });
-        const movementForm = reactive({ geoLevel: '', geoLevelId: 0 });
-        const geoIndicator = reactive({
-            state: 50, currentLevelId: 0,
-            lga: '', cluster: '', ward: '',
-        });
-        const geoLevelData = ref([]);
-        const sysDefaultData = ref({});
-        const lgaLevelData = ref([]);
-        const clusterLevelData = ref([]);
-        const wardLevelData = ref([]);
-        const lgaNetBalancesData = ref([]);
-        const wardNetBalancesData = ref([]);
-        const hhmBalanacesData = ref([]);
-        const isLgabalance = ref(true);
-        const isHHMbalance = ref(true);
-        const allStatistics = reactive({
-            stateBalance: 0, lgaBalance: 0, wardBalance: 0,
-            mobilizer: 0, beneficiary: 0,
-        });
+        return;
+      }
 
-        const loadTableData = () => {
-            overlay.show();
-            var qid;
-            if (tableOptions.filterParam.movementType == 'Reverse') qid = '203';
-            else if (tableOptions.filterParam.movementType == 'Forward') qid = '202';
-            else qid = '204';
+      // Reverse path
+      if (selectedId.length != 1) {
+        alert.Error(
+          "Error",
+          "You must select <b>1</b> Household Mobilizer to <b>Reverse From</b>",
+        );
+        return;
+      }
+      if (!wardMovementForm.wardid || !wardMovementForm.totalNetcard) {
+        alert.Error("Require Fields", "All fields are required");
+        overlay.hide();
+        return;
+      }
+      if (!(selectedId[0].mobilizer_balance > 0)) {
+        alert.Error(
+          "Error",
+          "HHM with Login ID: <b>" +
+            selectedId[0].mobilizer_loginid +
+            "</b> doesn't have e-Netcard balances to Reverse",
+        );
+        return;
+      }
+      var totalReversable = parseInt(selectedId[0].mobilizer_balance) || 0;
+      if (wardMovementForm.totalNetcard > totalReversable) {
+        alert.Error(
+          "HHM Balance Exceeded",
+          "Selected HHM doesn't enough e-Netcard. You can only reverse <b>" +
+            totalReversable +
+            "</b> e-Netcard from the selected HHM",
+        );
+        return;
+      }
 
-            var endpoint =
-                common.TableService + '?qid=' + qid +
-                '&draw=' + tableOptions.currentPage +
-                '&order_column=' + tableOptions.orderField +
-                '&length=' + tableOptions.perPage +
-                '&start=' + tableOptions.limitStart +
-                '&order_dir=' + tableOptions.orderDir +
-                '&mt=' + tableOptions.filterParam.movementType +
-                '&rid=' + tableOptions.filterParam.requester_loginid +
-                '&mid=' + tableOptions.filterParam.mobilizer_loginid +
-                '&rda=' + tableOptions.filterParam.request_date;
-
-            axios.get(endpoint)
-                .then(response => {
-                    var d = response && response.data;
-                    tableData.value = Array.isArray(d && d.data) ? d.data : [];
-                    tableOptions.total = (d && d.recordsTotal) || 0;
-                    if (tableOptions.currentPage == 1) paginationDefault();
-                    overlay.hide();
-                })
-                .catch(error => {
-                    overlay.hide();
-                    alert.Error('ERROR', safeMessage(error));
-                });
-        }
-
-        const selectAll = () => {
-            for (var i = 0; i < hhmBalanacesData.value.length; i++) hhmBalanacesData.value[i].pick = true;
-        }
-        const uncheckAll = () => {
-            for (var i = 0; i < hhmBalanacesData.value.length; i++) hhmBalanacesData.value[i].pick = false;
-        }
-        const selectToggle = () => {
-            if (checkToggle.value === false) { selectAll(); checkToggle.value = true; }
-            else                              { uncheckAll(); checkToggle.value = false; }
-        }
-        const selectedItemsCount = () => { /* original was empty */ };
-        const checkedBg = (pickOne) => { return pickOne != '' ? 'bg-select' : ''; };
-        const toggleFilter = () => {
-            if (filterState.value === false) filters.value = false;
-            return (filterState.value = !filterState.value);
-        }
-        const selectedItems = () => { return hhmBalanacesData.value.filter(r => r.pick); };
-
-        const forwardReverseSelectedID = () => {
-            var id = $('#v_g_id').val();
-            return hhmBalanacesData.value.filter(r => r.pick).map(row => ({
-                total: wardMovementForm.totalNetcard,
-                wardid: wardMovementForm.wardid,
-                mobilizerid: row.userid,
-                mobilizer_balance: row.balance,
-                mobilizer_loginid: row.loginid,
-                userid: id,
-                device_serial: row.device_serial
-            }));
-        }
-
-        const paginationDefault = () => {
-            tableOptions.pageLength = Math.ceil(tableOptions.total / tableOptions.perPage);
-            tableOptions.limitStart = Math.ceil((tableOptions.currentPage - 1) * tableOptions.perPage);
-            tableOptions.isNext = tableOptions.currentPage < tableOptions.pageLength;
-            tableOptions.isPrev = tableOptions.currentPage > 1;
-        }
-        const nextPage = () => { tableOptions.currentPage += 1; paginationDefault(); loadTableData(); };
-        const prevPage = () => { tableOptions.currentPage -= 1; paginationDefault(); loadTableData(); };
-        const currentPage = () => {
-            paginationDefault();
-            if (tableOptions.currentPage < 1)                            alert.Error('ERROR', "The Page requested doesn't exist");
-            else if (tableOptions.currentPage > tableOptions.pageLength) alert.Error('ERROR', "The Page requested doesn't exist");
-            else                                                         loadTableData();
-        }
-        const changePerPage = (val) => {
-            var maxPerPage = Math.ceil(tableOptions.total / val);
-            if (maxPerPage < tableOptions.currentPage) tableOptions.currentPage = maxPerPage;
-            tableOptions.perPage = val;
-            paginationDefault();
-            loadTableData();
-        }
-        const sort = (col) => {
-            if (tableOptions.orderField === col) tableOptions.orderDir = tableOptions.orderDir === 'asc' ? 'desc' : 'asc';
-            else                                  tableOptions.orderField = col;
-            paginationDefault();
-            loadTableData();
-        }
-        const applyFilter = () => {
-            var checkFill = 0;
-            checkFill += tableOptions.filterParam.requester_loginid != '' ? 1 : 0;
-            checkFill += tableOptions.filterParam.mobilizer_loginid != '' ? 1 : 0;
-            checkFill += tableOptions.filterParam.request_date != '' ? 1 : 0;
-            if (checkFill > 0) {
-                toggleFilter();
-                filters.value = true;
-                paginationDefault();
-                loadTableData();
-            } else {
-                alert.Error('ERROR', 'Atleast one Filter field must be filled');
-            }
-        }
-        const removeSingleFilter = (column_name) => {
-            tableOptions.filterParam[column_name] = '';
-            if (column_name == 'request_date') clearDate('request_date');
-            var g = 0;
-            for (var k in tableOptions.filterParam) {
-                if (tableOptions.filterParam[k] != '' && k != 'movementType') g++;
-            }
-            if (g == 0) filters.value = false;
-            paginationDefault();
-            loadTableData();
-        }
-        const clearAllFilter = () => {
-            filters.value = false;
-            tableOptions.filterParam.requester_loginid = '';
-            tableOptions.filterParam.mobilizer_loginid = '';
-            tableOptions.filterParam.request_date = '';
-            clearDate('request_date');
-            paginationDefault();
-            loadTableData();
-        }
-        const clearDate = (id) => {
-            try {
-                $('#' + id).flatpickr({ altInput: true, altFormat: 'F j, Y', dateFormat: 'Y-m-d' }).clear();
-            } catch (e) {}
-        }
-
-        /* Ward modal show/hide --------------------------------------- */
-        const showWardMoveModal = (movement_type) => {
-            overlay.show();
-            scroll();
-            wardMovementForm.totalNetcard = 1;
-            wardMovementForm.wardMoveBtn = movement_type;
-            wardMovementForm.wardMoveModal = true;
-            wardMovementForm.lgaid = '';
-            wardMovementForm.wardid = '';
-            wardMovementForm.wardName = '';
-            wardMovementForm.wardBalance = '';
-            overlay.hide();
-        }
-        const hideWardMoveModal = () => {
-            overlay.show();
-            $('#wardMovement').modal('hide');
-            wardMovementForm.totalNetcard = 0;
-            wardMovementForm.wardMoveBtn = '';
-            wardMovementForm.wardMoveModal = false;
-            wardMovementForm.lgaid = '';
-            wardMovementForm.wardid = '';
-            wardMovementForm.wardName = '';
-            wardMovementForm.wardBalance = '';
-            geoIndicator.lga = '';
-            hhmBalanacesData.value = [];
-            wardNetBalancesData.value = [];
-            overlay.hide();
-        }
-        const hideHHMBalanceModal = () => {
-            overlay.show();
-            wardMovementForm.lgaid = '';
-            wardMovementForm.wardid = '';
-            $('#viewDetails').modal('hide');
-            overlay.hide();
-        }
-
-        /* Allocation / Reverse logic --------------------------------- */
-        const wardTransfer = () => {
-            var selectedId = forwardReverseSelectedID();
-            if (parseInt(wardMovementForm.totalNetcard) <= 0) {
-                alert.Error('Error', "You can't " + wardMovementForm.wardMoveBtn + ' <b>0</b> e-Netcard');
-                overlay.hide();
-                return;
-            }
-
-            if (wardMovementForm.wardMoveBtn == 'Forward') {
-                if (!wardMovementForm.wardid || !wardMovementForm.totalNetcard) {
-                    alert.Error('Require Fields', 'All fields are required');
-                    overlay.hide();
-                    return;
-                }
-                if (!(wardMovementForm.wardBalance > 0)) {
-                    alert.Error('Error', "You don't have e-Netcard to transfer");
-                    overlay.hide();
-                    return;
-                }
-                if (selectedId.length == 0) {
-                    alert.Error('Error', 'No Mobilizer Selected for transfer');
-                    overlay.hide();
-                    return;
-                }
-                var len = selectedId.length;
-                var checkIfSharable = parseInt(wardMovementForm.wardBalance) / parseInt(wardMovementForm.totalNetcard);
-                var totalSharable = Math.floor(wardMovementForm.wardBalance / len);
-
-                if (checkIfSharable < len) {
-                    alert.Error('Balance Exceeded', "You don't have enough e-Netcard to allocate. You can only share <b>" + totalSharable + '</b> e-Netcard for the <b>' + len + '</b> selected HHM');
-                    return;
-                }
-                $.confirm({
-                    title: 'WARNING!',
-                    content: 'Are you sure you want to allocate <b>' + wardMovementForm.totalNetcard + '</b> e-Netcard each to <b>' + len + '</b> selected HH Mobilizers?',
-                    buttons: {
-                        delete: {
-                            text: 'Allocate e-Netcard', btnClass: 'btn btn-danger mr-1 text-capitalize',
-                            action: () => {
-                                axios.post(common.DataService + '?qid=209', JSON.stringify(selectedId))
-                                    .then(response => {
-                                        if (response.data.result_code == '200') {
-                                            tableOptions.filterParam.movementType = 'Forward';
-                                            refreshHHMList();
-                                            refreshData();
-                                            alert.Success('Success', response.data.total + ' e-Netcards has been successfully allocated to <b>' + len + '</b> HH Mobilizers');
-                                            wardMovementForm.totalNetcard = 1;
-                                            overlay.hide();
-                                        } else {
-                                            overlay.hide();
-                                            alert.Error('Error', response.data.message);
-                                        }
-                                    })
-                                    .catch(error => {
-                                        alert.Error('ERROR', safeMessage(error));
-                                        overlay.hide();
-                                    });
-                            },
-                        },
-                        cancel: () => { overlay.hide(); },
-                    },
-                });
-                return;
-            }
-
-            // Reverse path
-            if (selectedId.length != 1) {
-                alert.Error('Error', 'You must select <b>1</b> Household Mobilizer to <b>Reverse From</b>');
-                return;
-            }
-            if (!wardMovementForm.wardid || !wardMovementForm.totalNetcard) {
-                alert.Error('Require Fields', 'All fields are required');
-                overlay.hide();
-                return;
-            }
-            if (!(selectedId[0].mobilizer_balance > 0)) {
-                alert.Error('Error', 'HHM with Login ID: <b>' + selectedId[0].mobilizer_loginid + "</b> doesn't have e-Netcard balances to Reverse");
-                return;
-            }
-            var totalReversable = parseInt(selectedId[0].mobilizer_balance) || 0;
-            if (wardMovementForm.totalNetcard > totalReversable) {
-                alert.Error('HHM Balance Exceeded', "Selected HHM doesn't enough e-Netcard. You can only reverse <b>" + totalReversable + '</b> e-Netcard from the selected HHM');
-                return;
-            }
-
-            // On-device vs online
-            if (selectedId[0].device_serial != null) {
-                $.confirm({
-                    title: 'WARNING!',
-                    content: 'Are you sure you want to Retract <b>' + wardMovementForm.totalNetcard + '</b> e-Netcard from HH Mobilizers with Login ID: <b>' + selectedId[0].mobilizer_loginid + '</b>?',
-                    buttons: {
-                        delete: {
-                            text: 'Reverse e-Netcard', btnClass: 'btn btn-danger mr-1 text-capitalize',
-                            action: () => {
-                                axios.post(common.DataService + '?qid=210', JSON.stringify(selectedId))
-                                    .then(response => {
-                                        if (response.data.result_code == '200') {
-                                            alert.Success('Success', response.data.total + ' e-Netcards Reverse order has been successfully placed');
-                                            tableOptions.filterParam.movementType = 'Reverse';
-                                            refreshHHMList();
-                                            refreshData();
-                                            wardMovementForm.totalNetcard = 1;
-                                            overlay.hide();
-                                        } else {
-                                            overlay.hide();
-                                            alert.Error('Error', response.data.message);
-                                        }
-                                    })
-                                    .catch(error => {
-                                        alert.Error('ERROR', safeMessage(error));
-                                        overlay.hide();
-                                    });
-                            },
-                        },
-                        cancel: () => { overlay.hide(); },
-                    },
-                });
-            } else {
-                $.confirm({
-                    title: 'WARNING!',
-                    content: 'Are you sure you want to Retract <b>' + wardMovementForm.totalNetcard + '</b> e-Netcard <b>Online</b> from HH Mobilizers with Login ID: <b>' + selectedId[0].mobilizer_loginid + '</b>?',
-                    buttons: {
-                        delete: {
-                            text: 'Reverse e-Netcard', btnClass: 'btn btn-danger mr-1 text-capitalize',
-                            action: () => {
-                                axios.post(common.DataService + '?qid=212', JSON.stringify(selectedId))
-                                    .then(response => {
-                                        if (response.data.result_code == '200') {
-                                            alert.Success('Success', response.data.total + ' Online e-Netcards Reverse successfull');
-                                            tableOptions.filterParam.movementType = 'ReverseOnline';
-                                            refreshHHMList();
-                                            refreshData();
-                                            wardMovementForm.totalNetcard = 1;
-                                            overlay.hide();
-                                        } else if (response.data.result_code == '401') {
-                                            alert.Success('Error', response.data.message);
-                                            refreshHHMList();
-                                            tableOptions.filterParam.movementType = 'ReverseOnline';
-                                            refreshData();
-                                            overlay.hide();
-                                        } else {
-                                            overlay.hide();
-                                            alert.Error('Error', response.data.message);
-                                        }
-                                    })
-                                    .catch(error => {
-                                        alert.Error('ERROR', safeMessage(error));
-                                        overlay.hide();
-                                    });
-                            },
-                        },
-                        cancel: () => { overlay.hide(); },
-                    },
-                });
-            }
-        }
-
-        /* Geo + balance lookups -------------------------------------- */
-        const getsysDefaultDataSettings = () => {
-            overlay.show();
-            axios.get(common.DataService + '?qid=gen007')
-                .then(response => {
-                    if (response.data.data && response.data.data.length > 0) {
-                        sysDefaultData.value = response.data.data[0];
-                        getLgasLevel(response.data.data[0].stateid);
-                        movementForm.geoLevel = 'state';
-                        movementForm.geoLevelId = response.data.data[0].stateid;
+      // On-device vs online
+      if (selectedId[0].device_serial != null) {
+        $.confirm({
+          title: "WARNING!",
+          content:
+            "Are you sure you want to Retract <b>" +
+            wardMovementForm.totalNetcard +
+            "</b> e-Netcard from HH Mobilizers with Login ID: <b>" +
+            selectedId[0].mobilizer_loginid +
+            "</b>?",
+          buttons: {
+            delete: {
+              text: "Reverse e-Netcard",
+              btnClass: "btn btn-danger mr-1 text-capitalize",
+              action: () => {
+                axios
+                  .post(
+                    common.DataService + "?qid=210",
+                    JSON.stringify(selectedId),
+                  )
+                  .then((response) => {
+                    if (response.data.result_code == "200") {
+                      alert.Success(
+                        "Success",
+                        response.data.total +
+                          " e-Netcards Reverse order has been successfully placed",
+                      );
+                      tableOptions.filterParam.movementType = "Reverse";
+                      refreshHHMList();
+                      refreshData();
+                      wardMovementForm.totalNetcard = 1;
+                      overlay.hide();
+                    } else {
+                      overlay.hide();
+                      alert.Error("Error", response.data.message);
                     }
+                  })
+                  .catch((error) => {
+                    alert.Error("ERROR", safeMessage(error));
                     overlay.hide();
-                })
-                .catch(error => {
+                  });
+              },
+            },
+            cancel: () => {
+              overlay.hide();
+            },
+          },
+        });
+      } else {
+        $.confirm({
+          title: "WARNING!",
+          content:
+            "Are you sure you want to Retract <b>" +
+            wardMovementForm.totalNetcard +
+            "</b> e-Netcard <b>Online</b> from HH Mobilizers with Login ID: <b>" +
+            selectedId[0].mobilizer_loginid +
+            "</b>?",
+          buttons: {
+            delete: {
+              text: "Reverse e-Netcard",
+              btnClass: "btn btn-danger mr-1 text-capitalize",
+              action: () => {
+                axios
+                  .post(
+                    common.DataService + "?qid=212",
+                    JSON.stringify(selectedId),
+                  )
+                  .then((response) => {
+                    if (response.data.result_code == "200") {
+                      alert.Success(
+                        "Success",
+                        response.data.total +
+                          " Online e-Netcards Reverse successfull",
+                      );
+                      tableOptions.filterParam.movementType = "ReverseOnline";
+                      refreshHHMList();
+                      refreshData();
+                      wardMovementForm.totalNetcard = 1;
+                      overlay.hide();
+                    } else if (response.data.result_code == "401") {
+                      alert.Success("Error", response.data.message);
+                      refreshHHMList();
+                      tableOptions.filterParam.movementType = "ReverseOnline";
+                      refreshData();
+                      overlay.hide();
+                    } else {
+                      overlay.hide();
+                      alert.Error("Error", response.data.message);
+                    }
+                  })
+                  .catch((error) => {
+                    alert.Error("ERROR", safeMessage(error));
                     overlay.hide();
-                    alert.Error('ERROR', safeMessage(error));
-                });
-        }
-        const getLgasLevel = (stateid) => {
+                  });
+              },
+            },
+            cancel: () => {
+              overlay.hide();
+            },
+          },
+        });
+      }
+    };
+
+    /* Geo + balance lookups -------------------------------------- */
+    const getsysDefaultDataSettings = () => {
+      overlay.show();
+      axios
+        .get(common.DataService + "?qid=gen007")
+        .then((response) => {
+          if (response.data.data && response.data.data.length > 0) {
+            sysDefaultData.value = response.data.data[0];
+            getLgasLevel(response.data.data[0].stateid);
+            movementForm.geoLevel = "state";
+            movementForm.geoLevelId = response.data.data[0].stateid;
+          }
+          overlay.hide();
+        })
+        .catch((error) => {
+          overlay.hide();
+          alert.Error("ERROR", safeMessage(error));
+        });
+    };
+    const getLgasLevel = (stateid) => {
+      overlay.show();
+      axios
+        .post(common.DataService + "?qid=gen003", JSON.stringify(stateid))
+        .then((response) => {
+          lgaLevelData.value = (response.data && response.data.data) || [];
+          overlay.hide();
+        })
+        .catch((error) => {
+          overlay.hide();
+          alert.Error("ERROR", safeMessage(error));
+        });
+    };
+    const getLgasNetBalances = () => {
+      overlay.show();
+      axios
+        .post(common.DataService + "?qid=206")
+        .then((response) => {
+          lgaNetBalancesData.value =
+            (response.data && response.data.data) || [];
+          overlay.hide();
+        })
+        .catch((error) => {
+          overlay.hide();
+          alert.Error("ERROR", safeMessage(error));
+        });
+    };
+    const getWardLevel = () => {
+      overlay.show();
+      wardMovementForm.wardid = "";
+      axios
+        .get(common.DataService + "?qid=gen005&e=" + wardMovementForm.lgaid)
+        .then((response) => {
+          wardLevelData.value = (response.data && response.data.data) || [];
+          overlay.hide();
+        })
+        .catch((error) => {
+          overlay.hide();
+          alert.Error("ERROR", safeMessage(error));
+        });
+    };
+    const getWardData = (event) => {
+      overlay.show();
+      wardMovementForm.wardid = "";
+      wardMovementForm.lgaid =
+        event.target.options[event.target.options.selectedIndex].value;
+      axios
+        .get(
+          common.DataService +
+            "?qid=gen005&lgaid=" +
+            wardMovementForm.lgaid +
+            "&e=" +
+            wardMovementForm.lgaid,
+        )
+        .then((response) => {
+          wardNetBalancesData.value =
+            (response.data && response.data.data) || [];
+          wardLevelData.value = (response.data && response.data.data) || [];
+          overlay.hide();
+        })
+        .catch((error) => {
+          overlay.hide();
+          alert.Error("ERROR", safeMessage(error));
+        });
+    };
+    const getHhmBalances = (event) => {
+      var current_endpoint =
+        wardMovementForm.wardMoveBtn == "Reverse" ? "208" : "211";
+      var optText =
+        event.target.options[event.target.options.selectedIndex].text;
+      wardMovementForm.wardName = optText.trim().replace(",", "").split("-")[0];
+      currentWardBalance.wardName = optText;
+      overlay.show();
+      getCurrentWardBalance();
+      axios
+        .get(
+          common.DataService +
+            "?qid=" +
+            current_endpoint +
+            "&wardid=" +
+            wardMovementForm.wardid,
+        )
+        .then((response) => {
+          hhmBalanacesData.value = (response.data && response.data.data) || [];
+          overlay.hide();
+        })
+        .catch((error) => {
+          overlay.hide();
+          alert.Error("ERROR", safeMessage(error));
+        });
+    };
+    const HHMBalancesRefresh = () => {
+      var current_endpoint =
+        wardMovementForm.wardMoveBtn == "Reverse" ? "208" : "211";
+      overlay.show();
+      if (wardMovementForm.wardid == "") {
+        alert.Error("Ward Selection Error", "Please select a ward first");
+        overlay.hide();
+        return;
+      }
+      getCurrentWardBalance();
+      axios
+        .get(
+          common.DataService +
+            "?qid=" +
+            current_endpoint +
+            "&wardid=" +
+            wardMovementForm.wardid,
+        )
+        .then((response) => {
+          hhmBalanacesData.value = (response.data && response.data.data) || [];
+          overlay.hide();
+        })
+        .catch((error) => {
+          overlay.hide();
+          alert.Error("ERROR", safeMessage(error));
+        });
+    };
+    const refreshHHMList = () => {
+      var current_endpoint =
+        wardMovementForm.wardMoveBtn == "Reverse" ? "208" : "211";
+      overlay.show();
+      getCurrentWardBalance();
+      axios
+        .get(
+          common.DataService +
+            "?qid=" +
+            current_endpoint +
+            "&wardid=" +
+            wardMovementForm.wardid,
+        )
+        .then((response) => {
+          hhmBalanacesData.value = (response.data && response.data.data) || [];
+          overlay.hide();
+        })
+        .catch((error) => {
+          overlay.hide();
+          alert.Error("ERROR", safeMessage(error));
+        });
+    };
+    const getCurrentWardBalance = () => {
+      axios
+        .get(common.DataService + "?qid=214&wardid=" + wardMovementForm.wardid)
+        .then((response) => {
+          var row =
+            (response.data && response.data.data && response.data.data[0]) ||
+            {};
+          currentWardBalance.balance = row.balance ? parseInt(row.balance) : 0;
+          wardMovementForm.wardBalance = currentWardBalance.balance;
+          currentWardBalance.received = row.received
+            ? parseInt(row.received)
+            : 0;
+          currentWardBalance.disbursed = row.disbursed
+            ? parseInt(row.disbursed)
+            : 0;
+          overlay.hide();
+        })
+        .catch((error) => {
+          overlay.hide();
+          alert.Error("ERROR", safeMessage(error));
+        });
+    };
+
+    const refreshData = () => {
+      paginationDefault();
+      loadTableData();
+      getLgasNetBalances();
+      getAllStat();
+    };
+    const getAllStat = () => {
+      var endpoints = [common.DataService + "?qid=201"];
+      Promise.all(endpoints.map((e) => axios.get(e)))
+        .then(
+          axios.spread((...allData) => {
             overlay.show();
-            axios.post(common.DataService + '?qid=gen003', JSON.stringify(stateid))
-                .then(response => {
-                    lgaLevelData.value = (response.data && response.data.data) || [];
-                    overlay.hide();
-                })
-                .catch(error => {
-                    overlay.hide();
-                    alert.Error('ERROR', safeMessage(error));
-                });
-        }
-        const getLgasNetBalances = () => {
-            overlay.show();
-            axios.post(common.DataService + '?qid=206')
-                .then(response => {
-                    lgaNetBalancesData.value = (response.data && response.data.data) || [];
-                    overlay.hide();
-                })
-                .catch(error => {
-                    overlay.hide();
-                    alert.Error('ERROR', safeMessage(error));
-                });
-        }
-        const getWardLevel = () => {
-            overlay.show();
-            wardMovementForm.wardid = '';
-            axios.get(common.DataService + '?qid=gen005&e=' + wardMovementForm.lgaid)
-                .then(response => {
-                    wardLevelData.value = (response.data && response.data.data) || [];
-                    overlay.hide();
-                })
-                .catch(error => {
-                    overlay.hide();
-                    alert.Error('ERROR', safeMessage(error));
-                });
-        }
-        const getWardData = (event) => {
-            overlay.show();
-            wardMovementForm.wardid = '';
-            wardMovementForm.lgaid = event.target.options[event.target.options.selectedIndex].value;
-            axios.get(common.DataService + '?qid=gen005&lgaid=' + wardMovementForm.lgaid + '&e=' + wardMovementForm.lgaid)
-                .then(response => {
-                    wardNetBalancesData.value = (response.data && response.data.data) || [];
-                    wardLevelData.value = (response.data && response.data.data) || [];
-                    overlay.hide();
-                })
-                .catch(error => {
-                    overlay.hide();
-                    alert.Error('ERROR', safeMessage(error));
-                });
-        }
-        const getHhmBalances = (event) => {
-            var current_endpoint = wardMovementForm.wardMoveBtn == 'Reverse' ? '208' : '211';
-            var optText = event.target.options[event.target.options.selectedIndex].text;
-            wardMovementForm.wardName = optText.trim().replace(',', '').split('-')[0];
-            currentWardBalance.wardName = optText;
-            overlay.show();
-            getCurrentWardBalance();
-            axios.get(common.DataService + '?qid=' + current_endpoint + '&wardid=' + wardMovementForm.wardid)
-                .then(response => {
-                    hhmBalanacesData.value = (response.data && response.data.data) || [];
-                    overlay.hide();
-                })
-                .catch(error => {
-                    overlay.hide();
-                    alert.Error('ERROR', safeMessage(error));
-                });
-        }
-        const HHMBalancesRefresh = () => {
-            var current_endpoint = wardMovementForm.wardMoveBtn == 'Reverse' ? '208' : '211';
-            overlay.show();
-            if (wardMovementForm.wardid == '') {
-                alert.Error('Ward Selection Error', 'Please select a ward first');
-                overlay.hide();
-                return;
+            var data =
+              (allData[0] && allData[0].data && allData[0].data.data) || [];
+            for (var i = 0; i < data.length; i++) {
+              var row = data[i];
+              if (!row || !row.location) continue;
+              if (row.location === "state")
+                allStatistics.stateBalance = row.total || 0;
+              else if (row.location === "lga")
+                allStatistics.lgaBalance = row.total || 0;
+              else if (row.location === "ward")
+                allStatistics.wardBalance = row.total || 0;
+              else if (row.location === "mobilizer")
+                allStatistics.mobilizer = row.total || 0;
+              else if (row.location === "beneficiary")
+                allStatistics.beneficiary = row.total || 0;
             }
-            getCurrentWardBalance();
-            axios.get(common.DataService + '?qid=' + current_endpoint + '&wardid=' + wardMovementForm.wardid)
-                .then(response => {
-                    hhmBalanacesData.value = (response.data && response.data.data) || [];
-                    overlay.hide();
-                })
-                .catch(error => {
-                    overlay.hide();
-                    alert.Error('ERROR', safeMessage(error));
-                });
-        }
-        const refreshHHMList = () => {
-            var current_endpoint = wardMovementForm.wardMoveBtn == 'Reverse' ? '208' : '211';
-            overlay.show();
-            getCurrentWardBalance();
-            axios.get(common.DataService + '?qid=' + current_endpoint + '&wardid=' + wardMovementForm.wardid)
-                .then(response => {
-                    hhmBalanacesData.value = (response.data && response.data.data) || [];
-                    overlay.hide();
-                })
-                .catch(error => {
-                    overlay.hide();
-                    alert.Error('ERROR', safeMessage(error));
-                });
-        }
-        const getCurrentWardBalance = () => {
-            axios.get(common.DataService + '?qid=214&wardid=' + wardMovementForm.wardid)
-                .then(response => {
-                    var row = (response.data && response.data.data && response.data.data[0]) || {};
-                    currentWardBalance.balance = row.balance ? parseInt(row.balance) : 0;
-                    wardMovementForm.wardBalance = currentWardBalance.balance;
-                    currentWardBalance.received = row.received ? parseInt(row.received) : 0;
-                    currentWardBalance.disbursed = row.disbursed ? parseInt(row.disbursed) : 0;
-                    overlay.hide();
-                })
-                .catch(error => {
-                    overlay.hide();
-                    alert.Error('ERROR', safeMessage(error));
-                });
-        }
-
-        const refreshData = () => {
-            paginationDefault();
-            loadTableData();
-            getLgasNetBalances();
-            getAllStat();
-        }
-        const getAllStat = () => {
-            var endpoints = [common.DataService + '?qid=201'];
-            Promise.all(endpoints.map(e => axios.get(e))).then(
-                axios.spread((...allData) => {
-                    overlay.show();
-                    var data = (allData[0] && allData[0].data && allData[0].data.data) || [];
-                    for (var i = 0; i < data.length; i++) {
-                        var row = data[i];
-                        if (!row || !row.location) continue;
-                        if (row.location === 'state') allStatistics.stateBalance = row.total || 0;
-                        else if (row.location === 'lga') allStatistics.lgaBalance = row.total || 0;
-                        else if (row.location === 'ward') allStatistics.wardBalance = row.total || 0;
-                        else if (row.location === 'mobilizer') allStatistics.mobilizer = row.total || 0;
-                        else if (row.location === 'beneficiary') allStatistics.beneficiary = row.total || 0;
-                    }
-                    overlay.hide();
-                })
-            ).catch(() => { overlay.hide(); });
-        }
-
-        const scroll = () => {
-            try {
-                var sidebarMenuList = $('.main-body');
-                if ($.app && $.app.menu && !$.app.menu.is_touch_device()) {
-                    if (sidebarMenuList.length > 0) {
-                        for (var i = 0; i < sidebarMenuList.length; ++i) {
-                            new PerfectScrollbar(sidebarMenuList[i], { theme: 'dark' });
-                        }
-                    }
-                } else {
-                    sidebarMenuList.css('overflow', 'scroll');
-                }
-            } catch (e) { /* swallow */ }
-        }
-        const onlyNumber = (event) => {
-            var keyCode = event.keyCode || event.which;
-            if ((keyCode < 48 || keyCode > 57) && keyCode == 46) event.preventDefault();
-        }
-
-        onMounted(() => {
-            try { $('.date').flatpickr({ altInput: true, altFormat: 'F j, Y', dateFormat: 'Y-m-d' }); } catch (e) {}
-            getsysDefaultDataSettings();
-            getLgasNetBalances();
-            loadTableData();
-            getAllStat();
-            bus.on('g-event-update', loadTableData);
-            $('#todo-search').on('keyup', function () {
-                var value = $(this).val().toLowerCase();
-                $('#moveTable tbody tr').filter(function () {
-                    $(this).toggle($(this).text().toLowerCase().indexOf(value) > -1);
-                });
-            });
-            $('#todo-search1').on('keyup', function () {
-                var value = $(this).val().toLowerCase();
-                $('#moveTable1 tbody tr').filter(function () {
-                    $(this).toggle($(this).text().toLowerCase().indexOf(value) > -1);
-                });
-            });
-            try { $('[data-toggle="tooltip"]').tooltip({ container: 'body' }); } catch (e) {}
-            scroll();
+            overlay.hide();
+          }),
+        )
+        .catch(() => {
+          overlay.hide();
         });
-        onBeforeUnmount(() => {
-            bus.off('g-event-update', loadTableData);
-        });
+    };
 
-        return {
-            tableData, checkToggle, filterState, filters, permission, url,
-            tableOptions, currentWardBalance, wardMovementForm, movementForm,
-            geoIndicator, geoLevelData, sysDefaultData, lgaLevelData,
-            clusterLevelData, wardLevelData, lgaNetBalancesData, wardNetBalancesData,
-            hhmBalanacesData, isLgabalance, isHHMbalance, allStatistics,
-            loadTableData, selectAll, uncheckAll, selectToggle, selectedItemsCount,
-            checkedBg, toggleFilter, selectedItems, forwardReverseSelectedID,
-            paginationDefault, nextPage, prevPage, currentPage, changePerPage, sort,
-            applyFilter, removeSingleFilter, clearAllFilter, clearDate,
-            showWardMoveModal, hideWardMoveModal, hideHHMBalanceModal,
-            wardTransfer,
-            getsysDefaultDataSettings, getLgasLevel, getLgasNetBalances,
-            getWardLevel, getWardData, getHhmBalances,
-            HHMBalancesRefresh, refreshHHMList, getCurrentWardBalance,
-            refreshData, getAllStat, onlyNumber,
-            capitalize: fmtUtils.capitalize,
-            formatNumber: fmtUtils.formatNumber,
-            displayDate: fmtUtils.displayDate,
-        };
-    },
-    template: `
+    const scroll = () => {
+      try {
+        var sidebarMenuList = $(".main-body");
+        if ($.app && $.app.menu && !$.app.menu.is_touch_device()) {
+          if (sidebarMenuList.length > 0) {
+            for (var i = 0; i < sidebarMenuList.length; ++i) {
+              new PerfectScrollbar(sidebarMenuList[i], { theme: "dark" });
+            }
+          }
+        } else {
+          sidebarMenuList.css("overflow", "scroll");
+        }
+      } catch (e) {
+        /* swallow */
+      }
+    };
+    const onlyNumber = (event) => {
+      var keyCode = event.keyCode || event.which;
+      if ((keyCode < 48 || keyCode > 57) && keyCode == 46)
+        event.preventDefault();
+    };
+
+    onMounted(() => {
+      try {
+        $(".date").flatpickr({
+          altInput: true,
+          altFormat: "F j, Y",
+          dateFormat: "Y-m-d",
+        });
+      } catch (e) {}
+      getsysDefaultDataSettings();
+      getLgasNetBalances();
+      loadTableData();
+      getAllStat();
+      bus.on("g-event-update", loadTableData);
+      $("#todo-search").on("keyup", function () {
+        var value = $(this).val().toLowerCase();
+        $("#moveTable tbody tr").filter(function () {
+          $(this).toggle($(this).text().toLowerCase().indexOf(value) > -1);
+        });
+      });
+      $("#todo-search1").on("keyup", function () {
+        var value = $(this).val().toLowerCase();
+        $("#moveTable1 tbody tr").filter(function () {
+          $(this).toggle($(this).text().toLowerCase().indexOf(value) > -1);
+        });
+      });
+      try {
+        $('[data-toggle="tooltip"]').tooltip({ container: "body" });
+      } catch (e) {}
+      scroll();
+    });
+    onBeforeUnmount(() => {
+      bus.off("g-event-update", loadTableData);
+    });
+
+    return {
+      tableData,
+      checkToggle,
+      filterState,
+      filters,
+      permission,
+      url,
+      tableOptions,
+      currentWardBalance,
+      wardMovementForm,
+      movementForm,
+      geoIndicator,
+      geoLevelData,
+      sysDefaultData,
+      lgaLevelData,
+      clusterLevelData,
+      wardLevelData,
+      lgaNetBalancesData,
+      wardNetBalancesData,
+      hhmBalanacesData,
+      isLgabalance,
+      isHHMbalance,
+      allStatistics,
+      loadTableData,
+      selectAll,
+      uncheckAll,
+      selectToggle,
+      selectedItemsCount,
+      checkedBg,
+      toggleFilter,
+      selectedItems,
+      forwardReverseSelectedID,
+      paginationDefault,
+      nextPage,
+      prevPage,
+      currentPage,
+      changePerPage,
+      sort,
+      applyFilter,
+      removeSingleFilter,
+      clearAllFilter,
+      clearDate,
+      showWardMoveModal,
+      hideWardMoveModal,
+      hideHHMBalanceModal,
+      wardTransfer,
+      getsysDefaultDataSettings,
+      getLgasLevel,
+      getLgasNetBalances,
+      getWardLevel,
+      getWardData,
+      getHhmBalances,
+      HHMBalancesRefresh,
+      refreshHHMList,
+      getCurrentWardBalance,
+      refreshData,
+      getAllStat,
+      onlyNumber,
+      capitalize: fmtUtils.capitalize,
+      formatNumber: fmtUtils.formatNumber,
+      displayDate: fmtUtils.displayDate,
+    };
+  },
+  template: `
         <div class="row" id="basic-table" v-cloak>
             <div class="col-md-12 col-sm-12 col-12 mb-1">
                 <h2 class="content-header-title header-txt float-left mb-0">e-Netcard</h2>
@@ -1138,6 +1403,6 @@ const NecardMovement = {
 };
 
 useApp({ template: `<div><page-body/></div>` })
-    .component('page-body', PageBody)
-    .component('necard_movement', NecardMovement)
-    .mount('#app');
+  .component("page-body", PageBody)
+  .component("necard_movement", NecardMovement)
+  .mount("#app");

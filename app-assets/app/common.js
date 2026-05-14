@@ -42,7 +42,7 @@ function GoBack() {
   window.history.back();
 }
 
-(overlay => {
+((overlay) => {
   const show = () => {
     $.blockUI({
       message: '<div class="spinner-border text-white" role="status"></div>',
@@ -54,17 +54,17 @@ function GoBack() {
         opacity: 0.7,
       },
     });
-  }
+  };
 
   const hide = () => {
     $.unblockUI();
-  }
+  };
   //
   overlay.show = show;
   overlay.hide = hide;
 })(window.overlay);
 
-(common => {
+((common) => {
   //
   //  Common Properties
   //
@@ -84,16 +84,16 @@ function GoBack() {
   //
   const GoToUrl = (a) => {
     location.href = a;
-  }
+  };
 
   const GoToPage = (page) => {
     location.href = page;
-  }
+  };
 
   const Pad = (str, max) => {
     str = str.toString();
     return str.length < max ? Pad("0" + str, max) : str;
-  }
+  };
   /*
       Pad Usage
       ***********
@@ -122,7 +122,7 @@ function GoBack() {
   common.ExportDownloadLimit = ExportDownloadLimit;
 })(window.common);
 
-(alert => {
+((alert) => {
   const Success = (title, msg) => {
     toastr.success(msg, title, {
       positionClass: "toast-top-right",
@@ -131,7 +131,7 @@ function GoBack() {
       hideMethod: "slideUp",
       progressBar: true,
     });
-  }
+  };
 
   const Error = (title, msg) => {
     toastr.error(msg, title, {
@@ -141,7 +141,7 @@ function GoBack() {
       hideMethod: "slideUp",
       progressBar: true,
     });
-  }
+  };
 
   const Info = (title, msg) => {
     toastr.info(msg, title, {
@@ -151,7 +151,7 @@ function GoBack() {
       hideMethod: "slideUp",
       progressBar: true,
     });
-  }
+  };
 
   const Warning = (title, msg) => {
     toastr.warning(msg, title, {
@@ -161,7 +161,7 @@ function GoBack() {
       hideMethod: "slideUp",
       progressBar: true,
     });
-  }
+  };
 
   const Delete = (page) => {
     $.confirm({
@@ -188,7 +188,7 @@ function GoBack() {
         },
       },
     });
-  }
+  };
   //
   //
   //

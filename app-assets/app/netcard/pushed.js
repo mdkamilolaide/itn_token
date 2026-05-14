@@ -15,7 +15,7 @@ const PageBody = {
     const page = ref("list");
     const gotoPageHandler = (data) => {
       page.value = data && data.page;
-    }
+    };
     onMounted(() => {
       bus.on("g-event-goto-page", gotoPageHandler);
     });
@@ -78,7 +78,7 @@ const WalletList = {
     const reloadUserListOnUpdate = () => {
       paginationDefault();
       loadTableData();
-    }
+    };
 
     const loadTableData = () => {
       overlay.show();
@@ -104,27 +104,27 @@ const WalletList = {
             "&mdt=" +
             tableOptions.filterParam.mobilization_date,
         )
-        .then(response => {
+        .then((response) => {
           var d = response && response.data;
           tableData.value = Array.isArray(d && d.data) ? d.data : [];
           tableOptions.total = (d && d.recordsTotal) || 0;
           if (tableOptions.currentPage == 1) paginationDefault();
           overlay.hide();
         })
-        .catch(error => {
+        .catch((error) => {
           overlay.hide();
           alert.Error("ERROR", safeMessage(error));
         });
-    }
+    };
 
     const selectAll = () => {
       for (var i = 0; i < tableData.value.length; i++)
         tableData.value[i].pick = true;
-    }
+    };
     const uncheckAll = () => {
       for (var i = 0; i < tableData.value.length; i++)
         tableData.value[i].pick = false;
-    }
+    };
     const selectToggle = () => {
       if (checkToggle.value === false) {
         selectAll();
@@ -133,22 +133,20 @@ const WalletList = {
         uncheckAll();
         checkToggle.value = false;
       }
-    }
+    };
     const checkedBg = (pickOne) => {
       return pickOne != "" ? "bg-select" : "";
-    }
+    };
     const toggleFilter = () => {
       if (filterState.value === false) filters.value = false;
       return (filterState.value = !filterState.value);
-    }
+    };
     const selectedItems = () => {
-      return tableData.value.filter(r => r.pick);
-    }
+      return tableData.value.filter((r) => r.pick);
+    };
     const selectedID = () => {
-      return tableData.value
-        .filter(r => r.pick)
-        .map(r => r.userid);
-    }
+      return tableData.value.filter((r) => r.pick).map((r) => r.userid);
+    };
 
     const paginationDefault = () => {
       tableOptions.pageLength = Math.ceil(
@@ -159,17 +157,17 @@ const WalletList = {
       );
       tableOptions.isNext = tableOptions.currentPage < tableOptions.pageLength;
       tableOptions.isPrev = tableOptions.currentPage > 1;
-    }
+    };
     const nextPage = () => {
       tableOptions.currentPage += 1;
       paginationDefault();
       loadTableData();
-    }
+    };
     const prevPage = () => {
       tableOptions.currentPage -= 1;
       paginationDefault();
       loadTableData();
-    }
+    };
     const currentPage = () => {
       paginationDefault();
       if (tableOptions.currentPage < 1)
@@ -177,7 +175,7 @@ const WalletList = {
       else if (tableOptions.currentPage > tableOptions.pageLength)
         alert.Error("ERROR", "The Page requested doesn't exist");
       else loadTableData();
-    }
+    };
     const changePerPage = (val) => {
       var maxPerPage = Math.ceil(tableOptions.total / val);
       if (maxPerPage < tableOptions.currentPage)
@@ -185,7 +183,7 @@ const WalletList = {
       tableOptions.perPage = val;
       paginationDefault();
       loadTableData();
-    }
+    };
     const sort = (col) => {
       if (tableOptions.orderField === col)
         tableOptions.orderDir =
@@ -193,7 +191,7 @@ const WalletList = {
       else tableOptions.orderField = col;
       paginationDefault();
       loadTableData();
-    }
+    };
     const applyFilter = () => {
       var checkFill = 0;
       checkFill += tableOptions.filterParam.loginid != "" ? 1 : 0;
@@ -208,7 +206,7 @@ const WalletList = {
       } else {
         alert.Error("ERROR", "Invalid required data");
       }
-    }
+    };
     const removeSingleFilter = (column_name) => {
       tableOptions.filterParam[column_name] = "";
       if (column_name == "geo_level" || column_name == "geo_level_id") {
@@ -222,7 +220,7 @@ const WalletList = {
       if (g == 0) filters.value = false;
       paginationDefault();
       loadTableData();
-    }
+    };
     const clearAllFilter = () => {
       try {
         $("#mobilization_date")
@@ -240,31 +238,31 @@ const WalletList = {
       tableOptions.filterParam.geo_level_id = "";
       paginationDefault();
       loadTableData();
-    }
+    };
     const goToDetail = (userid, user_status) => {
       bus.emit("g-event-goto-page", {
         userid: userid,
         page: "detail",
         user_status: user_status,
       });
-    }
+    };
     const refreshData = () => {
       paginationDefault();
       loadTableData();
-    }
+    };
     const getGeoLocation = () => {
       overlay.show();
       axios
         .get(common.DataService + "?qid=gen009")
-        .then(response => {
+        .then((response) => {
           geoData.value = (response.data && response.data.data) || [];
           overlay.hide();
         })
-        .catch(error => {
+        .catch((error) => {
           overlay.hide();
           alert.Error("ERROR", safeMessage(error));
         });
-    }
+    };
     const setLocation = (select_index) => {
       var i = select_index || 0;
       var row = geoData.value[i];
@@ -272,7 +270,7 @@ const WalletList = {
       tableOptions.filterParam.geo_level = row.geo_level;
       tableOptions.filterParam.geo_level_id = row.geo_level_id;
       tableOptions.filterParam.geo_string = row.title;
-    }
+    };
 
     const exportMobilization = async () => {
       var qs =
@@ -305,7 +303,7 @@ const WalletList = {
         " Mobilization List";
       overlay.show();
 
-      var count = await new Promise(resolve => {
+      var count = await new Promise((resolve) => {
         $.ajax({
           url: common.DataService,
           type: "POST",
@@ -328,7 +326,7 @@ const WalletList = {
         alert.Error("Download Error", "No data found");
       } else {
         alert.Info("DOWNLOADING...", "Downloading " + count + " record(s)");
-        var outcome = await new Promise(resolve => {
+        var outcome = await new Promise((resolve) => {
           $.ajax({
             url: common.ExportService,
             type: "POST",
@@ -344,7 +342,7 @@ const WalletList = {
         }
       }
       overlay.hide();
-    }
+    };
 
     onMounted(() => {
       getGeoLocation();
@@ -603,10 +601,10 @@ const MobilizationDetails = {
       userid.value = data.userid;
       user_status.value = data.user_status;
       getUserDetails();
-    }
+    };
     const goToList = () => {
       bus.emit("g-event-goto-page", { page: "list", userid: userid.value });
-    }
+    };
     const discardUpdate = () => {
       $.confirm({
         title: "WARNING!",
@@ -631,12 +629,12 @@ const MobilizationDetails = {
           },
         },
       });
-    }
+    };
     const getUserDetails = () => {
       overlay.show();
       axios
         .get(common.DataService + "?qid=005&e=" + userid.value)
-        .then(response => {
+        .then((response) => {
           userData.baseData =
             (response.data.base && response.data.base[0]) || {};
           userData.financeData =
@@ -647,24 +645,24 @@ const MobilizationDetails = {
             (response.data.role && response.data.role[0]) || {};
           overlay.hide();
         })
-        .catch(error => {
+        .catch((error) => {
           overlay.hide();
           alert.Error("ERROR", safeMessage(error));
         });
-    }
+    };
     const getBankLists = () => {
       overlay.show();
       axios
         .get(common.DataService + "?qid=gen008")
-        .then(response => {
+        .then((response) => {
           bankListData.value = (response.data && response.data.data) || [];
           overlay.hide();
         })
-        .catch(error => {
+        .catch((error) => {
           overlay.hide();
           alert.Error("ERROR", safeMessage(error));
         });
-    }
+    };
     const updateUserProfile = () => {
       var updateFormData = {
         userid: userid.value,
@@ -696,7 +694,7 @@ const MobilizationDetails = {
                   common.DataService + "?qid=006",
                   JSON.stringify(updateFormData),
                 )
-                .then(response => {
+                .then((response) => {
                   if (response.data.result_code == "200") {
                     overlay.hide();
                     bus.emit("g-event-update-user", {});
@@ -710,7 +708,7 @@ const MobilizationDetails = {
                     alert.Error("ERROR", "User De/Activation failed");
                   }
                 })
-                .catch(error => {
+                .catch((error) => {
                   overlay.hide();
                   alert.Error("ERROR", safeMessage(error));
                 });
@@ -725,28 +723,28 @@ const MobilizationDetails = {
           },
         },
       });
-    }
+    };
     const getRoleList = () => {
       overlay.show();
       axios
         .get(common.DataService + "?qid=007")
-        .then(response => {
+        .then((response) => {
           roleListData.value = (response.data && response.data.data) || [];
           overlay.hide();
         })
-        .catch(error => {
+        .catch((error) => {
           overlay.hide();
           alert.Error("ERROR", safeMessage(error));
         });
-    }
+    };
     const checkIfEmpty = (data) => {
       return data === null || data === "" ? "Nil" : data;
-    }
+    };
     const userActivationDeactivation = (actionid) => {
       overlay.show();
       axios
         .post(common.DataService + "?qid=001", JSON.stringify([actionid]))
-        .then(response => {
+        .then((response) => {
           overlay.hide();
           if (response.data.result_code == "200") {
             bus.emit("g-event-update-user", {});
@@ -756,24 +754,24 @@ const MobilizationDetails = {
             alert.Error("ERROR", "User De/Activation failed");
           }
         })
-        .catch(error => {
+        .catch((error) => {
           overlay.hide();
           alert.Error("ERROR", safeMessage(error));
         });
-    }
+    };
     const changeRole = (event) => {
       userData.baseData.role =
         event.target.options[event.target.options.selectedIndex].text;
-    }
+    };
     const changeBank = (event) => {
       userData.financeData.bank_name =
         event.target.options[event.target.options.selectedIndex].text;
-    }
+    };
     const downloadBadge = (uid) => {
       overlay.show();
       window.open(common.BadgeService + "?qid=002&e=" + uid, "_parent");
       overlay.hide();
-    }
+    };
 
     onMounted(() => {
       bus.on("g-event-goto-page", gotoPageHandler);

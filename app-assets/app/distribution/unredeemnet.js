@@ -11,19 +11,28 @@ const { ref, reactive, onMounted, onBeforeUnmount } = Vue;
 const { useApp, useFormat, bus, safeMessage } = window.utils;
 
 const PageBody = {
-    setup() {
-        const page = ref('list');
-        const permission = ref(
-            (typeof getPermission === 'function')
-                ? (getPermission(typeof per !== 'undefined' ? per : null, 'distribution') || { permission_value: 0 })
-                : { permission_value: 0 }
-        );
-        const gotoPageHandler = (data) => { page.value = data && data.page; };
-        onMounted(() => { bus.on('g-event-goto-page', gotoPageHandler); });
-        onBeforeUnmount(() => { bus.off('g-event-goto-page', gotoPageHandler); });
-        return { page, permission };
-    },
-    template: `
+  setup() {
+    const page = ref("list");
+    const permission = ref(
+      typeof getPermission === "function"
+        ? getPermission(
+            typeof per !== "undefined" ? per : null,
+            "distribution",
+          ) || { permission_value: 0 }
+        : { permission_value: 0 },
+    );
+    const gotoPageHandler = (data) => {
+      page.value = data && data.page;
+    };
+    onMounted(() => {
+      bus.on("g-event-goto-page", gotoPageHandler);
+    });
+    onBeforeUnmount(() => {
+      bus.off("g-event-goto-page", gotoPageHandler);
+    });
+    return { page, permission };
+  },
+  template: `
         <div>
             <div class="content-body">
                 <div v-show="page == 'list'">
@@ -38,304 +47,471 @@ const PageBody = {
 };
 
 const UnredeemedSearch = {
-    setup() {
-        const fmtUtils = useFormat();
+  setup() {
+    const fmtUtils = useFormat();
 
-        const url = ref(window.common && window.common.BadgeService);
-        const tableData = ref([]);
-        const permission = ref(
-            (typeof getPermission === 'function')
-                ? (getPermission(typeof per !== 'undefined' ? per : null, 'distribution') || { permission_value: 0 })
-                : { permission_value: 0 }
-        );
-        const tableDetails = reactive({
-            hhid: '', hoh_first: '', hoh_last: '', hoh_phone: '', hoh_gender: '',
-            family_size: '', hod_mother: '', allocated_net: '', sleeping_space: '',
-            adult_female: '', adult_male: '', children: '',
-            etoken_serial: '', etoken_pin: '',
-            geo_level: '', geo_level_id: '', geo_string: '',
-            mobilization_date: '', location_description: '',
+    const url = ref(window.common && window.common.BadgeService);
+    const tableData = ref([]);
+    const permission = ref(
+      typeof getPermission === "function"
+        ? getPermission(
+            typeof per !== "undefined" ? per : null,
+            "distribution",
+          ) || { permission_value: 0 }
+        : { permission_value: 0 },
+    );
+    const tableDetails = reactive({
+      hhid: "",
+      hoh_first: "",
+      hoh_last: "",
+      hoh_phone: "",
+      hoh_gender: "",
+      family_size: "",
+      hod_mother: "",
+      allocated_net: "",
+      sleeping_space: "",
+      adult_female: "",
+      adult_male: "",
+      children: "",
+      etoken_serial: "",
+      etoken_pin: "",
+      geo_level: "",
+      geo_level_id: "",
+      geo_string: "",
+      mobilization_date: "",
+      location_description: "",
+    });
+    const id = ref(0);
+    const geoData = ref([]);
+    const checkToggle = ref(false);
+    const filterState = ref(false);
+    const filters = ref(false);
+    const tableOptions = reactive({
+      total: 1,
+      pageLength: 1,
+      perPage: 10,
+      currentPage: 1,
+      orderDir: "desc",
+      orderField: 0,
+      limitStart: 0,
+      isNext: false,
+      isPrev: false,
+      aLength: [10, 20, 50, 100, 150, 200],
+      filterParam: {
+        loginid: "",
+        hh_phone_no: "",
+        etoken_serial: "",
+        etoken_pin: "",
+        mobilization_date: "",
+        geo_level: "",
+        geo_level_id: "",
+        geo_string: "",
+      },
+    });
+
+    const reloadUserListOnUpdate = () => {
+      paginationDefault();
+      loadTableData();
+    };
+    const loadTableData = () => {
+      overlay.show();
+      axios
+        .get(
+          common.TableService +
+            "?qid=402&draw=" +
+            tableOptions.currentPage +
+            "&order_column=" +
+            tableOptions.orderField +
+            "&length=" +
+            tableOptions.perPage +
+            "&start=" +
+            tableOptions.limitStart +
+            "&order_dir=" +
+            tableOptions.orderDir +
+            "&glv=" +
+            tableOptions.filterParam.geo_level +
+            "&lgid=" +
+            tableOptions.filterParam.loginid +
+            "&gid=" +
+            tableOptions.filterParam.geo_level_id +
+            "&mdt=" +
+            tableOptions.filterParam.mobilization_date +
+            "&pph=" +
+            tableOptions.filterParam.hh_phone_no +
+            "&ets=" +
+            tableOptions.filterParam.etoken_serial +
+            "&etp=" +
+            tableOptions.filterParam.etoken_pin,
+        )
+        .then((response) => {
+          var d = response && response.data;
+          tableData.value = Array.isArray(d && d.data) ? d.data : [];
+          tableOptions.total = (d && d.recordsTotal) || 0;
+          if (tableOptions.currentPage == 1) paginationDefault();
+          overlay.hide();
+        })
+        .catch((error) => {
+          overlay.hide();
+          alert.Error("ERROR", safeMessage(error));
         });
-        const id = ref(0);
-        const geoData = ref([]);
-        const checkToggle = ref(false);
-        const filterState = ref(false);
-        const filters = ref(false);
-        const tableOptions = reactive({
-            total: 1, pageLength: 1, perPage: 10, currentPage: 1,
-            orderDir: 'desc', orderField: 0, limitStart: 0,
-            isNext: false, isPrev: false,
-            aLength: [10, 20, 50, 100, 150, 200],
-            filterParam: {
-                loginid: '', hh_phone_no: '', etoken_serial: '', etoken_pin: '',
-                mobilization_date: '', geo_level: '', geo_level_id: '', geo_string: '',
-            },
-        });
+    };
 
-        const reloadUserListOnUpdate = () => { paginationDefault(); loadTableData(); };
-        const loadTableData = () => {
-            overlay.show();
-            axios.get(
-                common.TableService +
-                '?qid=402&draw=' + tableOptions.currentPage +
-                '&order_column=' + tableOptions.orderField +
-                '&length=' + tableOptions.perPage +
-                '&start=' + tableOptions.limitStart +
-                '&order_dir=' + tableOptions.orderDir +
-                '&glv=' + tableOptions.filterParam.geo_level +
-                '&lgid=' + tableOptions.filterParam.loginid +
-                '&gid=' + tableOptions.filterParam.geo_level_id +
-                '&mdt=' + tableOptions.filterParam.mobilization_date +
-                '&pph=' + tableOptions.filterParam.hh_phone_no +
-                '&ets=' + tableOptions.filterParam.etoken_serial +
-                '&etp=' + tableOptions.filterParam.etoken_pin
-            )
-                .then(response => {
-                    var d = response && response.data;
-                    tableData.value = Array.isArray(d && d.data) ? d.data : [];
-                    tableOptions.total = (d && d.recordsTotal) || 0;
-                    if (tableOptions.currentPage == 1) paginationDefault();
-                    overlay.hide();
-                })
-                .catch(error => {
-                    overlay.hide();
-                    alert.Error('ERROR', safeMessage(error));
-                });
-        }
-
-        const selectAll = () => { for (var i = 0; i < tableData.value.length; i++) tableData.value[i].pick = true; };
-        const uncheckAll = () => { for (var i = 0; i < tableData.value.length; i++) tableData.value[i].pick = false; };
-        const selectToggle = () => {
-            if (checkToggle.value === false) { selectAll(); checkToggle.value = true; }
-            else                              { uncheckAll(); checkToggle.value = false; }
-        }
-        const checkedBg = (p) => { return p != '' ? 'bg-select' : ''; };
-        const toggleFilter = () => {
-            if (filterState.value === false) {
-                filters.value = false;
-                try {
-                    $('#mobilization_date').flatpickr({ altInput: true, altFormat: 'F j, Y', dateFormat: 'Y-m-d' }).clear();
-                } catch (e) {}
-            }
-            return (filterState.value = !filterState.value);
-        }
-        const paginationDefault = () => {
-            tableOptions.pageLength = Math.ceil(tableOptions.total / tableOptions.perPage);
-            tableOptions.limitStart = Math.ceil((tableOptions.currentPage - 1) * tableOptions.perPage);
-            tableOptions.isNext = tableOptions.currentPage < tableOptions.pageLength;
-            tableOptions.isPrev = tableOptions.currentPage > 1;
-        }
-        const nextPage = () => { tableOptions.currentPage += 1; paginationDefault(); loadTableData(); };
-        const prevPage = () => { tableOptions.currentPage -= 1; paginationDefault(); loadTableData(); };
-        const currentPage = () => {
-            paginationDefault();
-            if (tableOptions.currentPage < 1)                            alert.Error('ERROR', "The Page requested doesn't exist");
-            else if (tableOptions.currentPage > tableOptions.pageLength) alert.Error('ERROR', "The Page requested doesn't exist");
-            else                                                         loadTableData();
-        }
-        const changePerPage = (val) => {
-            var maxPerPage = Math.ceil(tableOptions.total / val);
-            if (maxPerPage < tableOptions.currentPage) tableOptions.currentPage = maxPerPage;
-            tableOptions.perPage = val;
-            paginationDefault();
-            loadTableData();
-        }
-        const sort = (col) => {
-            if (tableOptions.orderField === col) tableOptions.orderDir = tableOptions.orderDir === 'asc' ? 'desc' : 'asc';
-            else                                  tableOptions.orderField = col;
-            paginationDefault();
-            loadTableData();
-        }
-        const applyFilter = () => {
-            var checkFill = 0;
-            checkFill += tableOptions.filterParam.loginid != '' ? 1 : 0;
-            checkFill += tableOptions.filterParam.mobilization_date != '' ? 1 : 0;
-            checkFill += tableOptions.filterParam.etoken_serial != '' ? 1 : 0;
-            checkFill += tableOptions.filterParam.etoken_pin != '' ? 1 : 0;
-            checkFill += tableOptions.filterParam.hh_phone_no != '' ? 1 : 0;
-            checkFill += tableOptions.filterParam.geo_level != '' ? 1 : 0;
-            checkFill += tableOptions.filterParam.geo_level_id != '' ? 1 : 0;
-            if (checkFill > 0) {
-                toggleFilter();
-                filters.value = true;
-                paginationDefault();
-                loadTableData();
-            } else {
-                alert.Error('ERROR', 'Invalid required data');
-            }
-        }
-        const removeSingleFilter = (column_name) => {
-            tableOptions.filterParam[column_name] = '';
-            if (column_name == 'geo_level' || column_name == 'geo_level_id') {
-                tableOptions.filterParam.geo_level = '';
-                tableOptions.filterParam.geo_level_id = '';
-            }
-            if (column_name == 'mobilization_date') {
-                try { $('#mobilization_date').flatpickr({ altInput: true, altFormat: 'F j, Y', dateFormat: 'Y-m-d' }).clear(); } catch (e) {}
-            }
-            var g = 0;
-            for (var k in tableOptions.filterParam) {
-                if (tableOptions.filterParam[k] != '') g++;
-            }
-            if (g == 0) filters.value = false;
-            paginationDefault();
-            loadTableData();
-        }
-        const clearAllFilter = () => {
-            try { $('#mobilization_date').flatpickr({ altInput: true, altFormat: 'F j, Y', dateFormat: 'Y-m-d' }).clear(); } catch (e) {}
-            filters.value = false;
-            tableOptions.filterParam.mobilization_date = '';
-            tableOptions.filterParam.loginid = '';
-            tableOptions.filterParam.geo_level = '';
-            tableOptions.filterParam.geo_level_id = '';
-            paginationDefault();
-            loadTableData();
-        }
-        const refreshData = () => { paginationDefault(); loadTableData(); };
-        const getGeoLocation = () => {
-            overlay.show();
-            axios.get(common.DataService + '?qid=gen009')
-                .then(response => {
-                    geoData.value = (response.data && response.data.data) || [];
-                    overlay.hide();
-                })
-                .catch(error => {
-                    overlay.hide();
-                    alert.Error('ERROR', safeMessage(error));
-                });
-        }
-        const setLocation = (select_index) => {
-            var i = select_index || 0;
-            var row = geoData.value[i];
-            if (!row) return;
-            tableOptions.filterParam.geo_level = row.geo_level;
-            tableOptions.filterParam.geo_level_id = row.geo_level_id;
-            tableOptions.filterParam.geo_string = row.title;
-        }
-
-        const exportMobilization = async () => {
-            var qs =
-                'qid=402&draw=' + tableOptions.currentPage +
-                '&order_column=' + tableOptions.orderField +
-                '&length=' + tableOptions.perPage +
-                '&start=' + tableOptions.limitStart +
-                '&order_dir=' + tableOptions.orderDir +
-                '&glv=' + tableOptions.filterParam.geo_level +
-                '&lgid=' + tableOptions.filterParam.loginid +
-                '&gid=' + tableOptions.filterParam.geo_level_id +
-                '&mdt=' + tableOptions.filterParam.mobilization_date +
-                '&pph=' + tableOptions.filterParam.hh_phone_no +
-                '&ets=' + tableOptions.filterParam.etoken_serial +
-                '&etp=' + tableOptions.filterParam.etoken_pin;
-            var filename =
-                (tableOptions.filterParam.geo_string ? tableOptions.filterParam.geo_string : 'UnRedeemed ') + ' ' +
-                (tableOptions.filterParam.loginid ? tableOptions.filterParam.loginid : 'UnRedeemed ') +
-                ' Mobilization List';
-            overlay.show();
-
-            var count = await new Promise(resolve => {
-                $.ajax({
-                    url: common.DataService, type: 'POST', data: qs, dataType: 'json',
-                    success: (data) => { resolve(data.total); },
-                });
-            });
-            var downloadMax = (window.common && window.common.ExportDownloadLimit) || 25000;
-            if (parseInt(count) > downloadMax) {
-                alert.Error('Download Error', 'Unable to download data because it has exceeded download limit, download limit is ' + downloadMax);
-            } else if (parseInt(count) == 0) {
-                alert.Error('Download Error', 'No data found');
-            } else {
-                alert.Info('DOWNLOADING...', 'Downloading ' + count + ' record(s)');
-                var outcome = await new Promise(resolve => {
-                    $.ajax({
-                        url: common.ExportService, type: 'POST', data: qs,
-                        success: (data) => { resolve(data); },
-                    });
-                });
-                var exportData = JSON.parse(outcome);
-                if (window.Jhxlsx && typeof window.Jhxlsx.export === 'function') {
-                    window.Jhxlsx.export(exportData, { fileName: filename });
-                }
-            }
-            overlay.hide();
-        }
-
-        const showdistributionDetailsModal = (i) => {
-            overlay.show();
-            var row = tableData.value[i] || {};
-            tableDetails.geo_string = row.geo_string;
-            tableDetails.allocated_net = row.allocated_net;
-            tableDetails.mobilization_date = row.collected_date;
-            tableDetails.etoken_serial = row.etoken_serial;
-            tableDetails.etoken_pin = row.etoken_pin;
-            tableDetails.sleeping_space = row.sleeping_space;
-            tableDetails.adult_female = row.adult_female;
-            tableDetails.adult_male = row.adult_male;
-            tableDetails.family_size = row.family_size;
-            tableDetails.geo_level = row.geo_level;
-            tableDetails.hoh_first = row.hoh_first;
-            tableDetails.hoh_last = row.hoh_last;
-            tableDetails.hoh_gender = row.hoh_gender;
-            tableDetails.hoh_phone = row.hoh_phone;
-            tableDetails.children = row.children;
-            tableDetails.location_description = row.location_description;
-            $('#distributionDetails').modal('show');
-            overlay.hide();
-        }
-        const hidedistributionDetailsModal = () => {
-            overlay.show();
-            $('#distributionDetails').modal('hide');
-            for (var k in tableDetails) tableDetails[k] = '';
-            overlay.hide();
-        }
-        const checkIfEmpty = (data) => { return data === null || data === '' ? 'Nil' : data; };
-
-        // Kick off data fetches in setup rather than onMounted — the
-        // <unredeemed_search v-if="permission.permission_value > 1"> wrap
-        // (combined with the parent's v-show) made onMounted fire too late
-        // for the initial render to pick up the response. Setup-level calls
-        // are independent of mount lifecycle and reliably populate tableData
-        // on first paint.
-        getGeoLocation();
+    const selectAll = () => {
+      for (var i = 0; i < tableData.value.length; i++)
+        tableData.value[i].pick = true;
+    };
+    const uncheckAll = () => {
+      for (var i = 0; i < tableData.value.length; i++)
+        tableData.value[i].pick = false;
+    };
+    const selectToggle = () => {
+      if (checkToggle.value === false) {
+        selectAll();
+        checkToggle.value = true;
+      } else {
+        uncheckAll();
+        checkToggle.value = false;
+      }
+    };
+    const checkedBg = (p) => {
+      return p != "" ? "bg-select" : "";
+    };
+    const toggleFilter = () => {
+      if (filterState.value === false) {
+        filters.value = false;
+        try {
+          $("#mobilization_date")
+            .flatpickr({
+              altInput: true,
+              altFormat: "F j, Y",
+              dateFormat: "Y-m-d",
+            })
+            .clear();
+        } catch (e) {}
+      }
+      return (filterState.value = !filterState.value);
+    };
+    const paginationDefault = () => {
+      tableOptions.pageLength = Math.ceil(
+        tableOptions.total / tableOptions.perPage,
+      );
+      tableOptions.limitStart = Math.ceil(
+        (tableOptions.currentPage - 1) * tableOptions.perPage,
+      );
+      tableOptions.isNext = tableOptions.currentPage < tableOptions.pageLength;
+      tableOptions.isPrev = tableOptions.currentPage > 1;
+    };
+    const nextPage = () => {
+      tableOptions.currentPage += 1;
+      paginationDefault();
+      loadTableData();
+    };
+    const prevPage = () => {
+      tableOptions.currentPage -= 1;
+      paginationDefault();
+      loadTableData();
+    };
+    const currentPage = () => {
+      paginationDefault();
+      if (tableOptions.currentPage < 1)
+        alert.Error("ERROR", "The Page requested doesn't exist");
+      else if (tableOptions.currentPage > tableOptions.pageLength)
+        alert.Error("ERROR", "The Page requested doesn't exist");
+      else loadTableData();
+    };
+    const changePerPage = (val) => {
+      var maxPerPage = Math.ceil(tableOptions.total / val);
+      if (maxPerPage < tableOptions.currentPage)
+        tableOptions.currentPage = maxPerPage;
+      tableOptions.perPage = val;
+      paginationDefault();
+      loadTableData();
+    };
+    const sort = (col) => {
+      if (tableOptions.orderField === col)
+        tableOptions.orderDir =
+          tableOptions.orderDir === "asc" ? "desc" : "asc";
+      else tableOptions.orderField = col;
+      paginationDefault();
+      loadTableData();
+    };
+    const applyFilter = () => {
+      var checkFill = 0;
+      checkFill += tableOptions.filterParam.loginid != "" ? 1 : 0;
+      checkFill += tableOptions.filterParam.mobilization_date != "" ? 1 : 0;
+      checkFill += tableOptions.filterParam.etoken_serial != "" ? 1 : 0;
+      checkFill += tableOptions.filterParam.etoken_pin != "" ? 1 : 0;
+      checkFill += tableOptions.filterParam.hh_phone_no != "" ? 1 : 0;
+      checkFill += tableOptions.filterParam.geo_level != "" ? 1 : 0;
+      checkFill += tableOptions.filterParam.geo_level_id != "" ? 1 : 0;
+      if (checkFill > 0) {
+        toggleFilter();
+        filters.value = true;
+        paginationDefault();
         loadTableData();
-
-        onMounted(() => {
-            bus.on('g-event-update-user', reloadUserListOnUpdate);
-            try {
-                var select = $('.select2');
-                select.each(function () {
-                    var $this = $(this);
-                    $this.wrap('<div class="position-relative"></div>');
-                    $this.select2({
-                        dropdownAutoWidth: true, width: '100%',
-                        dropdownParent: $this.parent(),
-                    }).on('change', function () { setLocation(this.value); });
-                });
-                $('.select2-selection__arrow').html('<i class="feather icon-chevron-down"></i>');
-                $('.date').flatpickr({ altInput: true, altFormat: 'F j, Y', dateFormat: 'Y-m-d' });
-            } catch (e) {}
+      } else {
+        alert.Error("ERROR", "Invalid required data");
+      }
+    };
+    const removeSingleFilter = (column_name) => {
+      tableOptions.filterParam[column_name] = "";
+      if (column_name == "geo_level" || column_name == "geo_level_id") {
+        tableOptions.filterParam.geo_level = "";
+        tableOptions.filterParam.geo_level_id = "";
+      }
+      if (column_name == "mobilization_date") {
+        try {
+          $("#mobilization_date")
+            .flatpickr({
+              altInput: true,
+              altFormat: "F j, Y",
+              dateFormat: "Y-m-d",
+            })
+            .clear();
+        } catch (e) {}
+      }
+      var g = 0;
+      for (var k in tableOptions.filterParam) {
+        if (tableOptions.filterParam[k] != "") g++;
+      }
+      if (g == 0) filters.value = false;
+      paginationDefault();
+      loadTableData();
+    };
+    const clearAllFilter = () => {
+      try {
+        $("#mobilization_date")
+          .flatpickr({
+            altInput: true,
+            altFormat: "F j, Y",
+            dateFormat: "Y-m-d",
+          })
+          .clear();
+      } catch (e) {}
+      filters.value = false;
+      tableOptions.filterParam.mobilization_date = "";
+      tableOptions.filterParam.loginid = "";
+      tableOptions.filterParam.geo_level = "";
+      tableOptions.filterParam.geo_level_id = "";
+      paginationDefault();
+      loadTableData();
+    };
+    const refreshData = () => {
+      paginationDefault();
+      loadTableData();
+    };
+    const getGeoLocation = () => {
+      overlay.show();
+      axios
+        .get(common.DataService + "?qid=gen009")
+        .then((response) => {
+          geoData.value = (response.data && response.data.data) || [];
+          overlay.hide();
+        })
+        .catch((error) => {
+          overlay.hide();
+          alert.Error("ERROR", safeMessage(error));
         });
-        onBeforeUnmount(() => {
-            bus.off('g-event-update-user', reloadUserListOnUpdate);
-        });
+    };
+    const setLocation = (select_index) => {
+      var i = select_index || 0;
+      var row = geoData.value[i];
+      if (!row) return;
+      tableOptions.filterParam.geo_level = row.geo_level;
+      tableOptions.filterParam.geo_level_id = row.geo_level_id;
+      tableOptions.filterParam.geo_string = row.title;
+    };
 
-        return {
-            url, tableData, permission, tableDetails, id, geoData,
-            checkToggle, filterState, filters, tableOptions,
-            reloadUserListOnUpdate, loadTableData, selectAll, uncheckAll,
-            selectToggle, checkedBg, toggleFilter,
-            paginationDefault, nextPage, prevPage, currentPage,
-            changePerPage, sort, applyFilter, removeSingleFilter,
-            clearAllFilter, refreshData,
-            getGeoLocation, setLocation, exportMobilization,
-            showdistributionDetailsModal, hidedistributionDetailsModal,
-            checkIfEmpty,
-            capitalize: fmtUtils.capitalize,
-            displayDate: fmtUtils.displayDate,
-            formatNumber: fmtUtils.formatNumber,
-        };
-    },
-    template: `
+    const exportMobilization = async () => {
+      var qs =
+        "qid=402&draw=" +
+        tableOptions.currentPage +
+        "&order_column=" +
+        tableOptions.orderField +
+        "&length=" +
+        tableOptions.perPage +
+        "&start=" +
+        tableOptions.limitStart +
+        "&order_dir=" +
+        tableOptions.orderDir +
+        "&glv=" +
+        tableOptions.filterParam.geo_level +
+        "&lgid=" +
+        tableOptions.filterParam.loginid +
+        "&gid=" +
+        tableOptions.filterParam.geo_level_id +
+        "&mdt=" +
+        tableOptions.filterParam.mobilization_date +
+        "&pph=" +
+        tableOptions.filterParam.hh_phone_no +
+        "&ets=" +
+        tableOptions.filterParam.etoken_serial +
+        "&etp=" +
+        tableOptions.filterParam.etoken_pin;
+      var filename =
+        (tableOptions.filterParam.geo_string
+          ? tableOptions.filterParam.geo_string
+          : "UnRedeemed ") +
+        " " +
+        (tableOptions.filterParam.loginid
+          ? tableOptions.filterParam.loginid
+          : "UnRedeemed ") +
+        " Mobilization List";
+      overlay.show();
+
+      var count = await new Promise((resolve) => {
+        $.ajax({
+          url: common.DataService,
+          type: "POST",
+          data: qs,
+          dataType: "json",
+          success: (data) => {
+            resolve(data.total);
+          },
+        });
+      });
+      var downloadMax =
+        (window.common && window.common.ExportDownloadLimit) || 25000;
+      if (parseInt(count) > downloadMax) {
+        alert.Error(
+          "Download Error",
+          "Unable to download data because it has exceeded download limit, download limit is " +
+            downloadMax,
+        );
+      } else if (parseInt(count) == 0) {
+        alert.Error("Download Error", "No data found");
+      } else {
+        alert.Info("DOWNLOADING...", "Downloading " + count + " record(s)");
+        var outcome = await new Promise((resolve) => {
+          $.ajax({
+            url: common.ExportService,
+            type: "POST",
+            data: qs,
+            success: (data) => {
+              resolve(data);
+            },
+          });
+        });
+        var exportData = JSON.parse(outcome);
+        if (window.Jhxlsx && typeof window.Jhxlsx.export === "function") {
+          window.Jhxlsx.export(exportData, { fileName: filename });
+        }
+      }
+      overlay.hide();
+    };
+
+    const showdistributionDetailsModal = (i) => {
+      overlay.show();
+      var row = tableData.value[i] || {};
+      tableDetails.geo_string = row.geo_string;
+      tableDetails.allocated_net = row.allocated_net;
+      tableDetails.mobilization_date = row.collected_date;
+      tableDetails.etoken_serial = row.etoken_serial;
+      tableDetails.etoken_pin = row.etoken_pin;
+      tableDetails.sleeping_space = row.sleeping_space;
+      tableDetails.adult_female = row.adult_female;
+      tableDetails.adult_male = row.adult_male;
+      tableDetails.family_size = row.family_size;
+      tableDetails.geo_level = row.geo_level;
+      tableDetails.hoh_first = row.hoh_first;
+      tableDetails.hoh_last = row.hoh_last;
+      tableDetails.hoh_gender = row.hoh_gender;
+      tableDetails.hoh_phone = row.hoh_phone;
+      tableDetails.children = row.children;
+      tableDetails.location_description = row.location_description;
+      $("#distributionDetails").modal("show");
+      overlay.hide();
+    };
+    const hidedistributionDetailsModal = () => {
+      overlay.show();
+      $("#distributionDetails").modal("hide");
+      for (var k in tableDetails) tableDetails[k] = "";
+      overlay.hide();
+    };
+    const checkIfEmpty = (data) => {
+      return data === null || data === "" ? "Nil" : data;
+    };
+
+    // Kick off data fetches in setup rather than onMounted — the
+    // <unredeemed_search v-if="permission.permission_value > 1"> wrap
+    // (combined with the parent's v-show) made onMounted fire too late
+    // for the initial render to pick up the response. Setup-level calls
+    // are independent of mount lifecycle and reliably populate tableData
+    // on first paint.
+    getGeoLocation();
+    loadTableData();
+
+    onMounted(() => {
+      bus.on("g-event-update-user", reloadUserListOnUpdate);
+      try {
+        var select = $(".select2");
+        select.each(function () {
+          var $this = $(this);
+          $this.wrap('<div class="position-relative"></div>');
+          $this
+            .select2({
+              dropdownAutoWidth: true,
+              width: "100%",
+              dropdownParent: $this.parent(),
+            })
+            .on("change", function () {
+              setLocation(this.value);
+            });
+        });
+        $(".select2-selection__arrow").html(
+          '<i class="feather icon-chevron-down"></i>',
+        );
+        $(".date").flatpickr({
+          altInput: true,
+          altFormat: "F j, Y",
+          dateFormat: "Y-m-d",
+        });
+      } catch (e) {}
+    });
+    onBeforeUnmount(() => {
+      bus.off("g-event-update-user", reloadUserListOnUpdate);
+    });
+
+    return {
+      url,
+      tableData,
+      permission,
+      tableDetails,
+      id,
+      geoData,
+      checkToggle,
+      filterState,
+      filters,
+      tableOptions,
+      reloadUserListOnUpdate,
+      loadTableData,
+      selectAll,
+      uncheckAll,
+      selectToggle,
+      checkedBg,
+      toggleFilter,
+      paginationDefault,
+      nextPage,
+      prevPage,
+      currentPage,
+      changePerPage,
+      sort,
+      applyFilter,
+      removeSingleFilter,
+      clearAllFilter,
+      refreshData,
+      getGeoLocation,
+      setLocation,
+      exportMobilization,
+      showdistributionDetailsModal,
+      hidedistributionDetailsModal,
+      checkIfEmpty,
+      capitalize: fmtUtils.capitalize,
+      displayDate: fmtUtils.displayDate,
+      formatNumber: fmtUtils.formatNumber,
+    };
+  },
+  template: `
         <div class="row" id="basic-table">
             <div class="col-md-8 col-sm-12 col-12 mb-0">
                 <h2 class="content-header-title header-txt float-left mb-0">Distribution</h2>
@@ -524,6 +700,6 @@ const UnredeemedSearch = {
 };
 
 useApp({ template: `<div><page-body/></div>` })
-    .component('page-body', PageBody)
-    .component('unredeemed_search', UnredeemedSearch)
-    .mount('#app');
+  .component("page-body", PageBody)
+  .component("unredeemed_search", UnredeemedSearch)
+  .mount("#app");

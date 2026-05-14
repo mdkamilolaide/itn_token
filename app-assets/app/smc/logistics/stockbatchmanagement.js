@@ -8,228 +8,318 @@ const { ref, reactive, computed, watch, onMounted, onBeforeUnmount } = Vue;
 const { useApp, useFormat, bus, safeMessage } = window.utils;
 
 const appState = Vue.reactive({
-    pageState: { page: 'availability-check', title: '' },
-    permission: (typeof getPermission === 'function')
-        ? (getPermission(typeof per !== 'undefined' ? per : null, 'smc') || { permission_value: 0 })
-        : { permission_value: 0 },
-    userId: (() => { var el = document.getElementById('v_g_id'); return el ? el.value : ''; })(),
-    geoLevelForm: { geoLevel: '', geoLevelId: 0 },
-    defaultStateId: '',
-    sysDefaultData: [],
-    productData: [],
-    lgaData: [],
-    stockBatchData: [],
-    periodData: [],
-    currentPeriodId: '',
-    currentProductCode: '',
-    receiptHeader: '',
-    filterText: '',
+  pageState: { page: "availability-check", title: "" },
+  permission:
+    typeof getPermission === "function"
+      ? getPermission(typeof per !== "undefined" ? per : null, "smc") || {
+          permission_value: 0,
+        }
+      : { permission_value: 0 },
+  userId: (() => {
+    var el = document.getElementById("v_g_id");
+    return el ? el.value : "";
+  })(),
+  geoLevelForm: { geoLevel: "", geoLevelId: 0 },
+  defaultStateId: "",
+  sysDefaultData: [],
+  productData: [],
+  lgaData: [],
+  stockBatchData: [],
+  periodData: [],
+  currentPeriodId: "",
+  currentProductCode: "",
+  receiptHeader: "",
+  filterText: "",
 });
 
 const displayDateLong = (d, fullDate, withTime) => {
-    if (fullDate === undefined) fullDate = false;
-    if (withTime === undefined) withTime = true;
-    var date = new Date(d);
-    var options = {
-        year: 'numeric',
-        month: fullDate ? 'long' : 'short',
-        day: 'numeric',
-    };
-    if (withTime) { options.hour = '2-digit'; options.minute = '2-digit'; options.hour12 = true; }
-    return date.toLocaleString('en-US', options);
-}
+  if (fullDate === undefined) fullDate = false;
+  if (withTime === undefined) withTime = true;
+  var date = new Date(d);
+  var options = {
+    year: "numeric",
+    month: fullDate ? "long" : "short",
+    day: "numeric",
+  };
+  if (withTime) {
+    options.hour = "2-digit";
+    options.minute = "2-digit";
+    options.hour12 = true;
+  }
+  return date.toLocaleString("en-US", options);
+};
 
 const PageAvailabilityCheck = {
-    setup() {
-        const fmtUtils = useFormat();
-        const searchState = ref(false);
-        const searchText = ref('');
+  setup() {
+    const fmtUtils = useFormat();
+    const searchState = ref(false);
+    const searchText = ref("");
 
-        const getAllPeriodLists = () => {
-            overlay.show();
-            axios.get(common.DataService + '?qid=1004')
-                .then(response => {
-                    appState.periodData = (response.data && response.data.data) || [];
-                    overlay.hide();
-                })
-                .catch(error => {
-                    overlay.hide();
-                    alert.Error('ERROR', safeMessage(error));
-                });
-        }
-        const getReceiptHeader = () => {
-            overlay.show();
-            axios.get(common.DataService + '?qid=gen0013')
-                .then(response => {
-                    var data = response.data && response.data.data && response.data.data[0];
-                    appState.receiptHeader = (data && data.logo) || '';
-                    overlay.hide();
-                })
-                .catch(error => {
-                    overlay.hide();
-                    alert.Error('ERROR', safeMessage(error));
-                });
-        }
-        const generateBatchStock = () => {
-            if (appState.currentPeriodId == '') { alert.Error('ERROR', 'Please select a visit'); return; }
-            var data = { periodid: appState.currentPeriodId };
-            overlay.show();
-            axios.post(common.DataService + '?qid=1132', JSON.stringify(data))
-                .then(response => {
-                    overlay.hide();
-                    if (response.data.result_code == '200') {
-                        appState.stockBatchData = response.data.data || [];
-                        searchState.value = true;
-                    } else {
-                        alert.Error('ERROR', response.data.message);
-                    }
-                })
-                .catch(error => {
-                    overlay.hide();
-                    var msg = (error && error.response && error.response.data && error.response.data.message) || safeMessage(error);
-                    alert.Error('ERROR', msg);
-                });
-        }
-        const resetCheckTable = () => {
-            appState.stockBatchData = [];
-            searchState.value = false;
-        }
-        const resetForm = () => {
-            resetCheckTable();
-            appState.currentPeriodId = '';
-            appState.currentProductCode = '';
-        }
-
-        const filteredStockData = computed(() => {
-            var keyword = (appState.filterText || '').toLowerCase().trim();
-            if (!keyword) return appState.stockBatchData || [];
-            return (appState.stockBatchData || []).filter(item => (item.product_name && item.product_name.toLowerCase().includes(keyword)) ||
-            (item.batch && item.batch.toLowerCase().includes(keyword)) ||
-            (item.origin_string && item.origin_string.toLowerCase().includes(keyword)) ||
-            (item.destination_string && item.destination_string.toLowerCase().includes(keyword)));
+    const getAllPeriodLists = () => {
+      overlay.show();
+      axios
+        .get(common.DataService + "?qid=1004")
+        .then((response) => {
+          appState.periodData = (response.data && response.data.data) || [];
+          overlay.hide();
+        })
+        .catch((error) => {
+          overlay.hide();
+          alert.Error("ERROR", safeMessage(error));
         });
-        const groupDataByFacility = computed(() => {
-            var grouped = filteredStockData.value.reduce((acc, item) => {
-                var key = item.lgaid + '||' + item.lga;
-                if (!acc[key]) acc[key] = { lgaid: item.lgaid, lga: item.lga, items: [] };
-                var updatedItem = Object.assign({}, item, {
-                    rate: fmtUtils.convertStringNumberToFigures(item.rate),
-                    secondary_qty: fmtUtils.convertStringNumberToFigures(item.secondary_qty),
-                    expiry: displayDateLong(item.expiry, false, false),
-                });
-                acc[key].items.push(updatedItem);
-                return acc;
-            }, {});
-            return Object.values(grouped).sort((a, b) => a.lga.localeCompare(b.lga));
+    };
+    const getReceiptHeader = () => {
+      overlay.show();
+      axios
+        .get(common.DataService + "?qid=gen0013")
+        .then((response) => {
+          var data =
+            response.data && response.data.data && response.data.data[0];
+          appState.receiptHeader = (data && data.logo) || "";
+          overlay.hide();
+        })
+        .catch((error) => {
+          overlay.hide();
+          alert.Error("ERROR", safeMessage(error));
         });
-
-        const generatePDF = () => {
-            var content = [];
-            var data = groupDataByFacility.value;
-            if (!data || data.length === 0) { alert.Error('ERROR', 'No data available for PDF generation.'); return; }
-            var todayDate = displayDateLong(new Date().toLocaleDateString(), false, true);
-            data.forEach((group, index) => {
-                content.push(
-                    { text: 'STOCK BATCH ORDER FOR ' + group.lga + ' LGA', fontSize: 12, style: 'header', alignment: 'center', margin: [0, 0, 0, 40] },
-                    {
-                        table: {
-                            headerRows: 1,
-                            widths: ['auto', 'auto', 'auto', 'auto', 'auto', 'auto', '*'],
-                            body: [
-                                [
-                                    { text: '#', style: 'tableHeader' },
-                                    { text: 'Destination', style: 'tableHeader' },
-                                    { text: 'Product', style: 'tableHeader', noWrap: true },
-                                    { text: 'Code', style: 'tableHeader' },
-                                    { text: 'Batch', style: 'tableHeader' },
-                                    { text: 'Expiry Date', style: 'tableHeader', noWrap: true },
-                                    { text: 'Quantity', style: 'tableHeader' },
-                                ],
-                            ].concat(group.items.map((item, i) => [
-                                { text: i + 1, style: 'tableBodyFont8' },
-                                { text: item.destination_string, style: 'tableBodyFont8' },
-                                { text: item.product_name, style: 'tableBodyFont8', noWrap: true },
-                                { text: item.product_code, style: 'tableBodyFont8' },
-                                { text: item.batch, style: 'tableBodyFont8' },
-                                { text: item.expiry, style: 'tableBodyFont8', noWrap: true },
-                                { text: item.secondary_qty, style: 'tableBodyFont8' },
-                            ])),
-                        },
-                        layout: 'lightHorizontalLines',
-                        margin: [0, 0, 0, 20],
-                    }
-                );
-                if (index < data.length - 1) content.push({ text: '', pageBreak: 'after' });
-            });
-
-            var docDefinition = {
-                pageSize: 'A4',
-                pageOrientation: 'landscape',
-                pageMargins: [40, 60, 40, 60],
-                images: { logoDataURL: 'data:image/svg+xml;base64,' + appState.receiptHeader },
-                header: (currentPage, pageCount) => {
-                    return {
-                        columns: [
-                            currentPage === 1 ? { image: 'logoDataURL', width: 80 } : { text: '', width: 80 },
-                            { text: 'Page ' + currentPage + ' of ' + pageCount, alignment: 'right', margin: [0, 15, 0, 0], fontSize: 9 },
-                        ],
-                        margin: [40, 20, 40, 0],
-                    };
-                },
-                footer: (currentPage, pageCount) => {
-                    return {
-                        columns: [
-                            { text: 'Generated by Ipolongo System', alignment: 'left', fontSize: 9 },
-                            { text: todayDate, alignment: 'center', fontSize: 9 },
-                            { text: 'Page ' + currentPage + ' of ' + pageCount, alignment: 'right', fontSize: 9 },
-                        ],
-                        margin: [40, 0, 40, 20],
-                    };
-                },
-                content: content,
-                styles: {
-                    header: { fontSize: 12, bold: true },
-                    subheader: { fontSize: 10, margin: [0, 2] },
-                    tableHeader: { bold: true, fillColor: '#eeeeee', fontSize: 10, margin: [0, 2, 0, 2] },
-                    tableBodyFont8: { fontSize: 8, lineHeight: 1.2 },
-                },
-            };
-            if (typeof pdfMake !== 'undefined') {
-                pdfMake.createPdf(docDefinition).download('Stock_Batch_order_' + todayDate + '.pdf');
-            }
-        }
-
-        const debounce = (fn, delay) => {
-            var timeout;
-            return function () {
-                var args = arguments;
-                clearTimeout(timeout);
-                timeout = setTimeout(() => { fn.apply(null, args); }, delay);
-            };
-        }
-        var debouncedSearch = debounce(val => { appState.filterText = val; }, 300);
-        watch(searchText, val => { debouncedSearch(val); });
-
-        onMounted(() => {
-            getAllPeriodLists();
-            getReceiptHeader();
-            bus.on('g-event-reset-form', resetForm);
+    };
+    const generateBatchStock = () => {
+      if (appState.currentPeriodId == "") {
+        alert.Error("ERROR", "Please select a visit");
+        return;
+      }
+      var data = { periodid: appState.currentPeriodId };
+      overlay.show();
+      axios
+        .post(common.DataService + "?qid=1132", JSON.stringify(data))
+        .then((response) => {
+          overlay.hide();
+          if (response.data.result_code == "200") {
+            appState.stockBatchData = response.data.data || [];
+            searchState.value = true;
+          } else {
+            alert.Error("ERROR", response.data.message);
+          }
+        })
+        .catch((error) => {
+          overlay.hide();
+          var msg =
+            (error &&
+              error.response &&
+              error.response.data &&
+              error.response.data.message) ||
+            safeMessage(error);
+          alert.Error("ERROR", msg);
         });
-        onBeforeUnmount(() => {
-            bus.off('g-event-reset-form', resetForm);
-        });
+    };
+    const resetCheckTable = () => {
+      appState.stockBatchData = [];
+      searchState.value = false;
+    };
+    const resetForm = () => {
+      resetCheckTable();
+      appState.currentPeriodId = "";
+      appState.currentProductCode = "";
+    };
 
-        return {
-            appState, searchState, searchText,
-            filteredStockData, groupDataByFacility,
-            getAllPeriodLists, getReceiptHeader, generateBatchStock,
-            resetCheckTable, resetForm, generatePDF,
-            displayDate: (d, fullDate, withTime) => { return displayDateLong(d, fullDate, withTime); },
-            convertStringNumberToFigures: fmtUtils.convertStringNumberToFigures,
-            capitalize: fmtUtils.capitalize,
-        };
-    },
-    template: `
+    const filteredStockData = computed(() => {
+      var keyword = (appState.filterText || "").toLowerCase().trim();
+      if (!keyword) return appState.stockBatchData || [];
+      return (appState.stockBatchData || []).filter(
+        (item) =>
+          (item.product_name &&
+            item.product_name.toLowerCase().includes(keyword)) ||
+          (item.batch && item.batch.toLowerCase().includes(keyword)) ||
+          (item.origin_string &&
+            item.origin_string.toLowerCase().includes(keyword)) ||
+          (item.destination_string &&
+            item.destination_string.toLowerCase().includes(keyword)),
+      );
+    });
+    const groupDataByFacility = computed(() => {
+      var grouped = filteredStockData.value.reduce((acc, item) => {
+        var key = item.lgaid + "||" + item.lga;
+        if (!acc[key])
+          acc[key] = { lgaid: item.lgaid, lga: item.lga, items: [] };
+        var updatedItem = Object.assign({}, item, {
+          rate: fmtUtils.convertStringNumberToFigures(item.rate),
+          secondary_qty: fmtUtils.convertStringNumberToFigures(
+            item.secondary_qty,
+          ),
+          expiry: displayDateLong(item.expiry, false, false),
+        });
+        acc[key].items.push(updatedItem);
+        return acc;
+      }, {});
+      return Object.values(grouped).sort((a, b) => a.lga.localeCompare(b.lga));
+    });
+
+    const generatePDF = () => {
+      var content = [];
+      var data = groupDataByFacility.value;
+      if (!data || data.length === 0) {
+        alert.Error("ERROR", "No data available for PDF generation.");
+        return;
+      }
+      var todayDate = displayDateLong(
+        new Date().toLocaleDateString(),
+        false,
+        true,
+      );
+      data.forEach((group, index) => {
+        content.push(
+          {
+            text: "STOCK BATCH ORDER FOR " + group.lga + " LGA",
+            fontSize: 12,
+            style: "header",
+            alignment: "center",
+            margin: [0, 0, 0, 40],
+          },
+          {
+            table: {
+              headerRows: 1,
+              widths: ["auto", "auto", "auto", "auto", "auto", "auto", "*"],
+              body: [
+                [
+                  { text: "#", style: "tableHeader" },
+                  { text: "Destination", style: "tableHeader" },
+                  { text: "Product", style: "tableHeader", noWrap: true },
+                  { text: "Code", style: "tableHeader" },
+                  { text: "Batch", style: "tableHeader" },
+                  { text: "Expiry Date", style: "tableHeader", noWrap: true },
+                  { text: "Quantity", style: "tableHeader" },
+                ],
+              ].concat(
+                group.items.map((item, i) => [
+                  { text: i + 1, style: "tableBodyFont8" },
+                  { text: item.destination_string, style: "tableBodyFont8" },
+                  {
+                    text: item.product_name,
+                    style: "tableBodyFont8",
+                    noWrap: true,
+                  },
+                  { text: item.product_code, style: "tableBodyFont8" },
+                  { text: item.batch, style: "tableBodyFont8" },
+                  { text: item.expiry, style: "tableBodyFont8", noWrap: true },
+                  { text: item.secondary_qty, style: "tableBodyFont8" },
+                ]),
+              ),
+            },
+            layout: "lightHorizontalLines",
+            margin: [0, 0, 0, 20],
+          },
+        );
+        if (index < data.length - 1)
+          content.push({ text: "", pageBreak: "after" });
+      });
+
+      var docDefinition = {
+        pageSize: "A4",
+        pageOrientation: "landscape",
+        pageMargins: [40, 60, 40, 60],
+        images: {
+          logoDataURL: "data:image/svg+xml;base64," + appState.receiptHeader,
+        },
+        header: (currentPage, pageCount) => {
+          return {
+            columns: [
+              currentPage === 1
+                ? { image: "logoDataURL", width: 80 }
+                : { text: "", width: 80 },
+              {
+                text: "Page " + currentPage + " of " + pageCount,
+                alignment: "right",
+                margin: [0, 15, 0, 0],
+                fontSize: 9,
+              },
+            ],
+            margin: [40, 20, 40, 0],
+          };
+        },
+        footer: (currentPage, pageCount) => {
+          return {
+            columns: [
+              {
+                text: "Generated by Ipolongo System",
+                alignment: "left",
+                fontSize: 9,
+              },
+              { text: todayDate, alignment: "center", fontSize: 9 },
+              {
+                text: "Page " + currentPage + " of " + pageCount,
+                alignment: "right",
+                fontSize: 9,
+              },
+            ],
+            margin: [40, 0, 40, 20],
+          };
+        },
+        content: content,
+        styles: {
+          header: { fontSize: 12, bold: true },
+          subheader: { fontSize: 10, margin: [0, 2] },
+          tableHeader: {
+            bold: true,
+            fillColor: "#eeeeee",
+            fontSize: 10,
+            margin: [0, 2, 0, 2],
+          },
+          tableBodyFont8: { fontSize: 8, lineHeight: 1.2 },
+        },
+      };
+      if (typeof pdfMake !== "undefined") {
+        pdfMake
+          .createPdf(docDefinition)
+          .download("Stock_Batch_order_" + todayDate + ".pdf");
+      }
+    };
+
+    const debounce = (fn, delay) => {
+      var timeout;
+      return function () {
+        var args = arguments;
+        clearTimeout(timeout);
+        timeout = setTimeout(() => {
+          fn.apply(null, args);
+        }, delay);
+      };
+    };
+    var debouncedSearch = debounce((val) => {
+      appState.filterText = val;
+    }, 300);
+    watch(searchText, (val) => {
+      debouncedSearch(val);
+    });
+
+    onMounted(() => {
+      getAllPeriodLists();
+      getReceiptHeader();
+      bus.on("g-event-reset-form", resetForm);
+    });
+    onBeforeUnmount(() => {
+      bus.off("g-event-reset-form", resetForm);
+    });
+
+    return {
+      appState,
+      searchState,
+      searchText,
+      filteredStockData,
+      groupDataByFacility,
+      getAllPeriodLists,
+      getReceiptHeader,
+      generateBatchStock,
+      resetCheckTable,
+      resetForm,
+      generatePDF,
+      displayDate: (d, fullDate, withTime) => {
+        return displayDateLong(d, fullDate, withTime);
+      },
+      convertStringNumberToFigures: fmtUtils.convertStringNumberToFigures,
+      capitalize: fmtUtils.capitalize,
+    };
+  },
+  template: `
         <div class="row">
             <div class="col-md-8 col-sm-12 col-12 mb-0">
                 <h2 class="content-header-title header-txt float-left mb-0">SMC</h2>
@@ -357,13 +447,15 @@ const PageAvailabilityCheck = {
 };
 
 useApp({
-    template: `
+  template: `
         <div>
             <div v-show="appState.pageState.page == 'table'"></div>
             <div v-show="appState.pageState.page == 'availability-check'"><page-availability-check/></div>
         </div>
     `,
-    setup() { return { appState }; },
+  setup() {
+    return { appState };
+  },
 })
-    .component('page-availability-check', PageAvailabilityCheck)
-    .mount('#app');
+  .component("page-availability-check", PageAvailabilityCheck)
+  .mount("#app");

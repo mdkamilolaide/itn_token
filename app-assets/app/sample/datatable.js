@@ -8,11 +8,11 @@ const { ref, reactive, onMounted, onBeforeUnmount } = Vue;
 const { useApp, useFormat, safeMessage } = window.utils;
 
 const PageBody = {
-    setup() {
-        const page = ref('home');
-        return { page };
-    },
-    template: `
+  setup() {
+    const page = ref("home");
+    return { page };
+  },
+  template: `
     <div>
         <div class="content-header row">
             <div class="content-header-left col-md-9 col-12 mb-2">
@@ -50,95 +50,103 @@ const PageBody = {
 };
 
 const SampleTable = {
-    setup() {
-        const tableData = ref([]);
-        // inTable holds the jQuery DataTables instance; not reactive
-        // (Vue should not proxy a jQuery wrapper).
-        let inTable = null;
-        const selectedData = ref([]);
-        const selectedID = ref([]);
+  setup() {
+    const tableData = ref([]);
+    // inTable holds the jQuery DataTables instance; not reactive
+    // (Vue should not proxy a jQuery wrapper).
+    let inTable = null;
+    const selectedData = ref([]);
+    const selectedID = ref([]);
 
-        const getTable = ($table, queryString) => {
-            return $table.DataTable({
-                processing: true,
-                serverSide: true,
-                ajax: {
-                    url: common.TableService + '?' + queryString,
-                    type: 'POST',
-                },
-                order: [[0, 'asc']],
-                displayLength: 10,
-                lengthMenu: [7, 10, 25, 50, 75, 100],
-            });
-        }
+    const getTable = ($table, queryString) => {
+      return $table.DataTable({
+        processing: true,
+        serverSide: true,
+        ajax: {
+          url: common.TableService + "?" + queryString,
+          type: "POST",
+        },
+        order: [[0, "asc"]],
+        displayLength: 10,
+        lengthMenu: [7, 10, 25, 50, 75, 100],
+      });
+    };
 
-        const freshLoad = () => {
-            inTable = getTable($('#basicTable'), 'qid=100');
-        }
+    const freshLoad = () => {
+      inTable = getTable($("#basicTable"), "qid=100");
+    };
 
-        const refreshList = () => {
-            $('#basicTable').DataTable().ajax.reload();
-        }
+    const refreshList = () => {
+      $("#basicTable").DataTable().ajax.reload();
+    };
 
-        const loadList = () => {
-            if ($.fn.dataTable.isDataTable('#basicTable')) refreshList();
-            else freshLoad();
-        }
+    const loadList = () => {
+      if ($.fn.dataTable.isDataTable("#basicTable")) refreshList();
+      else freshLoad();
+    };
 
-        const ReloadList = () => {
-            $('#basicTable').DataTable().ajax.url(common.TableService + '?qid=100').load();
-        }
+    const ReloadList = () => {
+      $("#basicTable")
+        .DataTable()
+        .ajax.url(common.TableService + "?qid=100")
+        .load();
+    };
 
-        const loadTableData = () => {
-            // Kept for API parity with the v2 component — populates tableData
-            // from qid=sam001. Not used by the DataTables flow above.
-            axios.get(common.DataService + '?qid=sam001')
-                .then(response => {
-                    tableData.value = (response.data && response.data.data) || [];
-                })
-                .catch(error => {
-                    alert.Error('ERROR', safeMessage(error));
-                });
-        }
-
-        const getSelectedData = () => {
-            if (!inTable) return;
-            var indexes = inTable.rows({ selected: true })[0];
-            selectedData.value = inTable.rows(indexes).data().toArray();
-            var dd = inTable.rows(indexes).data().toArray();
-            var targetid = 0;
-            selectedID.value = [];
-            for (var a = 0; a < dd.length; a++) {
-                selectedID.value.push(dd[a][targetid]);
-            }
-        }
-
-        onMounted(() => {
-            loadList();
+    const loadTableData = () => {
+      // Kept for API parity with the v2 component — populates tableData
+      // from qid=sam001. Not used by the DataTables flow above.
+      axios
+        .get(common.DataService + "?qid=sam001")
+        .then((response) => {
+          tableData.value = (response.data && response.data.data) || [];
+        })
+        .catch((error) => {
+          alert.Error("ERROR", safeMessage(error));
         });
+    };
 
-        onBeforeUnmount(() => {
-            // Destroy the DataTable on unmount so we don't leak on hot reload
-            // or page transitions that re-create the same #basicTable id.
-            if (inTable) {
-                try { inTable.destroy(true); } catch (e) { /* swallow */ }
-                inTable = null;
-            }
-        });
+    const getSelectedData = () => {
+      if (!inTable) return;
+      var indexes = inTable.rows({ selected: true })[0];
+      selectedData.value = inTable.rows(indexes).data().toArray();
+      var dd = inTable.rows(indexes).data().toArray();
+      var targetid = 0;
+      selectedID.value = [];
+      for (var a = 0; a < dd.length; a++) {
+        selectedID.value.push(dd[a][targetid]);
+      }
+    };
 
-        return {
-            tableData,
-            selectedData,
-            selectedID,
-            loadTableData,
-            getSelectedData,
-            loadList,
-            freshLoad,
-            refreshList,
-            ReloadList,
-        };
-    },
-    template: `
+    onMounted(() => {
+      loadList();
+    });
+
+    onBeforeUnmount(() => {
+      // Destroy the DataTable on unmount so we don't leak on hot reload
+      // or page transitions that re-create the same #basicTable id.
+      if (inTable) {
+        try {
+          inTable.destroy(true);
+        } catch (e) {
+          /* swallow */
+        }
+        inTable = null;
+      }
+    });
+
+    return {
+      tableData,
+      selectedData,
+      selectedID,
+      loadTableData,
+      getSelectedData,
+      loadList,
+      freshLoad,
+      refreshList,
+      ReloadList,
+    };
+  },
+  template: `
         <div class="row">
             <div class="col-12 p-20">
                 <div class="card invoice-list-wrapper">
@@ -162,6 +170,6 @@ const SampleTable = {
 };
 
 useApp({ template: `<div><page-body/></div>` })
-    .component('page-body', PageBody)
-    .component('sample_table', SampleTable)
-    .mount('#app');
+  .component("page-body", PageBody)
+  .component("sample_table", SampleTable)
+  .mount("#app");

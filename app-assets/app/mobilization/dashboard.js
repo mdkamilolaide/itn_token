@@ -14,19 +14,23 @@ const { useApp, useFormat, bus, safeMessage } = window.utils;
 /* page-body                                                            */
 /* ------------------------------------------------------------------ */
 const PageBody = {
-    setup() {
-        const page = ref('dashboard');
-        const gotoPageHandler = (data) => { page.value = data.page; };
-        onMounted(() => {
-            const containers = document.querySelectorAll('.lgaAggregate');
-            if (containers && typeof PerfectScrollbar !== 'undefined') {
-                containers.forEach(el => { new PerfectScrollbar(el); });
-            }
-            bus.on('g-event-goto-page', gotoPageHandler);
+  setup() {
+    const page = ref("dashboard");
+    const gotoPageHandler = (data) => {
+      page.value = data.page;
+    };
+    onMounted(() => {
+      const containers = document.querySelectorAll(".lgaAggregate");
+      if (containers && typeof PerfectScrollbar !== "undefined") {
+        containers.forEach((el) => {
+          new PerfectScrollbar(el);
         });
-        return { page };
-    },
-    template: `
+      }
+      bus.on("g-event-goto-page", gotoPageHandler);
+    });
+    return { page };
+  },
+  template: `
         <div>
             <div class="content-body">
                 <div v-show="page == 'dashboard'">
@@ -42,221 +46,326 @@ const PageBody = {
 /* mobilization_dashboard                                               */
 /* ------------------------------------------------------------------ */
 const MobilizationDashboard = {
-    setup() {
-        const fmtUtils = useFormat();
+  setup() {
+    const fmtUtils = useFormat();
 
-        const topMobilizationStat = reactive({ eNetcard: 0, hhMobilized: 0, familySize: 0 });
-        const statData = reactive({ tableData: [], chartData: [], dataIndex: '' });
-        const chartStates = ref(['hhMobilized', 'eNetcard', 'family_size']);
-        const chartCurrentTab = ref(0);
-        const chartFilter = reactive({
-            lgaid: '', lgaName: '', wardid: '', wardName: '',
-            dpid: '', dpName: '', date: '', chartLevel: 0,
+    const topMobilizationStat = reactive({
+      eNetcard: 0,
+      hhMobilized: 0,
+      familySize: 0,
+    });
+    const statData = reactive({ tableData: [], chartData: [], dataIndex: "" });
+    const chartStates = ref(["hhMobilized", "eNetcard", "family_size"]);
+    const chartCurrentTab = ref(0);
+    const chartFilter = reactive({
+      lgaid: "",
+      lgaName: "",
+      wardid: "",
+      wardName: "",
+      dpid: "",
+      dpName: "",
+      date: "",
+      chartLevel: 0,
+    });
+    const lgaMobilizationAggregate = reactive({
+      mobilizationData: [],
+      mobDateData: [],
+      dateFilter: "",
+      lgaIdFilter: 0,
+      lgaNameFilter: "",
+    });
+    const series = ref([]);
+    const allChartData = ref([]);
+    const chartOptions = ref({ xaxis: { title: { text: "" } } });
+
+    const convertStringNumberToFigures = (d) => {
+      var data = d ? parseInt(d) : 0;
+      return data ? data.toLocaleString() : 0;
+    };
+    const convertToDateMonthDay = (date) => {
+      return new Date(date).toLocaleDateString("en-US", {
+        month: "short",
+        day: "2-digit",
+      });
+    };
+    const checkIfDateIsToday = (date) => {
+      var today = new Date().toISOString().slice(0, 10);
+      if (date === today) return "Today";
+      var parsed = new Date(date);
+      return parsed.toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "short",
+        day: "2-digit",
+      });
+    };
+    const isValidDate = (dateString) => {
+      var regex = /^\d{4}-\d{2}-\d{2}$/;
+      return regex.test(dateString)
+        ? convertToDateMonthDay(dateString)
+        : dateString;
+    };
+    const capitalizeWords = (str) => {
+      if (typeof str !== "string") return "";
+      return str
+        .toLowerCase()
+        .split(" ")
+        .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+        .join(" ");
+    };
+
+    const getTopListStatistics = async () => {
+      overlay.show();
+      try {
+        var response = await axios.get(common.DataService + "?qid=750");
+        var allData =
+          (response.data && response.data.data && response.data.data[0]) || {};
+        topMobilizationStat.eNetcard = convertStringNumberToFigures(
+          allData.netcards,
+        );
+        topMobilizationStat.hhMobilized = convertStringNumberToFigures(
+          allData.households,
+        );
+        topMobilizationStat.familySize = convertStringNumberToFigures(
+          allData.family_size,
+        );
+      } catch (error) {
+        alert.Error("ERROR", safeMessage(error));
+      } finally {
+        overlay.hide();
+      }
+    };
+
+    const getDailyTopSummary = async () => {
+      overlay.show();
+      try {
+        var response = await axios.get(common.DataService + "?qid=751");
+        var allData = response.data || {};
+        var chartArr = Array.isArray(allData.chart) ? allData.chart : [[], []];
+        statData.tableData = Array.isArray(allData.table) ? allData.table : [];
+        statData.chartData = chartArr;
+        statData.chartData.xAxisLabel = "Days";
+        chartFilter.chartLevel = allData.level || 0;
+        if (Array.isArray(statData.chartData[1])) {
+          statData.chartData[1] = statData.chartData[1].map((item) =>
+            convertToDateMonthDay(item),
+          );
+        }
+        try {
+          plotChart();
+        } catch (e) {
+          console.error("plotChart failed:", e);
+        }
+      } catch (error) {
+        alert.Error("ERROR", safeMessage(error));
+      } finally {
+        overlay.hide();
+      }
+    };
+
+    const plotChart = () => {
+      var yAxislabel =
+        (statData.chartData[0] &&
+          statData.chartData[0][chartCurrentTab.value] &&
+          statData.chartData[0][chartCurrentTab.value].name) ||
+        "";
+      var xAxisLabel = statData.chartData.xAxisLabel;
+      chartOptions.value = {
+        chart: { type: "bar" },
+        colors: "#7367f0",
+        xaxis: {
+          categories: statData.chartData[1] || [],
+          title: {
+            text: xAxisLabel,
+            style: { color: "#6e6b7b", fontWeight: "bold" },
+            offsetY: 10,
+          },
+        },
+        yaxis: {
+          title: {
+            text: yAxislabel,
+            style: { color: "#6e6b7b", fontWeight: "bold" },
+          },
+          labels: {
+            formatter: (val) => {
+              return parseInt(val).toLocaleString();
+            },
+          },
+        },
+        plotOptions: { bar: { dataLabels: { position: "top" } } },
+        dataLabels: {
+          enabled: true,
+          formatter: (val) => {
+            return parseInt(val).toLocaleString();
+          },
+          offsetY: -20,
+          style: { fontSize: "12px", colors: ["#000"] },
+        },
+        noData: {
+          text: "No data available, kindly refresh",
+          align: "center",
+          verticalAlign: "middle",
+          offsetX: 0,
+          offsetY: 0,
+          style: { color: "#333", fontSize: "14px" },
+        },
+      };
+      series.value = statData.chartData[0]
+        ? [statData.chartData[0][chartCurrentTab.value]]
+        : [];
+    };
+
+    const loadNewChart = (d) => {
+      chartCurrentTab.value = d;
+      plotChart();
+    };
+
+    const generateStatData = (i) => {
+      if (i === undefined) i = "";
+      getTopListStatistics();
+      statData.dataIndex = i;
+      var date = chartFilter.date,
+        lgaid = chartFilter.lgaid,
+        wardid = chartFilter.wardid,
+        dpid = chartFilter.dpid;
+      var rowData = statData.tableData[statData.dataIndex];
+      if (!isNaN(i)) {
+        if (!date && !lgaid && !wardid && !dpid) {
+          chartFilter.date = rowData.title;
+          getDailySummaryPerDate();
+        } else if (date && !lgaid && !wardid && !dpid) {
+          chartFilter.lgaid = rowData.lgaid;
+          chartFilter.lgaName = rowData.title;
+          getDailySummaryPerWard();
+        } else if (date && lgaid && (!wardid || wardid) && !dpid) {
+          chartFilter.wardName = rowData.title;
+          chartFilter.wardid = rowData.wardid;
+          if (chartFilter.chartLevel != 3) getDailySummaryPerDatePerDp();
+        } else {
+          getDailyTopSummary();
+        }
+      } else {
+        if (date && lgaid && !wardid && !dpid) getDailySummaryPerWard();
+        else if (date && lgaid && wardid) getDailySummaryPerDatePerDp();
+        else if (date && !lgaid && !wardid) getDailySummaryPerDate();
+        else getDailyTopSummary();
+      }
+    };
+
+    const refresh = () => {
+      getTopListStatistics();
+      if (chartFilter.chartLevel == 0) getDailyTopSummary();
+      else if (chartFilter.chartLevel == 1) getDailySummaryPerDate();
+      else if (chartFilter.chartLevel == 2) getDailySummaryPerWard();
+      else if (chartFilter.chartLevel == 3) getDailySummaryPerDatePerDp();
+      else getDailyTopSummary();
+    };
+
+    const dailyStatBreadCrum = (state) => {
+      var sel = document.querySelector(".data-index-" + state);
+      statData.dataIndex = sel ? sel.getAttribute("data-index") : "";
+      if (state == 1) {
+        chartFilter.lgaid = chartFilter.wardid = chartFilter.dpid = "";
+        getDailySummaryPerDate();
+      } else if (state == 2) {
+        chartFilter.wardid = chartFilter.dpid = "";
+        getDailySummaryPerWard();
+      } else if (state == 3) {
+        chartFilter.wardid = chartFilter.dpid = "";
+        getDailySummaryPerDatePerDp();
+      } else {
+        chartFilter.date =
+          chartFilter.lgaid =
+          chartFilter.wardid =
+          chartFilter.dpid =
+            "";
+        getDailyTopSummary();
+      }
+    };
+
+    const getDailySummaryPerDate = async () => {
+      await fetchData("753", { date: chartFilter.date, xAxisLabel: "LGAS" });
+      var list = document.querySelector(".data-index-1");
+      if (list) list.setAttribute("data-index", statData.dataIndex);
+    };
+    const getDailySummaryPerWard = async () => {
+      await fetchData("754", {
+        date: chartFilter.date,
+        lgaid: chartFilter.lgaid,
+        xAxisLabel: "Wards",
+      });
+      var list = document.querySelector(".data-index-2");
+      if (list) list.setAttribute("data-index", statData.dataIndex);
+    };
+    const getDailySummaryPerDatePerDp = async () => {
+      await fetchData("755", {
+        date: chartFilter.date,
+        wardid: chartFilter.wardid,
+        xAxisLabel: "DPs",
+      });
+    };
+
+    const fetchData = async (queryId, params) => {
+      overlay.show();
+      try {
+        var response = await axios.get(common.DataService + "?qid=" + queryId, {
+          params: params,
         });
-        const lgaMobilizationAggregate = reactive({
-            mobilizationData: [], mobDateData: [],
-            dateFilter: '', lgaIdFilter: 0, lgaNameFilter: '',
-        });
-        const series = ref([]);
-        const allChartData = ref([]);
-        const chartOptions = ref({ xaxis: { title: { text: '' } } });
+        var allData = response.data || {};
+        var chartArr = Array.isArray(allData.chart) ? allData.chart : [[], []];
+        statData.tableData = Array.isArray(allData.table) ? allData.table : [];
+        statData.chartData = chartArr;
+        statData.chartData.xAxisLabel = params.xAxisLabel;
+        chartFilter.chartLevel = allData.level || 0;
+        try {
+          plotChart();
+        } catch (e) {
+          console.error("plotChart failed:", e);
+        }
+      } catch (error) {
+        alert.Error("ERROR", safeMessage(error));
+      } finally {
+        overlay.hide();
+      }
+    };
 
-        const convertStringNumberToFigures = (d) => {
-            var data = d ? parseInt(d) : 0;
-            return data ? data.toLocaleString() : 0;
-        }
-        const convertToDateMonthDay = (date) => {
-            return new Date(date).toLocaleDateString('en-US', { month: 'short', day: '2-digit' });
-        }
-        const checkIfDateIsToday = (date) => {
-            var today = new Date().toISOString().slice(0, 10);
-            if (date === today) return 'Today';
-            var parsed = new Date(date);
-            return parsed.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: '2-digit' });
-        }
-        const isValidDate = (dateString) => {
-            var regex = /^\d{4}-\d{2}-\d{2}$/;
-            return regex.test(dateString) ? convertToDateMonthDay(dateString) : dateString;
-        }
-        const capitalizeWords = (str) => {
-            if (typeof str !== 'string') return '';
-            return str.toLowerCase().split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
-        }
+    onBeforeMount(() => {
+      getDailyTopSummary();
+    });
+    onMounted(() => {
+      getTopListStatistics();
+    });
 
-        const getTopListStatistics = async () => {
-            overlay.show();
-            try {
-                var response = await axios.get(common.DataService + '?qid=750');
-                var allData = (response.data && response.data.data && response.data.data[0]) || {};
-                topMobilizationStat.eNetcard = convertStringNumberToFigures(allData.netcards);
-                topMobilizationStat.hhMobilized = convertStringNumberToFigures(allData.households);
-                topMobilizationStat.familySize = convertStringNumberToFigures(allData.family_size);
-            } catch (error) {
-                alert.Error('ERROR', safeMessage(error));
-            } finally {
-                overlay.hide();
-            }
-        }
-
-        const getDailyTopSummary = async () => {
-            overlay.show();
-            try {
-                var response = await axios.get(common.DataService + '?qid=751');
-                var allData = response.data || {};
-                var chartArr = Array.isArray(allData.chart) ? allData.chart : [[], []];
-                statData.tableData = Array.isArray(allData.table) ? allData.table : [];
-                statData.chartData = chartArr;
-                statData.chartData.xAxisLabel = 'Days';
-                chartFilter.chartLevel = allData.level || 0;
-                if (Array.isArray(statData.chartData[1])) {
-                    statData.chartData[1] = statData.chartData[1].map(item => convertToDateMonthDay(item));
-                }
-                try { plotChart(); } catch (e) { console.error('plotChart failed:', e); }
-            } catch (error) {
-                alert.Error('ERROR', safeMessage(error));
-            } finally {
-                overlay.hide();
-            }
-        }
-
-        const plotChart = () => {
-            var yAxislabel = (statData.chartData[0] && statData.chartData[0][chartCurrentTab.value] && statData.chartData[0][chartCurrentTab.value].name) || '';
-            var xAxisLabel = statData.chartData.xAxisLabel;
-            chartOptions.value = {
-                chart: { type: 'bar' },
-                colors: '#7367f0',
-                xaxis: {
-                    categories: statData.chartData[1] || [],
-                    title: { text: xAxisLabel, style: { color: '#6e6b7b', fontWeight: 'bold' }, offsetY: 10 },
-                },
-                yaxis: {
-                    title: { text: yAxislabel, style: { color: '#6e6b7b', fontWeight: 'bold' } },
-                    labels: { formatter: (val) => { return parseInt(val).toLocaleString(); } },
-                },
-                plotOptions: { bar: { dataLabels: { position: 'top' } } },
-                dataLabels: {
-                    enabled: true,
-                    formatter: (val) => { return parseInt(val).toLocaleString(); },
-                    offsetY: -20,
-                    style: { fontSize: '12px', colors: ['#000'] },
-                },
-                noData: {
-                    text: 'No data available, kindly refresh',
-                    align: 'center', verticalAlign: 'middle', offsetX: 0, offsetY: 0,
-                    style: { color: '#333', fontSize: '14px' },
-                },
-            };
-            series.value = statData.chartData[0] ? [statData.chartData[0][chartCurrentTab.value]] : [];
-        }
-
-        const loadNewChart = (d) => {
-            chartCurrentTab.value = d;
-            plotChart();
-        }
-
-        const generateStatData = (i) => {
-            if (i === undefined) i = '';
-            getTopListStatistics();
-            statData.dataIndex = i;
-            var date = chartFilter.date, lgaid = chartFilter.lgaid, wardid = chartFilter.wardid, dpid = chartFilter.dpid;
-            var rowData = statData.tableData[statData.dataIndex];
-            if (!isNaN(i)) {
-                if (!date && !lgaid && !wardid && !dpid) {
-                    chartFilter.date = rowData.title;
-                    getDailySummaryPerDate();
-                } else if (date && !lgaid && !wardid && !dpid) {
-                    chartFilter.lgaid = rowData.lgaid;
-                    chartFilter.lgaName = rowData.title;
-                    getDailySummaryPerWard();
-                } else if (date && lgaid && (!wardid || wardid) && !dpid) {
-                    chartFilter.wardName = rowData.title;
-                    chartFilter.wardid = rowData.wardid;
-                    if (chartFilter.chartLevel != 3) getDailySummaryPerDatePerDp();
-                } else {
-                    getDailyTopSummary();
-                }
-            } else {
-                if (date && lgaid && !wardid && !dpid) getDailySummaryPerWard();
-                else if (date && lgaid && wardid) getDailySummaryPerDatePerDp();
-                else if (date && !lgaid && !wardid) getDailySummaryPerDate();
-                else getDailyTopSummary();
-            }
-        }
-
-        const refresh = () => {
-            getTopListStatistics();
-            if (chartFilter.chartLevel == 0) getDailyTopSummary();
-            else if (chartFilter.chartLevel == 1) getDailySummaryPerDate();
-            else if (chartFilter.chartLevel == 2) getDailySummaryPerWard();
-            else if (chartFilter.chartLevel == 3) getDailySummaryPerDatePerDp();
-            else getDailyTopSummary();
-        }
-
-        const dailyStatBreadCrum = (state) => {
-            var sel = document.querySelector('.data-index-' + state);
-            statData.dataIndex = sel ? sel.getAttribute('data-index') : '';
-            if (state == 1) {
-                chartFilter.lgaid = chartFilter.wardid = chartFilter.dpid = '';
-                getDailySummaryPerDate();
-            } else if (state == 2) {
-                chartFilter.wardid = chartFilter.dpid = '';
-                getDailySummaryPerWard();
-            } else if (state == 3) {
-                chartFilter.wardid = chartFilter.dpid = '';
-                getDailySummaryPerDatePerDp();
-            } else {
-                chartFilter.date = chartFilter.lgaid = chartFilter.wardid = chartFilter.dpid = '';
-                getDailyTopSummary();
-            }
-        }
-
-        const getDailySummaryPerDate = async () => {
-            await fetchData('753', { date: chartFilter.date, xAxisLabel: 'LGAS' });
-            var list = document.querySelector('.data-index-1');
-            if (list) list.setAttribute('data-index', statData.dataIndex);
-        }
-        const getDailySummaryPerWard = async () => {
-            await fetchData('754', { date: chartFilter.date, lgaid: chartFilter.lgaid, xAxisLabel: 'Wards' });
-            var list = document.querySelector('.data-index-2');
-            if (list) list.setAttribute('data-index', statData.dataIndex);
-        }
-        const getDailySummaryPerDatePerDp = async () => {
-            await fetchData('755', { date: chartFilter.date, wardid: chartFilter.wardid, xAxisLabel: 'DPs' });
-        }
-
-        const fetchData = async (queryId, params) => {
-            overlay.show();
-            try {
-                var response = await axios.get(common.DataService + '?qid=' + queryId, { params: params });
-                var allData = response.data || {};
-                var chartArr = Array.isArray(allData.chart) ? allData.chart : [[], []];
-                statData.tableData = Array.isArray(allData.table) ? allData.table : [];
-                statData.chartData = chartArr;
-                statData.chartData.xAxisLabel = params.xAxisLabel;
-                chartFilter.chartLevel = allData.level || 0;
-                try { plotChart(); } catch (e) { console.error('plotChart failed:', e); }
-            } catch (error) {
-                alert.Error('ERROR', safeMessage(error));
-            } finally {
-                overlay.hide();
-            }
-        }
-
-        onBeforeMount(() => { getDailyTopSummary(); });
-        onMounted(() => { getTopListStatistics(); });
-
-        return {
-            topMobilizationStat, statData, chartStates, chartCurrentTab, chartFilter,
-            lgaMobilizationAggregate, series, allChartData, chartOptions,
-            getTopListStatistics, getDailyTopSummary, plotChart, loadNewChart,
-            convertToDateMonthDay, checkIfDateIsToday, isValidDate,
-            convertStringNumberToFigures, generateStatData, refresh,
-            dailyStatBreadCrum, getDailySummaryPerDate, getDailySummaryPerWard,
-            getDailySummaryPerDatePerDp, fetchData, capitalizeWords,
-            capitalize: fmtUtils.capitalize, formatNumber: fmtUtils.formatNumber,
-        };
-    },
-    template: `
+    return {
+      topMobilizationStat,
+      statData,
+      chartStates,
+      chartCurrentTab,
+      chartFilter,
+      lgaMobilizationAggregate,
+      series,
+      allChartData,
+      chartOptions,
+      getTopListStatistics,
+      getDailyTopSummary,
+      plotChart,
+      loadNewChart,
+      convertToDateMonthDay,
+      checkIfDateIsToday,
+      isValidDate,
+      convertStringNumberToFigures,
+      generateStatData,
+      refresh,
+      dailyStatBreadCrum,
+      getDailySummaryPerDate,
+      getDailySummaryPerWard,
+      getDailySummaryPerDatePerDp,
+      fetchData,
+      capitalizeWords,
+      capitalize: fmtUtils.capitalize,
+      formatNumber: fmtUtils.formatNumber,
+    };
+  },
+  template: `
         <div>
             <div class="row">
                 <div class="col-12 mb-2">
@@ -391,171 +500,229 @@ const MobilizationDashboard = {
 /* lga_aggregate_mobilization_dashboard                                 */
 /* ------------------------------------------------------------------ */
 const LgaAggregateMobilizationDashboard = {
-    setup() {
-        const fmtUtils = useFormat();
+  setup() {
+    const fmtUtils = useFormat();
 
-        const statData = reactive({ tableData: [], chartData: [], dataIndex: '' });
-        const chartCurrentTab = ref(0);
-        const chartFilter = reactive({
-            lgaid: '', lgaName: '', wardid: '', wardName: '',
-            dpid: '', dpName: '', date: '', chartLevel: 0,
+    const statData = reactive({ tableData: [], chartData: [], dataIndex: "" });
+    const chartCurrentTab = ref(0);
+    const chartFilter = reactive({
+      lgaid: "",
+      lgaName: "",
+      wardid: "",
+      wardName: "",
+      dpid: "",
+      dpName: "",
+      date: "",
+      chartLevel: 0,
+    });
+    const series = ref([]);
+    const allChartData = ref([]);
+    const chartOptions = ref({ xaxis: { title: { text: "" } } });
+
+    const convertStringNumberToFigures = (d) => {
+      var data = d ? parseInt(d) : 0;
+      return data ? data.toLocaleString() : 0;
+    };
+    const capitalizeWords = (str) => {
+      if (typeof str !== "string") return "";
+      return str
+        .toLowerCase()
+        .split(" ")
+        .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+        .join(" ");
+    };
+
+    const getAggregateByLocation = async () => {
+      overlay.show();
+      try {
+        var response = await axios.get(common.DataService + "?qid=752");
+        var allData = response.data || {};
+        var chartArr = Array.isArray(allData.chart) ? allData.chart : [[], []];
+        statData.tableData = Array.isArray(allData.table) ? allData.table : [];
+        statData.chartData = chartArr;
+        statData.chartData.xAxisLabel = "LGAs";
+        chartFilter.chartLevel = allData.level || 0;
+        try {
+          plotAggregateChart();
+        } catch (e) {
+          console.error("plotAggregateChart failed:", e);
+        }
+      } catch (error) {
+        alert.Error("ERROR", safeMessage(error));
+      } finally {
+        overlay.hide();
+      }
+    };
+
+    const plotAggregateChart = () => {
+      var yAxislabel =
+        (statData.chartData[0] &&
+          statData.chartData[0][chartCurrentTab.value] &&
+          statData.chartData[0][chartCurrentTab.value].name) ||
+        "";
+      var xAxisLabel = statData.chartData.xAxisLabel;
+      chartOptions.value = {
+        chart: { type: "bar" },
+        colors: "#7367f0",
+        xaxis: {
+          categories: statData.chartData[1] || [],
+          title: {
+            text: xAxisLabel,
+            style: { color: "#6e6b7b", fontWeight: "bold" },
+            offsetY: 10,
+          },
+        },
+        yaxis: {
+          title: {
+            text: yAxislabel,
+            style: { color: "#6e6b7b", fontWeight: "bold" },
+          },
+          labels: {
+            formatter: (val) => {
+              return parseInt(val).toLocaleString();
+            },
+          },
+        },
+        plotOptions: { bar: { dataLabels: { position: "top" } } },
+        dataLabels: {
+          enabled: true,
+          formatter: (val) => {
+            return parseInt(val).toLocaleString();
+          },
+          offsetY: -20,
+          style: { fontSize: "12px", colors: ["#000"] },
+        },
+        noData: {
+          text: "No data available, kindly refresh",
+          align: "center",
+          verticalAlign: "middle",
+          offsetX: 0,
+          offsetY: 0,
+          style: { color: "#333", fontSize: "14px" },
+        },
+      };
+      series.value = statData.chartData[0]
+        ? [statData.chartData[0][chartCurrentTab.value]]
+        : [];
+    };
+
+    const loadAggregateNewChart = (d) => {
+      chartCurrentTab.value = d;
+      plotAggregateChart();
+    };
+
+    const generateAggregateStatData = (i) => {
+      if (i === undefined) i = "";
+      statData.dataIndex = i;
+      var lgaid = chartFilter.lgaid,
+        wardid = chartFilter.wardid,
+        dpid = chartFilter.dpid;
+      var rowData = statData.tableData[statData.dataIndex];
+      if (!isNaN(i)) {
+        if (!lgaid && !wardid && !dpid) {
+          chartFilter.lgaid = rowData.lgaid;
+          chartFilter.lgaName = rowData.title;
+          getAggregateSummaryPerWard();
+        } else if (lgaid && !wardid && !dpid) {
+          chartFilter.wardid = rowData.wardid;
+          chartFilter.wardName = rowData.title;
+          getAggregateSummaryPerDp();
+        } else if (wardid && !dpid) {
+          chartFilter.dpName = rowData.title;
+          chartFilter.dpid = rowData.dpid;
+          getAggregateSummaryPerDp();
+        }
+      } else {
+        if (lgaid && !wardid && !dpid) getAggregateSummaryPerWard();
+        else if (wardid) getAggregateSummaryPerDp();
+        else if (!lgaid && !wardid) getAggregateByLocation();
+      }
+    };
+
+    const refreshAggregatePage = () => {
+      if (chartFilter.chartLevel == 0) getAggregateByLocation();
+      else if (chartFilter.chartLevel == 1) getAggregateSummaryPerWard();
+      else if (chartFilter.chartLevel == 2) getAggregateSummaryPerDp();
+      else getAggregateByLocation();
+    };
+
+    const aggregateStatBreadCrum = (state) => {
+      var sel = document.querySelector(".data-index-" + state);
+      statData.dataIndex = sel ? sel.getAttribute("data-index") : "";
+      if (state == 1) {
+        chartFilter.wardid = chartFilter.dpid = "";
+        getAggregateSummaryPerWard();
+      } else if (state == 2) {
+        chartFilter.wardid = chartFilter.dpid = "";
+        getAggregateSummaryPerDp();
+      } else {
+        chartFilter.lgaid = chartFilter.wardid = chartFilter.dpid = "";
+        getAggregateByLocation();
+      }
+    };
+
+    const getAggregateSummaryPerWard = async () => {
+      await fetchData("756", { lgaid: chartFilter.lgaid, xAxisLabel: "Wards" });
+      var list = document.querySelector(".data-index-1");
+      if (list) list.setAttribute("data-index", statData.dataIndex);
+    };
+    const getAggregateSummaryPerDp = async () => {
+      await fetchData("757", { wardid: chartFilter.wardid, xAxisLabel: "DPs" });
+    };
+
+    const fetchData = async (queryId, params) => {
+      overlay.show();
+      try {
+        var response = await axios.get(common.DataService + "?qid=" + queryId, {
+          params: params,
         });
-        const series = ref([]);
-        const allChartData = ref([]);
-        const chartOptions = ref({ xaxis: { title: { text: '' } } });
-
-        const convertStringNumberToFigures = (d) => {
-            var data = d ? parseInt(d) : 0;
-            return data ? data.toLocaleString() : 0;
+        var allData = response.data || {};
+        var chartArr = Array.isArray(allData.chart) ? allData.chart : [[], []];
+        statData.tableData = Array.isArray(allData.table) ? allData.table : [];
+        statData.chartData = chartArr;
+        statData.chartData.xAxisLabel = params.xAxisLabel;
+        chartFilter.chartLevel = allData.level || 0;
+        try {
+          plotAggregateChart();
+        } catch (e) {
+          console.error("plotAggregateChart failed:", e);
         }
-        const capitalizeWords = (str) => {
-            if (typeof str !== 'string') return '';
-            return str.toLowerCase().split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
-        }
+      } catch (error) {
+        alert.Error("ERROR", safeMessage(error));
+      } finally {
+        overlay.hide();
+      }
+    };
 
-        const getAggregateByLocation = async () => {
-            overlay.show();
-            try {
-                var response = await axios.get(common.DataService + '?qid=752');
-                var allData = response.data || {};
-                var chartArr = Array.isArray(allData.chart) ? allData.chart : [[], []];
-                statData.tableData = Array.isArray(allData.table) ? allData.table : [];
-                statData.chartData = chartArr;
-                statData.chartData.xAxisLabel = 'LGAs';
-                chartFilter.chartLevel = allData.level || 0;
-                try { plotAggregateChart(); } catch (e) { console.error('plotAggregateChart failed:', e); }
-            } catch (error) {
-                alert.Error('ERROR', safeMessage(error));
-            } finally {
-                overlay.hide();
-            }
-        }
+    // Single mount call — the legacy v2 code fired both beforeMount AND
+    // mounted, which double-counted overlay.show(); collapsed to one.
+    onMounted(() => {
+      getAggregateByLocation();
+    });
 
-        const plotAggregateChart = () => {
-            var yAxislabel = (statData.chartData[0] && statData.chartData[0][chartCurrentTab.value] && statData.chartData[0][chartCurrentTab.value].name) || '';
-            var xAxisLabel = statData.chartData.xAxisLabel;
-            chartOptions.value = {
-                chart: { type: 'bar' },
-                colors: '#7367f0',
-                xaxis: {
-                    categories: statData.chartData[1] || [],
-                    title: { text: xAxisLabel, style: { color: '#6e6b7b', fontWeight: 'bold' }, offsetY: 10 },
-                },
-                yaxis: {
-                    title: { text: yAxislabel, style: { color: '#6e6b7b', fontWeight: 'bold' } },
-                    labels: { formatter: (val) => { return parseInt(val).toLocaleString(); } },
-                },
-                plotOptions: { bar: { dataLabels: { position: 'top' } } },
-                dataLabels: {
-                    enabled: true,
-                    formatter: (val) => { return parseInt(val).toLocaleString(); },
-                    offsetY: -20,
-                    style: { fontSize: '12px', colors: ['#000'] },
-                },
-                noData: {
-                    text: 'No data available, kindly refresh',
-                    align: 'center', verticalAlign: 'middle', offsetX: 0, offsetY: 0,
-                    style: { color: '#333', fontSize: '14px' },
-                },
-            };
-            series.value = statData.chartData[0] ? [statData.chartData[0][chartCurrentTab.value]] : [];
-        }
-
-        const loadAggregateNewChart = (d) => {
-            chartCurrentTab.value = d;
-            plotAggregateChart();
-        }
-
-        const generateAggregateStatData = (i) => {
-            if (i === undefined) i = '';
-            statData.dataIndex = i;
-            var lgaid = chartFilter.lgaid, wardid = chartFilter.wardid, dpid = chartFilter.dpid;
-            var rowData = statData.tableData[statData.dataIndex];
-            if (!isNaN(i)) {
-                if (!lgaid && !wardid && !dpid) {
-                    chartFilter.lgaid = rowData.lgaid;
-                    chartFilter.lgaName = rowData.title;
-                    getAggregateSummaryPerWard();
-                } else if (lgaid && !wardid && !dpid) {
-                    chartFilter.wardid = rowData.wardid;
-                    chartFilter.wardName = rowData.title;
-                    getAggregateSummaryPerDp();
-                } else if (wardid && !dpid) {
-                    chartFilter.dpName = rowData.title;
-                    chartFilter.dpid = rowData.dpid;
-                    getAggregateSummaryPerDp();
-                }
-            } else {
-                if (lgaid && !wardid && !dpid) getAggregateSummaryPerWard();
-                else if (wardid) getAggregateSummaryPerDp();
-                else if (!lgaid && !wardid) getAggregateByLocation();
-            }
-        }
-
-        const refreshAggregatePage = () => {
-            if (chartFilter.chartLevel == 0) getAggregateByLocation();
-            else if (chartFilter.chartLevel == 1) getAggregateSummaryPerWard();
-            else if (chartFilter.chartLevel == 2) getAggregateSummaryPerDp();
-            else getAggregateByLocation();
-        }
-
-        const aggregateStatBreadCrum = (state) => {
-            var sel = document.querySelector('.data-index-' + state);
-            statData.dataIndex = sel ? sel.getAttribute('data-index') : '';
-            if (state == 1) {
-                chartFilter.wardid = chartFilter.dpid = '';
-                getAggregateSummaryPerWard();
-            } else if (state == 2) {
-                chartFilter.wardid = chartFilter.dpid = '';
-                getAggregateSummaryPerDp();
-            } else {
-                chartFilter.lgaid = chartFilter.wardid = chartFilter.dpid = '';
-                getAggregateByLocation();
-            }
-        }
-
-        const getAggregateSummaryPerWard = async () => {
-            await fetchData('756', { lgaid: chartFilter.lgaid, xAxisLabel: 'Wards' });
-            var list = document.querySelector('.data-index-1');
-            if (list) list.setAttribute('data-index', statData.dataIndex);
-        }
-        const getAggregateSummaryPerDp = async () => {
-            await fetchData('757', { wardid: chartFilter.wardid, xAxisLabel: 'DPs' });
-        }
-
-        const fetchData = async (queryId, params) => {
-            overlay.show();
-            try {
-                var response = await axios.get(common.DataService + '?qid=' + queryId, { params: params });
-                var allData = response.data || {};
-                var chartArr = Array.isArray(allData.chart) ? allData.chart : [[], []];
-                statData.tableData = Array.isArray(allData.table) ? allData.table : [];
-                statData.chartData = chartArr;
-                statData.chartData.xAxisLabel = params.xAxisLabel;
-                chartFilter.chartLevel = allData.level || 0;
-                try { plotAggregateChart(); } catch (e) { console.error('plotAggregateChart failed:', e); }
-            } catch (error) {
-                alert.Error('ERROR', safeMessage(error));
-            } finally {
-                overlay.hide();
-            }
-        }
-
-        // Single mount call — the legacy v2 code fired both beforeMount AND
-        // mounted, which double-counted overlay.show(); collapsed to one.
-        onMounted(() => { getAggregateByLocation(); });
-
-        return {
-            statData, chartCurrentTab, chartFilter, series, allChartData, chartOptions,
-            getAggregateByLocation, plotAggregateChart, loadAggregateNewChart,
-            convertStringNumberToFigures, generateAggregateStatData,
-            refreshAggregatePage, aggregateStatBreadCrum,
-            getAggregateSummaryPerWard, getAggregateSummaryPerDp, fetchData,
-            capitalizeWords,
-            capitalize: fmtUtils.capitalize, formatNumber: fmtUtils.formatNumber,
-        };
-    },
-    template: `
+    return {
+      statData,
+      chartCurrentTab,
+      chartFilter,
+      series,
+      allChartData,
+      chartOptions,
+      getAggregateByLocation,
+      plotAggregateChart,
+      loadAggregateNewChart,
+      convertStringNumberToFigures,
+      generateAggregateStatData,
+      refreshAggregatePage,
+      aggregateStatBreadCrum,
+      getAggregateSummaryPerWard,
+      getAggregateSummaryPerDp,
+      fetchData,
+      capitalizeWords,
+      capitalize: fmtUtils.capitalize,
+      formatNumber: fmtUtils.formatNumber,
+    };
+  },
+  template: `
         <div>
             <div class="row">
                 <div class="col-12 mt-1 pl-0 pr-0 pb-0">
@@ -637,7 +804,10 @@ const LgaAggregateMobilizationDashboard = {
 };
 
 useApp({ template: `<div><page-body/></div>` })
-    .component('page-body', PageBody)
-    .component('mobilization_dashboard', MobilizationDashboard)
-    .component('lga_aggregate_mobilization_dashboard', LgaAggregateMobilizationDashboard)
-    .mount('#app');
+  .component("page-body", PageBody)
+  .component("mobilization_dashboard", MobilizationDashboard)
+  .component(
+    "lga_aggregate_mobilization_dashboard",
+    LgaAggregateMobilizationDashboard,
+  )
+  .mount("#app");

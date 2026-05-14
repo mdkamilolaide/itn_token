@@ -14,14 +14,20 @@ const { ref, reactive, onMounted, onBeforeUnmount } = Vue;
 const { useApp, useFormat, bus, safeMessage } = window.utils;
 
 const PageBody = {
-    setup() {
-        const page = ref('movement');
-        const gotoPageHandler = (data) => { page.value = data && data.page; };
-        onMounted(() => { bus.on('g-event-goto-page', gotoPageHandler); });
-        onBeforeUnmount(() => { bus.off('g-event-goto-page', gotoPageHandler); });
-        return { page };
-    },
-    template: `
+  setup() {
+    const page = ref("movement");
+    const gotoPageHandler = (data) => {
+      page.value = data && data.page;
+    };
+    onMounted(() => {
+      bus.on("g-event-goto-page", gotoPageHandler);
+    });
+    onBeforeUnmount(() => {
+      bus.off("g-event-goto-page", gotoPageHandler);
+    });
+    return { page };
+  },
+  template: `
         <div>
             <div class="content-body">
                 <div v-show="page == 'movement'"><necard_movement/></div>
@@ -31,548 +37,814 @@ const PageBody = {
 };
 
 const NecardMovement = {
-    setup() {
-        const fmtUtils = useFormat();
+  setup() {
+    const fmtUtils = useFormat();
 
-        const tableData = ref([]);
-        const checkToggle = ref(false);
-        const filterState = ref(false);
-        const filters = ref(false);
-        const permission = ref(
-            (typeof getPermission === 'function')
-                ? (getPermission(typeof per !== 'undefined' ? per : null, 'enetcard') || { permission_value: 0 })
-                : { permission_value: 0 }
-        );
-        const url = ref(window.common && window.common.TableService);
-        const tableOptions = reactive({
-            total: 1, pageLength: 1, perPage: 10, currentPage: 1,
-            orderDir: 'desc', orderField: 0, limitStart: 0,
-            isNext: false, isPrev: false,
-            aLength: [10, 20, 50, 100, 150],
-            filterParam: { movementType: '' },
+    const tableData = ref([]);
+    const checkToggle = ref(false);
+    const filterState = ref(false);
+    const filters = ref(false);
+    const permission = ref(
+      typeof getPermission === "function"
+        ? getPermission(
+            typeof per !== "undefined" ? per : null,
+            "enetcard",
+          ) || { permission_value: 0 }
+        : { permission_value: 0 },
+    );
+    const url = ref(window.common && window.common.TableService);
+    const tableOptions = reactive({
+      total: 1,
+      pageLength: 1,
+      perPage: 10,
+      currentPage: 1,
+      orderDir: "desc",
+      orderField: 0,
+      limitStart: 0,
+      isNext: false,
+      isPrev: false,
+      aLength: [10, 20, 50, 100, 150],
+      filterParam: { movementType: "" },
+    });
+    const stateMovementForm = reactive({
+      stateMoveModal: false,
+      stateid: "",
+      lgaid: "",
+      totalNetcard: 1,
+      lgaName: "",
+    });
+    const lgaMovementForm = reactive({
+      totalNetcard: 1,
+      lgaMoveBtn: "",
+      lgaMoveModal: false,
+      originid: "",
+      originName: "",
+      originBalance: 0,
+      destinationid: "",
+      destinationName: "",
+    });
+    const wardMovementForm = reactive({
+      totalNetcard: 1,
+      wardMoveBtn: "",
+      wardMoveModal: false,
+      originid: "",
+      originName: "",
+      originBalance: 0,
+      destinationid: "",
+      destinationName: "",
+    });
+    const movementForm = reactive({ geoLevel: "", geoLevelId: 0 });
+    const geoIndicator = reactive({
+      state: 50,
+      currentLevelId: 0,
+      lga: "",
+      cluster: "",
+      ward: "",
+    });
+    const geoLevelData = ref([]);
+    const sysDefaultData = ref({});
+    const lgaLevelData = ref([]);
+    const clusterLevelData = ref([]);
+    const wardLevelData = ref([]);
+    const lgaNetBalancesData = ref([]);
+    const wardNetBalancesData = ref([]);
+    const isLgabalance = ref(true);
+    const allStatistics = reactive({
+      stateBalance: 0,
+      lgaBalance: 0,
+      wardBalance: 0,
+      beneficiary: 0,
+      total: 0,
+      mobilizer: 0,
+    });
+
+    const loadTableData = () => {
+      overlay.show();
+      axios
+        .get(
+          common.TableService +
+            "?qid=201&draw=" +
+            tableOptions.currentPage +
+            "&order_column=" +
+            tableOptions.orderField +
+            "&length=" +
+            tableOptions.perPage +
+            "&start=" +
+            tableOptions.limitStart +
+            "&order_dir=" +
+            tableOptions.orderDir +
+            "&mt=" +
+            tableOptions.filterParam.movementType,
+        )
+        .then((response) => {
+          var d = response && response.data;
+          tableData.value = Array.isArray(d && d.data) ? d.data : [];
+          tableOptions.total = (d && d.recordsTotal) || 0;
+          if (tableOptions.currentPage == 1) paginationDefault();
+          overlay.hide();
+        })
+        .catch((error) => {
+          overlay.hide();
+          alert.Error("ERROR", safeMessage(error));
         });
-        const stateMovementForm = reactive({
-            stateMoveModal: false, stateid: '', lgaid: '',
-            totalNetcard: 1, lgaName: '',
-        });
-        const lgaMovementForm = reactive({
-            totalNetcard: 1, lgaMoveBtn: '', lgaMoveModal: false,
-            originid: '', originName: '', originBalance: 0,
-            destinationid: '', destinationName: '',
-        });
-        const wardMovementForm = reactive({
-            totalNetcard: 1, wardMoveBtn: '', wardMoveModal: false,
-            originid: '', originName: '', originBalance: 0,
-            destinationid: '', destinationName: '',
-        });
-        const movementForm = reactive({ geoLevel: '', geoLevelId: 0 });
-        const geoIndicator = reactive({
-            state: 50, currentLevelId: 0,
-            lga: '', cluster: '', ward: '',
-        });
-        const geoLevelData = ref([]);
-        const sysDefaultData = ref({});
-        const lgaLevelData = ref([]);
-        const clusterLevelData = ref([]);
-        const wardLevelData = ref([]);
-        const lgaNetBalancesData = ref([]);
-        const wardNetBalancesData = ref([]);
-        const isLgabalance = ref(true);
-        const allStatistics = reactive({
-            stateBalance: 0, lgaBalance: 0, wardBalance: 0,
-            beneficiary: 0, total: 0, mobilizer: 0,
-        });
+    };
 
-        const loadTableData = () => {
-            overlay.show();
-            axios.get(
-                common.TableService +
-                '?qid=201&draw=' + tableOptions.currentPage +
-                '&order_column=' + tableOptions.orderField +
-                '&length=' + tableOptions.perPage +
-                '&start=' + tableOptions.limitStart +
-                '&order_dir=' + tableOptions.orderDir +
-                '&mt=' + tableOptions.filterParam.movementType
-            )
-                .then(response => {
-                    var d = response && response.data;
-                    tableData.value = Array.isArray(d && d.data) ? d.data : [];
-                    tableOptions.total = (d && d.recordsTotal) || 0;
-                    if (tableOptions.currentPage == 1) paginationDefault();
-                    overlay.hide();
-                })
-                .catch(error => {
-                    overlay.hide();
-                    alert.Error('ERROR', safeMessage(error));
-                });
-        }
+    const selectAll = () => {
+      for (var i = 0; i < tableData.value.length; i++)
+        tableData.value[i].pick = true;
+    };
+    const uncheckAll = () => {
+      for (var i = 0; i < tableData.value.length; i++)
+        tableData.value[i].pick = false;
+    };
+    const selectToggle = () => {
+      if (checkToggle.value === false) {
+        selectAll();
+        checkToggle.value = true;
+      } else {
+        uncheckAll();
+        checkToggle.value = false;
+      }
+    };
+    const checkedBg = (pickOne) => {
+      return pickOne != "" ? "bg-select" : "";
+    };
+    const toggleFilter = () => {
+      if (filterState.value === false) filters.value = false;
+      return (filterState.value = !filterState.value);
+    };
+    const paginationDefault = () => {
+      tableOptions.pageLength = Math.ceil(
+        tableOptions.total / tableOptions.perPage,
+      );
+      tableOptions.limitStart = Math.ceil(
+        (tableOptions.currentPage - 1) * tableOptions.perPage,
+      );
+      tableOptions.isNext = tableOptions.currentPage < tableOptions.pageLength;
+      tableOptions.isPrev = tableOptions.currentPage > 1;
+    };
+    const nextPage = () => {
+      tableOptions.currentPage += 1;
+      paginationDefault();
+      loadTableData();
+    };
+    const prevPage = () => {
+      tableOptions.currentPage -= 1;
+      paginationDefault();
+      loadTableData();
+    };
+    const currentPage = () => {
+      paginationDefault();
+      if (tableOptions.currentPage < 1)
+        alert.Error("ERROR", "The Page requested doesn't exist");
+      else if (tableOptions.currentPage > tableOptions.pageLength)
+        alert.Error("ERROR", "The Page requested doesn't exist");
+      else loadTableData();
+    };
+    const changePerPage = (val) => {
+      var maxPerPage = Math.ceil(tableOptions.total / val);
+      if (maxPerPage < tableOptions.currentPage)
+        tableOptions.currentPage = maxPerPage;
+      tableOptions.perPage = val;
+      paginationDefault();
+      loadTableData();
+    };
+    const sort = (col) => {
+      if (tableOptions.orderField === col)
+        tableOptions.orderDir =
+          tableOptions.orderDir === "asc" ? "desc" : "asc";
+      else tableOptions.orderField = col;
+      paginationDefault();
+      loadTableData();
+    };
+    const applyFilter = () => {
+      if (tableOptions.filterParam.movementType != "") {
+        toggleFilter();
+        filters.value = true;
+        paginationDefault();
+        loadTableData();
+      } else {
+        alert.Error("ERROR", "Invalid required data");
+      }
+    };
+    const removeSingleFilter = (column_name) => {
+      tableOptions.filterParam[column_name] = "";
+      var g = 0;
+      for (var k in tableOptions.filterParam) {
+        if (tableOptions.filterParam[k] != "") g++;
+      }
+      if (g == 0) filters.value = false;
+      paginationDefault();
+      loadTableData();
+    };
+    const clearAllFilter = () => {
+      filters.value = false;
+      tableOptions.filterParam.movementType = "";
+      paginationDefault();
+      loadTableData();
+    };
 
-        const selectAll = () => { for (var i = 0; i < tableData.value.length; i++) tableData.value[i].pick = true; };
-        const uncheckAll = () => { for (var i = 0; i < tableData.value.length; i++) tableData.value[i].pick = false; };
-        const selectToggle = () => {
-            if (checkToggle.value === false) { selectAll(); checkToggle.value = true; }
-            else                              { uncheckAll(); checkToggle.value = false; }
-        }
-        const checkedBg = (pickOne) => { return pickOne != '' ? 'bg-select' : ''; };
-        const toggleFilter = () => {
-            if (filterState.value === false) filters.value = false;
-            return (filterState.value = !filterState.value);
-        }
-        const paginationDefault = () => {
-            tableOptions.pageLength = Math.ceil(tableOptions.total / tableOptions.perPage);
-            tableOptions.limitStart = Math.ceil((tableOptions.currentPage - 1) * tableOptions.perPage);
-            tableOptions.isNext = tableOptions.currentPage < tableOptions.pageLength;
-            tableOptions.isPrev = tableOptions.currentPage > 1;
-        }
-        const nextPage = () => { tableOptions.currentPage += 1; paginationDefault(); loadTableData(); };
-        const prevPage = () => { tableOptions.currentPage -= 1; paginationDefault(); loadTableData(); };
-        const currentPage = () => {
-            paginationDefault();
-            if (tableOptions.currentPage < 1)                            alert.Error('ERROR', "The Page requested doesn't exist");
-            else if (tableOptions.currentPage > tableOptions.pageLength) alert.Error('ERROR', "The Page requested doesn't exist");
-            else                                                         loadTableData();
-        }
-        const changePerPage = (val) => {
-            var maxPerPage = Math.ceil(tableOptions.total / val);
-            if (maxPerPage < tableOptions.currentPage) tableOptions.currentPage = maxPerPage;
-            tableOptions.perPage = val;
-            paginationDefault();
-            loadTableData();
-        }
-        const sort = (col) => {
-            if (tableOptions.orderField === col) tableOptions.orderDir = tableOptions.orderDir === 'asc' ? 'desc' : 'asc';
-            else                                  tableOptions.orderField = col;
-            paginationDefault();
-            loadTableData();
-        }
-        const applyFilter = () => {
-            if (tableOptions.filterParam.movementType != '') {
-                toggleFilter();
-                filters.value = true;
-                paginationDefault();
-                loadTableData();
-            } else {
-                alert.Error('ERROR', 'Invalid required data');
-            }
-        }
-        const removeSingleFilter = (column_name) => {
-            tableOptions.filterParam[column_name] = '';
-            var g = 0;
-            for (var k in tableOptions.filterParam) {
-                if (tableOptions.filterParam[k] != '') g++;
-            }
-            if (g == 0) filters.value = false;
-            paginationDefault();
-            loadTableData();
-        }
-        const clearAllFilter = () => {
-            filters.value = false;
-            tableOptions.filterParam.movementType = '';
-            paginationDefault();
-            loadTableData();
-        }
-
-        /* State move modal ------------------------------------------- */
-        const showStateMoveModal = () => {
-            overlay.show();
-            stateMovementForm.totalNetcard = 1;
-            stateMovementForm.stateMoveModal = true;
-            stateMovementForm.lgaName = '';
-            overlay.hide();
-        }
-        const hideStateMoveModal = () => {
-            overlay.show();
-            stateMovementForm.lgaid = '';
-            stateMovementForm.totalNetcard = 1;
-            stateMovementForm.lgaName = '';
-            $('#stateMove').modal('hide');
-            stateMovementForm.stateMoveModal = false;
-            wardLevelData.value = [];
-            overlay.hide();
-        }
-        const setLgaName = (event) => {
-            stateMovementForm.lgaName = event.target.options[event.target.options.selectedIndex].text;
-        }
-        const transferFromStateToLGA = () => {
-            if (
-                parseInt(stateMovementForm.totalNetcard) > 0 &&
-                parseInt(stateMovementForm.totalNetcard) <= parseInt(allStatistics.stateBalance)
-            ) {
-                $.confirm({
-                    title: 'WARNING!',
-                    content: 'Are you sure you want to transfer <b>' + stateMovementForm.totalNetcard + '</b> e-Netcard to <b>' + stateMovementForm.lgaName + '</b> LGA?',
-                    buttons: {
-                        delete: {
-                            text: 'transfer', btnClass: 'btn btn-danger mr-1 text-capitalize',
-                            action: () => {
-                                axios.post(
-                                    common.DataService +
-                                    '?qid=202&total=' + stateMovementForm.totalNetcard +
-                                    '&stateid=' + stateMovementForm.stateid +
-                                    '&lgaid=' + stateMovementForm.lgaid +
-                                    '&id=' + $('#v_g_id').val()
-                                )
-                                    .then(response => {
-                                        if (response.data.result_code == 200) {
-                                            hideStateMoveModal();
-                                            refreshData();
-                                            alert.Success('Success', response.data.message + ' has been moved from State to ' + stateMovementForm.lgaName + ' LGA');
-                                            overlay.hide();
-                                        } else {
-                                            overlay.hide();
-                                            alert.Error('Error', response.data.message);
-                                        }
-                                    })
-                                    .catch(error => {
-                                        alert.Error('ERROR', safeMessage(error));
-                                        overlay.hide();
-                                    });
-                            },
-                        },
-                        cancel: () => { overlay.hide(); },
-                    },
-                });
-            } else {
-                alert.Error('ERROR', "You can't transfer more than " + allStatistics.stateBalance + ' available e-Netcards');
-                overlay.hide();
-            }
-        }
-
-        /* LGA move modal --------------------------------------------- */
-        const showLgaMoveModal = () => {
-            overlay.show();
-            lgaMovementForm.lgaMoveModal = true;
-            lgaMovementForm.lgaMoveBtn = 'Forward';
-            lgaMovementForm.totalNetcard = 1;
-            lgaMovementForm.originName = '';
-            lgaMovementForm.destinationName = '';
-            overlay.hide();
-        }
-        const hideLgaMoveModal = () => {
-            overlay.show();
-            lgaMovementForm.lgaMoveModal = false;
-            lgaMovementForm.lgaMoveBtn = '';
-            lgaMovementForm.destinationid = '';
-            lgaMovementForm.originid = '';
-            lgaMovementForm.totalNetcard = 1;
-            lgaMovementForm.originName = '';
-            lgaMovementForm.destinationName = '';
-            geoIndicator.lga = '';
-            wardNetBalancesData.value = [];
-            wardLevelData.value = [];
-            $('#lgaMove').modal('hide');
-            overlay.hide();
-        }
-        const setLgaOriginName = (event) => {
-            if (lgaMovementForm.lgaMoveBtn == 'Forward') {
-                lgaMovementForm.destinationid = '';
-                lgaMovementForm.destinationName = '';
-            }
-            getWardLevel();
-            geoIndicator.lga = lgaMovementForm.originid;
-            lgaMovementForm.originName = event.target.options[event.target.options.selectedIndex].text;
-            var origin = lgaMovementForm.originName.trim().replace(',', '').split('-');
-            var raw = origin[origin.length - 1];
-            lgaMovementForm.originBalance = raw == '' ? 0 : parseInt(raw);
-        }
-        const setLgaDestinationName = (event) => {
-            if (lgaMovementForm.lgaMoveBtn == 'Forward') {
-                lgaMovementForm.destinationName = event.target.options[event.target.options.selectedIndex].text;
-            }
-        }
-        const setLgaReverseVariable = () => {
-            lgaMovementForm.lgaMoveBtn = 'Reverse';
-            lgaMovementForm.destinationid = sysDefaultData.value.stateid;
-            lgaMovementForm.destinationName = sysDefaultData.value.state;
-        }
-        const lgaTransfer = (transfer_type) => {
-            var origin_name = lgaMovementForm.originName.split(' - ')[0];
-            if (parseInt(lgaMovementForm.totalNetcard) > parseInt(lgaMovementForm.originBalance)) {
-                alert.Error('ERROR', "You can't transfer more than " + lgaMovementForm.originBalance + ' e-Netcard');
-                overlay.hide();
-                return;
-            }
-            var qid = transfer_type == 'Reverse' ? '203' : '204';
-            var content = transfer_type == 'Reverse'
-                ? 'Are you sure you want to reverse <b>' + lgaMovementForm.totalNetcard + '</b> e-Netcard from <b>' + origin_name + '</b> to <b>' + lgaMovementForm.destinationName + '</b> State?'
-                : 'Are you sure you want to Transfer <b>' + lgaMovementForm.totalNetcard + '</b> e-Netcards from <b>' + origin_name + '</b> LGA to <b>' + lgaMovementForm.destinationName + '</b> Ward?';
-            var successMsg = transfer_type == 'Reverse'
-                ? n => n + ' Netcards has been reversed successfully from <b>' + origin_name + '</b> LGA to <b>' + lgaMovementForm.destinationName + '</b>'
-                : n => '<b>' + n + '</b> e-Netcards has been transfered successfully from <b>' + origin_name + '</b> LGA to <b>' + lgaMovementForm.destinationName + '</b> Ward';
-
-            $.confirm({
-                title: 'WARNING!', content: content,
-                buttons: {
-                    delete: {
-                        text: transfer_type, btnClass: 'btn btn-danger mr-1 text-capitalize',
-                        action: () => {
-                            axios.post(
-                                common.DataService +
-                                '?qid=' + qid +
-                                '&total=' + lgaMovementForm.totalNetcard +
-                                '&originid=' + lgaMovementForm.originid +
-                                '&destinationid=' + lgaMovementForm.destinationid +
-                                '&id=' + $('#v_g_id').val()
-                            )
-                                .then(response => {
-                                    if (response.data.result_code == '200') {
-                                        alert.Success('Success', successMsg(response.data.message));
-                                        hideLgaMoveModal();
-                                        refreshData();
-                                        overlay.hide();
-                                    } else {
-                                        overlay.hide();
-                                        alert.Error('Error', response.data.message);
-                                    }
-                                })
-                                .catch(error => {
-                                    alert.Error('ERROR', safeMessage(error));
-                                    overlay.hide();
-                                });
-                        },
-                    },
-                    cancel: () => { overlay.hide(); },
-                },
-            });
-        }
-
-        /* Ward move modal -------------------------------------------- */
-        const showWardMoveModal = () => {
-            overlay.show();
-            wardMovementForm.wardMoveModal = true;
-            wardMovementForm.wardMoveBtn = 'Forward';
-            wardMovementForm.totalNetcard = 1;
-            wardMovementForm.originName = '';
-            wardMovementForm.destinationName = '';
-            wardMovementForm.destinationid = '';
-            overlay.hide();
-        }
-        const hideWardMoveModal = () => {
-            overlay.show();
-            $('#wardMove').modal('hide');
-            wardMovementForm.wardMoveModal = false;
-            wardMovementForm.wardMoveBtn = '';
-            wardMovementForm.destinationid = '';
-            wardMovementForm.originid = '';
-            wardMovementForm.totalNetcard = 1;
-            wardMovementForm.originName = '';
-            wardMovementForm.destinationName = '';
-            wardMovementForm.originBalance = 0;
-            geoIndicator.lga = '';
-            wardLevelData.value = [];
-            wardNetBalancesData.value = [];
-            overlay.hide();
-        }
-        const setWardOriginName = (event) => {
-            wardMovementForm.originName = event.target.options[event.target.options.selectedIndex].text;
-            var trimmed = wardMovementForm.originName.trim().replace(',', '').split('-');
-            wardMovementForm.originBalance = trimmed[1] == '' ? 0 : parseInt(trimmed[1]);
-        }
-        const setWardDestinationName = (event) => {
-            wardMovementForm.originBalance = 0;
-            wardMovementForm.originid = '';
-            getWardsNetBalances();
-            wardMovementForm.destinationName = event.target.options[event.target.options.selectedIndex].text;
-        }
-        const wardTransfer = () => {
-            var origin_name = wardMovementForm.originName.split(' - ')[0];
-            if (parseInt(wardMovementForm.totalNetcard) > parseInt(wardMovementForm.originBalance)) {
-                alert.Error('ERROR', "You can't reverse more than " + wardMovementForm.originBalance + ' e-Netcard');
-                overlay.hide();
-                return;
-            }
-            $.confirm({
-                title: 'WARNING!',
-                content: 'Are you sure you want to reverse <b>' + wardMovementForm.totalNetcard + '</b> e-Netcard from <b>' + origin_name + '</b> Ward to <b>' + wardMovementForm.destinationName + '</b> LGA?',
-                buttons: {
-                    delete: {
-                        text: 'Reverse e-Netcard', btnClass: 'btn btn-danger mr-1 text-capitalize',
-                        action: () => {
-                            axios.post(
-                                common.DataService +
-                                '?qid=205&total=' + wardMovementForm.totalNetcard +
-                                '&originid=' + wardMovementForm.originid +
-                                '&destinationid=' + wardMovementForm.destinationid +
-                                '&id=' + $('#v_g_id').val()
-                            )
-                                .then(response => {
-                                    if (response.data.result_code == '200') {
-                                        alert.Success('Success', '<b>' + response.data.message + '</b> Netcards has been reversed successfully from <b>' + origin_name + '</b> Ward to <b>' + wardMovementForm.destinationName + '</b> LGA');
-                                        hideWardMoveModal();
-                                        refreshData();
-                                        overlay.hide();
-                                    } else {
-                                        overlay.hide();
-                                        alert.Error('Error', response.data.message);
-                                    }
-                                })
-                                .catch(error => {
-                                    alert.Error('ERROR', safeMessage(error));
-                                    overlay.hide();
-                                });
-                        },
-                    },
-                    cancel: () => { overlay.hide(); },
-                },
-            });
-        }
-
-        /* Geo lookups + stats ---------------------------------------- */
-        const getsysDefaultDataSettings = () => {
-            overlay.show();
-            axios.get(common.DataService + '?qid=gen007')
-                .then(response => {
-                    if (response.data.data && response.data.data.length > 0) {
-                        sysDefaultData.value = response.data.data[0];
-                        getLgasLevel(response.data.data[0].stateid);
-                        movementForm.geoLevel = 'state';
-                        movementForm.geoLevelId = response.data.data[0].stateid;
-                        stateMovementForm.stateid = response.data.data[0].stateid;
+    /* State move modal ------------------------------------------- */
+    const showStateMoveModal = () => {
+      overlay.show();
+      stateMovementForm.totalNetcard = 1;
+      stateMovementForm.stateMoveModal = true;
+      stateMovementForm.lgaName = "";
+      overlay.hide();
+    };
+    const hideStateMoveModal = () => {
+      overlay.show();
+      stateMovementForm.lgaid = "";
+      stateMovementForm.totalNetcard = 1;
+      stateMovementForm.lgaName = "";
+      $("#stateMove").modal("hide");
+      stateMovementForm.stateMoveModal = false;
+      wardLevelData.value = [];
+      overlay.hide();
+    };
+    const setLgaName = (event) => {
+      stateMovementForm.lgaName =
+        event.target.options[event.target.options.selectedIndex].text;
+    };
+    const transferFromStateToLGA = () => {
+      if (
+        parseInt(stateMovementForm.totalNetcard) > 0 &&
+        parseInt(stateMovementForm.totalNetcard) <=
+          parseInt(allStatistics.stateBalance)
+      ) {
+        $.confirm({
+          title: "WARNING!",
+          content:
+            "Are you sure you want to transfer <b>" +
+            stateMovementForm.totalNetcard +
+            "</b> e-Netcard to <b>" +
+            stateMovementForm.lgaName +
+            "</b> LGA?",
+          buttons: {
+            delete: {
+              text: "transfer",
+              btnClass: "btn btn-danger mr-1 text-capitalize",
+              action: () => {
+                axios
+                  .post(
+                    common.DataService +
+                      "?qid=202&total=" +
+                      stateMovementForm.totalNetcard +
+                      "&stateid=" +
+                      stateMovementForm.stateid +
+                      "&lgaid=" +
+                      stateMovementForm.lgaid +
+                      "&id=" +
+                      $("#v_g_id").val(),
+                  )
+                  .then((response) => {
+                    if (response.data.result_code == 200) {
+                      hideStateMoveModal();
+                      refreshData();
+                      alert.Success(
+                        "Success",
+                        response.data.message +
+                          " has been moved from State to " +
+                          stateMovementForm.lgaName +
+                          " LGA",
+                      );
+                      overlay.hide();
+                    } else {
+                      overlay.hide();
+                      alert.Error("Error", response.data.message);
                     }
+                  })
+                  .catch((error) => {
+                    alert.Error("ERROR", safeMessage(error));
                     overlay.hide();
-                })
-                .catch(error => {
-                    overlay.hide();
-                    alert.Error('ERROR', safeMessage(error));
-                });
-        }
-        const getLgasLevel = (stateid) => {
-            overlay.show();
-            axios.post(common.DataService + '?qid=gen003', JSON.stringify(stateid))
-                .then(response => {
-                    lgaLevelData.value = (response.data && response.data.data) || [];
-                    overlay.hide();
-                })
-                .catch(error => {
-                    overlay.hide();
-                    alert.Error('ERROR', safeMessage(error));
-                });
-        }
-        const getLgasNetBalances = () => {
-            overlay.show();
-            axios.post(common.DataService + '?qid=206')
-                .then(response => {
-                    lgaNetBalancesData.value = (response.data && response.data.data) || [];
-                    overlay.hide();
-                })
-                .catch(error => {
-                    overlay.hide();
-                    alert.Error('ERROR', safeMessage(error));
-                });
-        }
-        const getWardLevel = () => {
-            overlay.show();
-            axios.get(common.DataService + '?qid=gen005&e=' + lgaMovementForm.originid)
-                .then(response => {
-                    wardLevelData.value = (response.data && response.data.data) || [];
-                    overlay.hide();
-                })
-                .catch(error => {
-                    overlay.hide();
-                    alert.Error('ERROR', safeMessage(error));
-                });
-        }
-        const getWardsNetBalances = () => {
-            overlay.show();
-            axios.get(common.DataService + '?qid=207&lgaid=' + wardMovementForm.destinationid)
-                .then(response => {
-                    wardNetBalancesData.value = (response.data && response.data.data) || [];
-                    overlay.hide();
-                })
-                .catch(error => {
-                    overlay.hide();
-                    alert.Error('ERROR', safeMessage(error));
-                });
-        }
-        const getWardData = (event) => {
-            overlay.show();
-            var lgaid = event.target.options[event.target.options.selectedIndex].value;
-            axios.get(common.DataService + '?qid=207&lgaid=' + lgaid)
-                .then(response => {
-                    wardNetBalancesData.value = (response.data && response.data.data) || [];
-                    overlay.hide();
-                })
-                .catch(error => {
-                    overlay.hide();
-                    alert.Error('ERROR', safeMessage(error));
-                });
-        }
-        const refreshData = () => {
-            paginationDefault();
-            loadTableData();
-            getLgasNetBalances();
-            getAllStat();
-        }
-        const extractTotals = (data) => {
-            var state = 0, lga = 0, ward = 0, mobilizer = 0, beneficiary = 0;
-            if (Array.isArray(data)) {
-                data.forEach(item => {
-                    if (!item || typeof item !== 'object') return;
-                    if (item.location === 'state') state = item.total || 0;
-                    else if (item.location === 'lga') lga = item.total || 0;
-                    else if (item.location === 'ward') ward = item.total || 0;
-                    else if (item.location === 'mobilizer') mobilizer = item.total || 0;
-                    else if (item.location === 'beneficiary') beneficiary = item.total || 0;
-                });
-            }
-            return { state: state, lga: lga, ward: ward, mobilizer: mobilizer, beneficiary: beneficiary };
-        }
-        const getAllStat = () => {
-            var endpoints = [common.DataService + '?qid=201', common.DataService + '?qid=201a'];
-            Promise.all(endpoints.map(e => axios.get(e))).then(
-                axios.spread((...allData) => {
-                    overlay.show();
-                    var totalRow = (allData[1] && allData[1].data && allData[1].data.data && allData[1].data.data[0]) || {};
-                    allStatistics.total = parseInt(totalRow.total || 0);
-                    var stat = extractTotals((allData[0] && allData[0].data && allData[0].data.data) || []);
-                    allStatistics.stateBalance = stat.state;
-                    allStatistics.lgaBalance = stat.lga;
-                    allStatistics.wardBalance = stat.ward;
-                    allStatistics.mobilizer = stat.mobilizer;
-                    allStatistics.beneficiary = stat.beneficiary;
-                    overlay.hide();
-                })
-            ).catch(() => { overlay.hide(); });
-        }
-
-        const onlyNumber = (event) => {
-            var keyCode = event.keyCode || event.which;
-            if ((keyCode < 48 || keyCode > 57) && keyCode == 46) event.preventDefault();
-        }
-
-        onMounted(() => {
-            getsysDefaultDataSettings();
-            getLgasNetBalances();
-            loadTableData();
-            getAllStat();
-            bus.on('g-event-update', loadTableData);
+                  });
+              },
+            },
+            cancel: () => {
+              overlay.hide();
+            },
+          },
         });
-        onBeforeUnmount(() => {
-            bus.off('g-event-update', loadTableData);
-        });
+      } else {
+        alert.Error(
+          "ERROR",
+          "You can't transfer more than " +
+            allStatistics.stateBalance +
+            " available e-Netcards",
+        );
+        overlay.hide();
+      }
+    };
 
-        return {
-            tableData, checkToggle, filterState, filters, permission, url,
-            tableOptions, stateMovementForm, lgaMovementForm, wardMovementForm,
-            movementForm, geoIndicator, geoLevelData, sysDefaultData, lgaLevelData,
-            clusterLevelData, wardLevelData, lgaNetBalancesData, wardNetBalancesData,
-            isLgabalance, allStatistics,
-            loadTableData, selectAll, uncheckAll, selectToggle, checkedBg, toggleFilter,
-            paginationDefault, nextPage, prevPage, currentPage, changePerPage, sort,
-            applyFilter, removeSingleFilter, clearAllFilter,
-            showStateMoveModal, hideStateMoveModal, setLgaName, transferFromStateToLGA,
-            showLgaMoveModal, hideLgaMoveModal, setLgaOriginName, setLgaDestinationName,
-            setLgaReverseVariable, lgaTransfer,
-            showWardMoveModal, hideWardMoveModal, setWardOriginName, setWardDestinationName, wardTransfer,
-            getsysDefaultDataSettings, getLgasLevel, getLgasNetBalances, getWardLevel,
-            getWardsNetBalances, getWardData, refreshData, getAllStat, extractTotals,
-            onlyNumber,
-            capitalize: fmtUtils.capitalize,
-            formatNumber: fmtUtils.formatNumber,
-            displayDate: fmtUtils.displayDate,
-        };
-    },
-    template: `
+    /* LGA move modal --------------------------------------------- */
+    const showLgaMoveModal = () => {
+      overlay.show();
+      lgaMovementForm.lgaMoveModal = true;
+      lgaMovementForm.lgaMoveBtn = "Forward";
+      lgaMovementForm.totalNetcard = 1;
+      lgaMovementForm.originName = "";
+      lgaMovementForm.destinationName = "";
+      overlay.hide();
+    };
+    const hideLgaMoveModal = () => {
+      overlay.show();
+      lgaMovementForm.lgaMoveModal = false;
+      lgaMovementForm.lgaMoveBtn = "";
+      lgaMovementForm.destinationid = "";
+      lgaMovementForm.originid = "";
+      lgaMovementForm.totalNetcard = 1;
+      lgaMovementForm.originName = "";
+      lgaMovementForm.destinationName = "";
+      geoIndicator.lga = "";
+      wardNetBalancesData.value = [];
+      wardLevelData.value = [];
+      $("#lgaMove").modal("hide");
+      overlay.hide();
+    };
+    const setLgaOriginName = (event) => {
+      if (lgaMovementForm.lgaMoveBtn == "Forward") {
+        lgaMovementForm.destinationid = "";
+        lgaMovementForm.destinationName = "";
+      }
+      getWardLevel();
+      geoIndicator.lga = lgaMovementForm.originid;
+      lgaMovementForm.originName =
+        event.target.options[event.target.options.selectedIndex].text;
+      var origin = lgaMovementForm.originName
+        .trim()
+        .replace(",", "")
+        .split("-");
+      var raw = origin[origin.length - 1];
+      lgaMovementForm.originBalance = raw == "" ? 0 : parseInt(raw);
+    };
+    const setLgaDestinationName = (event) => {
+      if (lgaMovementForm.lgaMoveBtn == "Forward") {
+        lgaMovementForm.destinationName =
+          event.target.options[event.target.options.selectedIndex].text;
+      }
+    };
+    const setLgaReverseVariable = () => {
+      lgaMovementForm.lgaMoveBtn = "Reverse";
+      lgaMovementForm.destinationid = sysDefaultData.value.stateid;
+      lgaMovementForm.destinationName = sysDefaultData.value.state;
+    };
+    const lgaTransfer = (transfer_type) => {
+      var origin_name = lgaMovementForm.originName.split(" - ")[0];
+      if (
+        parseInt(lgaMovementForm.totalNetcard) >
+        parseInt(lgaMovementForm.originBalance)
+      ) {
+        alert.Error(
+          "ERROR",
+          "You can't transfer more than " +
+            lgaMovementForm.originBalance +
+            " e-Netcard",
+        );
+        overlay.hide();
+        return;
+      }
+      var qid = transfer_type == "Reverse" ? "203" : "204";
+      var content =
+        transfer_type == "Reverse"
+          ? "Are you sure you want to reverse <b>" +
+            lgaMovementForm.totalNetcard +
+            "</b> e-Netcard from <b>" +
+            origin_name +
+            "</b> to <b>" +
+            lgaMovementForm.destinationName +
+            "</b> State?"
+          : "Are you sure you want to Transfer <b>" +
+            lgaMovementForm.totalNetcard +
+            "</b> e-Netcards from <b>" +
+            origin_name +
+            "</b> LGA to <b>" +
+            lgaMovementForm.destinationName +
+            "</b> Ward?";
+      var successMsg =
+        transfer_type == "Reverse"
+          ? (n) =>
+              n +
+              " Netcards has been reversed successfully from <b>" +
+              origin_name +
+              "</b> LGA to <b>" +
+              lgaMovementForm.destinationName +
+              "</b>"
+          : (n) =>
+              "<b>" +
+              n +
+              "</b> e-Netcards has been transfered successfully from <b>" +
+              origin_name +
+              "</b> LGA to <b>" +
+              lgaMovementForm.destinationName +
+              "</b> Ward";
+
+      $.confirm({
+        title: "WARNING!",
+        content: content,
+        buttons: {
+          delete: {
+            text: transfer_type,
+            btnClass: "btn btn-danger mr-1 text-capitalize",
+            action: () => {
+              axios
+                .post(
+                  common.DataService +
+                    "?qid=" +
+                    qid +
+                    "&total=" +
+                    lgaMovementForm.totalNetcard +
+                    "&originid=" +
+                    lgaMovementForm.originid +
+                    "&destinationid=" +
+                    lgaMovementForm.destinationid +
+                    "&id=" +
+                    $("#v_g_id").val(),
+                )
+                .then((response) => {
+                  if (response.data.result_code == "200") {
+                    alert.Success("Success", successMsg(response.data.message));
+                    hideLgaMoveModal();
+                    refreshData();
+                    overlay.hide();
+                  } else {
+                    overlay.hide();
+                    alert.Error("Error", response.data.message);
+                  }
+                })
+                .catch((error) => {
+                  alert.Error("ERROR", safeMessage(error));
+                  overlay.hide();
+                });
+            },
+          },
+          cancel: () => {
+            overlay.hide();
+          },
+        },
+      });
+    };
+
+    /* Ward move modal -------------------------------------------- */
+    const showWardMoveModal = () => {
+      overlay.show();
+      wardMovementForm.wardMoveModal = true;
+      wardMovementForm.wardMoveBtn = "Forward";
+      wardMovementForm.totalNetcard = 1;
+      wardMovementForm.originName = "";
+      wardMovementForm.destinationName = "";
+      wardMovementForm.destinationid = "";
+      overlay.hide();
+    };
+    const hideWardMoveModal = () => {
+      overlay.show();
+      $("#wardMove").modal("hide");
+      wardMovementForm.wardMoveModal = false;
+      wardMovementForm.wardMoveBtn = "";
+      wardMovementForm.destinationid = "";
+      wardMovementForm.originid = "";
+      wardMovementForm.totalNetcard = 1;
+      wardMovementForm.originName = "";
+      wardMovementForm.destinationName = "";
+      wardMovementForm.originBalance = 0;
+      geoIndicator.lga = "";
+      wardLevelData.value = [];
+      wardNetBalancesData.value = [];
+      overlay.hide();
+    };
+    const setWardOriginName = (event) => {
+      wardMovementForm.originName =
+        event.target.options[event.target.options.selectedIndex].text;
+      var trimmed = wardMovementForm.originName
+        .trim()
+        .replace(",", "")
+        .split("-");
+      wardMovementForm.originBalance =
+        trimmed[1] == "" ? 0 : parseInt(trimmed[1]);
+    };
+    const setWardDestinationName = (event) => {
+      wardMovementForm.originBalance = 0;
+      wardMovementForm.originid = "";
+      getWardsNetBalances();
+      wardMovementForm.destinationName =
+        event.target.options[event.target.options.selectedIndex].text;
+    };
+    const wardTransfer = () => {
+      var origin_name = wardMovementForm.originName.split(" - ")[0];
+      if (
+        parseInt(wardMovementForm.totalNetcard) >
+        parseInt(wardMovementForm.originBalance)
+      ) {
+        alert.Error(
+          "ERROR",
+          "You can't reverse more than " +
+            wardMovementForm.originBalance +
+            " e-Netcard",
+        );
+        overlay.hide();
+        return;
+      }
+      $.confirm({
+        title: "WARNING!",
+        content:
+          "Are you sure you want to reverse <b>" +
+          wardMovementForm.totalNetcard +
+          "</b> e-Netcard from <b>" +
+          origin_name +
+          "</b> Ward to <b>" +
+          wardMovementForm.destinationName +
+          "</b> LGA?",
+        buttons: {
+          delete: {
+            text: "Reverse e-Netcard",
+            btnClass: "btn btn-danger mr-1 text-capitalize",
+            action: () => {
+              axios
+                .post(
+                  common.DataService +
+                    "?qid=205&total=" +
+                    wardMovementForm.totalNetcard +
+                    "&originid=" +
+                    wardMovementForm.originid +
+                    "&destinationid=" +
+                    wardMovementForm.destinationid +
+                    "&id=" +
+                    $("#v_g_id").val(),
+                )
+                .then((response) => {
+                  if (response.data.result_code == "200") {
+                    alert.Success(
+                      "Success",
+                      "<b>" +
+                        response.data.message +
+                        "</b> Netcards has been reversed successfully from <b>" +
+                        origin_name +
+                        "</b> Ward to <b>" +
+                        wardMovementForm.destinationName +
+                        "</b> LGA",
+                    );
+                    hideWardMoveModal();
+                    refreshData();
+                    overlay.hide();
+                  } else {
+                    overlay.hide();
+                    alert.Error("Error", response.data.message);
+                  }
+                })
+                .catch((error) => {
+                  alert.Error("ERROR", safeMessage(error));
+                  overlay.hide();
+                });
+            },
+          },
+          cancel: () => {
+            overlay.hide();
+          },
+        },
+      });
+    };
+
+    /* Geo lookups + stats ---------------------------------------- */
+    const getsysDefaultDataSettings = () => {
+      overlay.show();
+      axios
+        .get(common.DataService + "?qid=gen007")
+        .then((response) => {
+          if (response.data.data && response.data.data.length > 0) {
+            sysDefaultData.value = response.data.data[0];
+            getLgasLevel(response.data.data[0].stateid);
+            movementForm.geoLevel = "state";
+            movementForm.geoLevelId = response.data.data[0].stateid;
+            stateMovementForm.stateid = response.data.data[0].stateid;
+          }
+          overlay.hide();
+        })
+        .catch((error) => {
+          overlay.hide();
+          alert.Error("ERROR", safeMessage(error));
+        });
+    };
+    const getLgasLevel = (stateid) => {
+      overlay.show();
+      axios
+        .post(common.DataService + "?qid=gen003", JSON.stringify(stateid))
+        .then((response) => {
+          lgaLevelData.value = (response.data && response.data.data) || [];
+          overlay.hide();
+        })
+        .catch((error) => {
+          overlay.hide();
+          alert.Error("ERROR", safeMessage(error));
+        });
+    };
+    const getLgasNetBalances = () => {
+      overlay.show();
+      axios
+        .post(common.DataService + "?qid=206")
+        .then((response) => {
+          lgaNetBalancesData.value =
+            (response.data && response.data.data) || [];
+          overlay.hide();
+        })
+        .catch((error) => {
+          overlay.hide();
+          alert.Error("ERROR", safeMessage(error));
+        });
+    };
+    const getWardLevel = () => {
+      overlay.show();
+      axios
+        .get(common.DataService + "?qid=gen005&e=" + lgaMovementForm.originid)
+        .then((response) => {
+          wardLevelData.value = (response.data && response.data.data) || [];
+          overlay.hide();
+        })
+        .catch((error) => {
+          overlay.hide();
+          alert.Error("ERROR", safeMessage(error));
+        });
+    };
+    const getWardsNetBalances = () => {
+      overlay.show();
+      axios
+        .get(
+          common.DataService +
+            "?qid=207&lgaid=" +
+            wardMovementForm.destinationid,
+        )
+        .then((response) => {
+          wardNetBalancesData.value =
+            (response.data && response.data.data) || [];
+          overlay.hide();
+        })
+        .catch((error) => {
+          overlay.hide();
+          alert.Error("ERROR", safeMessage(error));
+        });
+    };
+    const getWardData = (event) => {
+      overlay.show();
+      var lgaid =
+        event.target.options[event.target.options.selectedIndex].value;
+      axios
+        .get(common.DataService + "?qid=207&lgaid=" + lgaid)
+        .then((response) => {
+          wardNetBalancesData.value =
+            (response.data && response.data.data) || [];
+          overlay.hide();
+        })
+        .catch((error) => {
+          overlay.hide();
+          alert.Error("ERROR", safeMessage(error));
+        });
+    };
+    const refreshData = () => {
+      paginationDefault();
+      loadTableData();
+      getLgasNetBalances();
+      getAllStat();
+    };
+    const extractTotals = (data) => {
+      var state = 0,
+        lga = 0,
+        ward = 0,
+        mobilizer = 0,
+        beneficiary = 0;
+      if (Array.isArray(data)) {
+        data.forEach((item) => {
+          if (!item || typeof item !== "object") return;
+          if (item.location === "state") state = item.total || 0;
+          else if (item.location === "lga") lga = item.total || 0;
+          else if (item.location === "ward") ward = item.total || 0;
+          else if (item.location === "mobilizer") mobilizer = item.total || 0;
+          else if (item.location === "beneficiary")
+            beneficiary = item.total || 0;
+        });
+      }
+      return {
+        state: state,
+        lga: lga,
+        ward: ward,
+        mobilizer: mobilizer,
+        beneficiary: beneficiary,
+      };
+    };
+    const getAllStat = () => {
+      var endpoints = [
+        common.DataService + "?qid=201",
+        common.DataService + "?qid=201a",
+      ];
+      Promise.all(endpoints.map((e) => axios.get(e)))
+        .then(
+          axios.spread((...allData) => {
+            overlay.show();
+            var totalRow =
+              (allData[1] &&
+                allData[1].data &&
+                allData[1].data.data &&
+                allData[1].data.data[0]) ||
+              {};
+            allStatistics.total = parseInt(totalRow.total || 0);
+            var stat = extractTotals(
+              (allData[0] && allData[0].data && allData[0].data.data) || [],
+            );
+            allStatistics.stateBalance = stat.state;
+            allStatistics.lgaBalance = stat.lga;
+            allStatistics.wardBalance = stat.ward;
+            allStatistics.mobilizer = stat.mobilizer;
+            allStatistics.beneficiary = stat.beneficiary;
+            overlay.hide();
+          }),
+        )
+        .catch(() => {
+          overlay.hide();
+        });
+    };
+
+    const onlyNumber = (event) => {
+      var keyCode = event.keyCode || event.which;
+      if ((keyCode < 48 || keyCode > 57) && keyCode == 46)
+        event.preventDefault();
+    };
+
+    onMounted(() => {
+      getsysDefaultDataSettings();
+      getLgasNetBalances();
+      loadTableData();
+      getAllStat();
+      bus.on("g-event-update", loadTableData);
+    });
+    onBeforeUnmount(() => {
+      bus.off("g-event-update", loadTableData);
+    });
+
+    return {
+      tableData,
+      checkToggle,
+      filterState,
+      filters,
+      permission,
+      url,
+      tableOptions,
+      stateMovementForm,
+      lgaMovementForm,
+      wardMovementForm,
+      movementForm,
+      geoIndicator,
+      geoLevelData,
+      sysDefaultData,
+      lgaLevelData,
+      clusterLevelData,
+      wardLevelData,
+      lgaNetBalancesData,
+      wardNetBalancesData,
+      isLgabalance,
+      allStatistics,
+      loadTableData,
+      selectAll,
+      uncheckAll,
+      selectToggle,
+      checkedBg,
+      toggleFilter,
+      paginationDefault,
+      nextPage,
+      prevPage,
+      currentPage,
+      changePerPage,
+      sort,
+      applyFilter,
+      removeSingleFilter,
+      clearAllFilter,
+      showStateMoveModal,
+      hideStateMoveModal,
+      setLgaName,
+      transferFromStateToLGA,
+      showLgaMoveModal,
+      hideLgaMoveModal,
+      setLgaOriginName,
+      setLgaDestinationName,
+      setLgaReverseVariable,
+      lgaTransfer,
+      showWardMoveModal,
+      hideWardMoveModal,
+      setWardOriginName,
+      setWardDestinationName,
+      wardTransfer,
+      getsysDefaultDataSettings,
+      getLgasLevel,
+      getLgasNetBalances,
+      getWardLevel,
+      getWardsNetBalances,
+      getWardData,
+      refreshData,
+      getAllStat,
+      extractTotals,
+      onlyNumber,
+      capitalize: fmtUtils.capitalize,
+      formatNumber: fmtUtils.formatNumber,
+      displayDate: fmtUtils.displayDate,
+    };
+  },
+  template: `
         <div class="row" id="basic-table" v-cloak>
             <div class="col-md-12 col-sm-12 col-12 mb-1">
                 <h2 class="content-header-title header-txt float-left mb-0">e-Netcard</h2>
@@ -1024,6 +1296,6 @@ const NecardMovement = {
 };
 
 useApp({ template: `<div><page-body/></div>` })
-    .component('page-body', PageBody)
-    .component('necard_movement', NecardMovement)
-    .mount('#app');
+  .component("page-body", PageBody)
+  .component("necard_movement", NecardMovement)
+  .mount("#app");

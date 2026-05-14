@@ -15,14 +15,20 @@ const { useApp, useFormat, bus, safeMessage } = window.utils;
 /* page-body                                                            */
 /* ------------------------------------------------------------------ */
 const PageBody = {
-    setup() {
-        const page = ref('list');
-        const gotoPageHandler = (data) => { page.value = data.page; };
-        onMounted(() => { bus.on('g-event-goto-page', gotoPageHandler); });
-        onBeforeUnmount(() => { bus.off('g-event-goto-page', gotoPageHandler); });
-        return { page };
-    },
-    template: `
+  setup() {
+    const page = ref("list");
+    const gotoPageHandler = (data) => {
+      page.value = data.page;
+    };
+    onMounted(() => {
+      bus.on("g-event-goto-page", gotoPageHandler);
+    });
+    onBeforeUnmount(() => {
+      bus.off("g-event-goto-page", gotoPageHandler);
+    });
+    return { page };
+  },
+  template: `
         <div>
             <div class="content-body">
                 <div v-show="page == 'list'"><user_list/></div>
@@ -36,964 +42,1305 @@ const PageBody = {
 /* user_list                                                            */
 /* ------------------------------------------------------------------ */
 const UserList = {
-    setup() {
-        const fmtUtils = useFormat();
+  setup() {
+    const fmtUtils = useFormat();
 
-        const url = ref(window.common && window.common.BadgeService);
-        const tableData = ref([]);
-        const defaultStateId = ref('');
-        const roleListData = ref([]);
-        const userRole = reactive({ currentUserRole: '', currentUserid: '' });
-        const geoData = ref([]);
-        const permission = ref(
-            (typeof getPermission === 'function')
-                ? (getPermission(typeof per !== 'undefined' ? per : null, 'users') || { permission_value: 0 })
-                : { permission_value: 0 }
-        );
-        const userGroup = ref([]);
-        const checkToggle = ref(false);
-        const filterState = ref(false);
-        const filters = ref(false);
-        const isBulkRole = ref(false);
+    const url = ref(window.common && window.common.BadgeService);
+    const tableData = ref([]);
+    const defaultStateId = ref("");
+    const roleListData = ref([]);
+    const userRole = reactive({ currentUserRole: "", currentUserid: "" });
+    const geoData = ref([]);
+    const permission = ref(
+      typeof getPermission === "function"
+        ? getPermission(typeof per !== "undefined" ? per : null, "users") || {
+            permission_value: 0,
+          }
+        : { permission_value: 0 },
+    );
+    const userGroup = ref([]);
+    const checkToggle = ref(false);
+    const filterState = ref(false);
+    const filters = ref(false);
+    const isBulkRole = ref(false);
 
-        const tableOptions = reactive({
-            total: 1, pageLength: 1, perPage: 10, currentPage: 1,
-            orderDir: 'asc', orderField: 0, limitStart: 0,
-            isNext: false, isPrev: false,
-            aLength: [10, 20, 50, 100, 150, 200],
-            filterParam: {
-                user_status: '', loginid: '', fullname: '', user_group: '',
-                phoneno: '', geo_level: '', geo_level_id: '', geo_string: '',
-                bank_status: '', role_id: '', role: '',
+    const tableOptions = reactive({
+      total: 1,
+      pageLength: 1,
+      perPage: 10,
+      currentPage: 1,
+      orderDir: "asc",
+      orderField: 0,
+      limitStart: 0,
+      isNext: false,
+      isPrev: false,
+      aLength: [10, 20, 50, 100, 150, 200],
+      filterParam: {
+        user_status: "",
+        loginid: "",
+        fullname: "",
+        user_group: "",
+        phoneno: "",
+        geo_level: "",
+        geo_level_id: "",
+        geo_string: "",
+        bank_status: "",
+        role_id: "",
+        role: "",
+      },
+    });
+
+    const geoLevelForm = reactive({
+      geoLevel: "",
+      geoLevelId: 0,
+      currentUserLoginid: "",
+      userid: "",
+      isBulk: false,
+    });
+    const geoIndicator = reactive({
+      state: 50,
+      currentLevelId: 0,
+      lga: "",
+      cluster: "",
+      ward: "",
+    });
+    const geoLevelData = ref([]);
+    const sysDefaultData = ref({});
+    const lgaLevelData = ref([]);
+    const clusterLevelData = ref([]);
+    const wardLevelData = ref([]);
+    const dpLevelData = ref([]);
+
+    const userPass = reactive({
+      pass: "",
+      loginid: "",
+      name: "",
+      isBulk: false,
+    });
+    const workHourExtensionForm = reactive({
+      extensionHour: "",
+      extensionDate: "",
+      authorizationUserId: "",
+      affectedUserIds: [],
+      isBulk: false,
+    });
+
+    const reloadUserListOnUpdate = () => {
+      paginationDefault();
+      loadTableData();
+    };
+
+    const loadTableData = () => {
+      overlay.show();
+      var u = common.TableService;
+      axios
+        .get(
+          u +
+            "?qid=001&draw=" +
+            tableOptions.currentPage +
+            "&order_column=" +
+            tableOptions.orderField +
+            "&length=" +
+            tableOptions.perPage +
+            "&start=" +
+            tableOptions.limitStart +
+            "&order_dir=" +
+            tableOptions.orderDir +
+            "&ac=" +
+            tableOptions.filterParam.user_status +
+            "&lo=" +
+            tableOptions.filterParam.loginid +
+            "&na=" +
+            tableOptions.filterParam.fullname +
+            "&gr=" +
+            tableOptions.filterParam.user_group +
+            "&ph=" +
+            tableOptions.filterParam.phoneno +
+            "&gl=" +
+            tableOptions.filterParam.geo_level +
+            "&gl_id=" +
+            tableOptions.filterParam.geo_level_id +
+            "&bv=" +
+            tableOptions.filterParam.bank_status +
+            "&ri=" +
+            tableOptions.filterParam.role_id,
+        )
+        .then((response) => {
+          var d = response && response.data;
+          tableData.value = Array.isArray(d && d.data) ? d.data : [];
+          tableOptions.total = (d && d.recordsTotal) || 0;
+          if (tableOptions.currentPage == 1) paginationDefault();
+          overlay.hide();
+        })
+        .catch((error) => {
+          overlay.hide();
+          alert.Error("ERROR", safeMessage(error));
+        });
+    };
+
+    const selectAll = () => {
+      for (var i = 0; i < tableData.value.length; i++)
+        tableData.value[i].pick = true;
+    };
+    const uncheckAll = () => {
+      for (var i = 0; i < tableData.value.length; i++)
+        tableData.value[i].pick = false;
+    };
+    const selectToggle = () => {
+      if (checkToggle.value === false) {
+        selectAll();
+        checkToggle.value = true;
+      } else {
+        uncheckAll();
+        checkToggle.value = false;
+      }
+    };
+    const checkedBg = (pickOne) => {
+      return pickOne != "" ? "bg-select" : "";
+    };
+
+    const toggleFilter = () => {
+      if (filterState.value === false) filters.value = false;
+      return (filterState.value = !filterState.value);
+    };
+    const selectedItems = () => {
+      return tableData.value.filter((r) => r.pick);
+    };
+    const selectedID = () => {
+      return tableData.value.filter((r) => r.pick).map((r) => r.userid);
+    };
+
+    const paginationDefault = () => {
+      tableOptions.pageLength = Math.ceil(
+        tableOptions.total / tableOptions.perPage,
+      );
+      tableOptions.limitStart = Math.ceil(
+        (tableOptions.currentPage - 1) * tableOptions.perPage,
+      );
+      tableOptions.isNext = tableOptions.currentPage < tableOptions.pageLength;
+      tableOptions.isPrev = tableOptions.currentPage > 1;
+    };
+    const nextPage = () => {
+      resetSelected();
+      tableOptions.currentPage += 1;
+      paginationDefault();
+      loadTableData();
+    };
+    const prevPage = () => {
+      resetSelected();
+      tableOptions.currentPage -= 1;
+      paginationDefault();
+      loadTableData();
+    };
+    const resetSelected = () => {
+      uncheckAll();
+      checkToggle.value = false;
+      totalCheckedBox();
+    };
+    const currentPage = () => {
+      paginationDefault();
+      if (tableOptions.currentPage < 1)
+        alert.Error("ERROR", "The Page requested doesn't exist");
+      else if (tableOptions.currentPage > tableOptions.pageLength)
+        alert.Error("ERROR", "The Page requested doesn't exist");
+      else loadTableData();
+    };
+    const changePerPage = (val) => {
+      resetSelected();
+      tableOptions.currentPage = 1;
+      tableOptions.perPage = val;
+      paginationDefault();
+      loadTableData();
+    };
+    const sort = (col) => {
+      if (tableOptions.orderField === col)
+        tableOptions.orderDir =
+          tableOptions.orderDir === "asc" ? "desc" : "asc";
+      else tableOptions.orderField = col;
+      paginationDefault();
+      loadTableData();
+    };
+
+    const applyFilter = () => {
+      var checkFill = 0;
+      checkFill += tableOptions.filterParam.user_status != "" ? 1 : 0;
+      checkFill += tableOptions.filterParam.loginid != "" ? 1 : 0;
+      checkFill += tableOptions.filterParam.fullname != "" ? 1 : 0;
+      checkFill += tableOptions.filterParam.user_group != "" ? 1 : 0;
+      checkFill += tableOptions.filterParam.phoneno != "" ? 1 : 0;
+      checkFill += tableOptions.filterParam.geo_level != "" ? 1 : 0;
+      checkFill += tableOptions.filterParam.bank_status != "" ? 1 : 0;
+      checkFill += tableOptions.filterParam.role_id != "" ? 1 : 0;
+      if (checkFill > 0) {
+        toggleFilter();
+        filters.value = true;
+        paginationDefault();
+        loadTableData();
+      } else {
+        alert.Error("ERROR", "Invalid required data");
+      }
+    };
+    const removeSingleFilter = (column_name) => {
+      tableOptions.filterParam[column_name] = "";
+      if (column_name == "geo_string") {
+        tableOptions.filterParam.geo_level = "";
+        tableOptions.filterParam.geo_level_id = "";
+        tableOptions.filterParam.geo_string = "";
+      }
+      if (column_name == "role") {
+        tableOptions.filterParam.role_id = "";
+        tableOptions.filterParam.role = "";
+      }
+      var g = 0;
+      for (var k in tableOptions.filterParam) {
+        if (tableOptions.filterParam[k] != "") g++;
+      }
+      if (g == 0) filters.value = false;
+      paginationDefault();
+      loadTableData();
+    };
+    const clearAllFilter = () => {
+      filters.value = false;
+      $(".select2").val("").trigger("change");
+      tableOptions.filterParam.user_status = "";
+      tableOptions.filterParam.loginid = "";
+      tableOptions.filterParam.fullname = "";
+      tableOptions.filterParam.user_group = "";
+      tableOptions.filterParam.phoneno = "";
+      tableOptions.filterParam.geo_level = "";
+      tableOptions.filterParam.geo_level_id = "";
+      tableOptions.filterParam.geo_string = "";
+      tableOptions.filterParam.bank_status = "";
+      tableOptions.filterParam.role_id = "";
+      tableOptions.filterParam.role = "";
+      paginationDefault();
+      loadTableData();
+    };
+
+    const userActivationDeactivation = (actionid) => {
+      var ids = actionid === "all" ? selectedID() : [actionid];
+      if (ids.length < 1) {
+        alert.Error("ERROR", "No User selected");
+        return;
+      }
+      var u = common.DataService;
+      $.confirm({
+        title: "WARNING!",
+        content:
+          "Are you sure you want to De/Activate Users? <br><br>Make sure you know what you are doing before you De/Activate the user",
+        buttons: {
+          delete: {
+            text: "De/Activate",
+            btnClass: "btn btn-danger mr-1",
+            action: () => {
+              axios
+                .post(u + "?qid=001", JSON.stringify(ids))
+                .then((response) => {
+                  overlay.hide();
+                  if (response.data.result_code == "200") {
+                    loadTableData();
+                    alert.Success(
+                      "SUCCESS",
+                      response.data.total + " Users Affected",
+                    );
+                  } else {
+                    alert.Error("ERROR", "User De/Activation failed");
+                  }
+                })
+                .catch((error) => {
+                  overlay.hide();
+                  alert.Error("ERROR", safeMessage(error));
+                });
             },
-        });
-
-        const geoLevelForm = reactive({
-            geoLevel: '', geoLevelId: 0,
-            currentUserLoginid: '', userid: '', isBulk: false,
-        });
-        const geoIndicator = reactive({
-            state: 50, currentLevelId: 0, lga: '', cluster: '', ward: '',
-        });
-        const geoLevelData = ref([]);
-        const sysDefaultData = ref({});
-        const lgaLevelData = ref([]);
-        const clusterLevelData = ref([]);
-        const wardLevelData = ref([]);
-        const dpLevelData = ref([]);
-
-        const userPass = reactive({
-            pass: '', loginid: '', name: '', isBulk: false,
-        });
-        const workHourExtensionForm = reactive({
-            extensionHour: '', extensionDate: '',
-            authorizationUserId: '', affectedUserIds: [], isBulk: false,
-        });
-
-        const reloadUserListOnUpdate = () => { paginationDefault(); loadTableData(); };
-
-        const loadTableData = () => {
-            overlay.show();
-            var u = common.TableService;
-            axios.get(
-                u +
-                '?qid=001&draw=' + tableOptions.currentPage +
-                '&order_column=' + tableOptions.orderField +
-                '&length=' + tableOptions.perPage +
-                '&start=' + tableOptions.limitStart +
-                '&order_dir=' + tableOptions.orderDir +
-                '&ac=' + tableOptions.filterParam.user_status +
-                '&lo=' + tableOptions.filterParam.loginid +
-                '&na=' + tableOptions.filterParam.fullname +
-                '&gr=' + tableOptions.filterParam.user_group +
-                '&ph=' + tableOptions.filterParam.phoneno +
-                '&gl=' + tableOptions.filterParam.geo_level +
-                '&gl_id=' + tableOptions.filterParam.geo_level_id +
-                '&bv=' + tableOptions.filterParam.bank_status +
-                '&ri=' + tableOptions.filterParam.role_id
-            )
-                .then(response => {
-                    var d = response && response.data;
-                    tableData.value = Array.isArray(d && d.data) ? d.data : [];
-                    tableOptions.total = (d && d.recordsTotal) || 0;
-                    if (tableOptions.currentPage == 1) paginationDefault();
-                    overlay.hide();
-                })
-                .catch(error => {
-                    overlay.hide();
-                    alert.Error('ERROR', safeMessage(error));
-                });
-        }
-
-        const selectAll = () => { for (var i = 0; i < tableData.value.length; i++) tableData.value[i].pick = true; };
-        const uncheckAll = () => { for (var i = 0; i < tableData.value.length; i++) tableData.value[i].pick = false; };
-        const selectToggle = () => {
-            if (checkToggle.value === false) { selectAll(); checkToggle.value = true; }
-            else                              { uncheckAll(); checkToggle.value = false; }
-        }
-        const checkedBg = (pickOne) => { return pickOne != '' ? 'bg-select' : ''; };
-
-        const toggleFilter = () => {
-            if (filterState.value === false) filters.value = false;
-            return (filterState.value = !filterState.value);
-        }
-        const selectedItems = () => { return tableData.value.filter(r => r.pick); };
-        const selectedID = () => { return tableData.value.filter(r => r.pick).map(r => r.userid); };
-
-        const paginationDefault = () => {
-            tableOptions.pageLength = Math.ceil(tableOptions.total / tableOptions.perPage);
-            tableOptions.limitStart = Math.ceil((tableOptions.currentPage - 1) * tableOptions.perPage);
-            tableOptions.isNext = tableOptions.currentPage < tableOptions.pageLength;
-            tableOptions.isPrev = tableOptions.currentPage > 1;
-        }
-        const nextPage = () => { resetSelected(); tableOptions.currentPage += 1; paginationDefault(); loadTableData(); };
-        const prevPage = () => { resetSelected(); tableOptions.currentPage -= 1; paginationDefault(); loadTableData(); };
-        const resetSelected = () => { uncheckAll(); checkToggle.value = false; totalCheckedBox(); };
-        const currentPage = () => {
-            paginationDefault();
-            if (tableOptions.currentPage < 1)                            alert.Error('ERROR', "The Page requested doesn't exist");
-            else if (tableOptions.currentPage > tableOptions.pageLength) alert.Error('ERROR', "The Page requested doesn't exist");
-            else                                                         loadTableData();
-        }
-        const changePerPage = (val) => {
-            resetSelected();
-            tableOptions.currentPage = 1;
-            tableOptions.perPage = val;
-            paginationDefault();
-            loadTableData();
-        }
-        const sort = (col) => {
-            if (tableOptions.orderField === col) tableOptions.orderDir = tableOptions.orderDir === 'asc' ? 'desc' : 'asc';
-            else                                  tableOptions.orderField = col;
-            paginationDefault();
-            loadTableData();
-        }
-
-        const applyFilter = () => {
-            var checkFill = 0;
-            checkFill += tableOptions.filterParam.user_status != '' ? 1 : 0;
-            checkFill += tableOptions.filterParam.loginid    != '' ? 1 : 0;
-            checkFill += tableOptions.filterParam.fullname   != '' ? 1 : 0;
-            checkFill += tableOptions.filterParam.user_group != '' ? 1 : 0;
-            checkFill += tableOptions.filterParam.phoneno    != '' ? 1 : 0;
-            checkFill += tableOptions.filterParam.geo_level  != '' ? 1 : 0;
-            checkFill += tableOptions.filterParam.bank_status != '' ? 1 : 0;
-            checkFill += tableOptions.filterParam.role_id    != '' ? 1 : 0;
-            if (checkFill > 0) {
-                toggleFilter();
-                filters.value = true;
-                paginationDefault();
-                loadTableData();
-            } else {
-                alert.Error('ERROR', 'Invalid required data');
-            }
-        }
-        const removeSingleFilter = (column_name) => {
-            tableOptions.filterParam[column_name] = '';
-            if (column_name == 'geo_string') {
-                tableOptions.filterParam.geo_level = '';
-                tableOptions.filterParam.geo_level_id = '';
-                tableOptions.filterParam.geo_string = '';
-            }
-            if (column_name == 'role') {
-                tableOptions.filterParam.role_id = '';
-                tableOptions.filterParam.role = '';
-            }
-            var g = 0;
-            for (var k in tableOptions.filterParam) {
-                if (tableOptions.filterParam[k] != '') g++;
-            }
-            if (g == 0) filters.value = false;
-            paginationDefault();
-            loadTableData();
-        }
-        const clearAllFilter = () => {
-            filters.value = false;
-            $('.select2').val('').trigger('change');
-            tableOptions.filterParam.user_status = '';
-            tableOptions.filterParam.loginid = '';
-            tableOptions.filterParam.fullname = '';
-            tableOptions.filterParam.user_group = '';
-            tableOptions.filterParam.phoneno = '';
-            tableOptions.filterParam.geo_level = '';
-            tableOptions.filterParam.geo_level_id = '';
-            tableOptions.filterParam.geo_string = '';
-            tableOptions.filterParam.bank_status = '';
-            tableOptions.filterParam.role_id = '';
-            tableOptions.filterParam.role = '';
-            paginationDefault();
-            loadTableData();
-        }
-
-        const userActivationDeactivation = (actionid) => {
-            var ids = actionid === 'all' ? selectedID() : [actionid];
-            if (ids.length < 1) {
-                alert.Error('ERROR', 'No User selected');
-                return;
-            }
-            var u = common.DataService;
-            $.confirm({
-                title: 'WARNING!',
-                content: 'Are you sure you want to De/Activate Users? <br><br>Make sure you know what you are doing before you De/Activate the user',
-                buttons: {
-                    delete: {
-                        text: 'De/Activate', btnClass: 'btn btn-danger mr-1',
-                        action: () => {
-                            axios.post(u + '?qid=001', JSON.stringify(ids))
-                                .then(response => {
-                                    overlay.hide();
-                                    if (response.data.result_code == '200') {
-                                        loadTableData();
-                                        alert.Success('SUCCESS', response.data.total + ' Users Affected');
-                                    } else {
-                                        alert.Error('ERROR', 'User De/Activation failed');
-                                    }
-                                })
-                                .catch(error => {
-                                    overlay.hide();
-                                    alert.Error('ERROR', safeMessage(error));
-                                });
-                        },
-                    },
-                    cancel: () => { overlay.hide(); },
-                },
-            });
-        }
-
-        const goToDetail = (userid, user_status) => {
-            bus.emit('g-event-goto-page', {
-                userid: userid, page: 'detail', user_status: user_status, role: roleListData.value,
-            });
-        }
-
-        const getRoleList = () => {
-            overlay.show();
-            axios.get(common.DataService + '?qid=007')
-                .then(response => {
-                    roleListData.value = (response.data && response.data.data) || [];
-                    overlay.hide();
-                })
-                .catch(error => {
-                    overlay.hide();
-                    alert.Error('ERROR', safeMessage(error));
-                });
-        }
-
-        const getGeoLocation = () => {
-            overlay.show();
-            axios.get(common.DataService + '?qid=gen009')
-                .then(response => {
-                    geoData.value = (response.data && response.data.data) || [];
-                    overlay.hide();
-                })
-                .catch(error => {
-                    overlay.hide();
-                    alert.Error('ERROR', safeMessage(error));
-                });
-        }
-        const setLocation = (select_index) => {
-            var i = select_index ? select_index : 0;
-            var row = geoData.value[i];
-            if (!row) return;
-            tableOptions.filterParam.geo_level = row.geo_level;
-            tableOptions.filterParam.geo_level_id = row.geo_level_id;
-            tableOptions.filterParam.geo_string = row.geo_string;
-        }
-        const setRole = (event) => {
-            tableOptions.filterParam.role = event.target.options[event.target.options.selectedIndex].text;
-        }
-
-        const changeUserGeoLevelModal = (userid, loginid, geo_level, geolevelid, isBulk) => {
-            isBulk = !!isBulk;
-            if (isBulk && selectedID().length < 1) {
-                alert.Error('ERROR', 'No User selected');
-                hideGeoModal();
-                return;
-            }
-            geoLevelForm.userid = userid;
-            geoLevelForm.geoLevel = geo_level;
-            geoLevelForm.currentUserLoginid = loginid;
-            geoLevelForm.geoLevelId = geolevelid;
-            if (isBulk) {
-                geoLevelForm.geoLevel = 'state';
-                geoLevelForm.geoLevelId = sysDefaultData.value.stateid;
-            }
-            geoLevelForm.isBulk = isBulk;
-            $('#geoLevelModal').modal('show');
-        }
-
-        const updateRole = () => {
-            var u = common.DataService;
-            if (isBulkRole.value === true) { submitBulkRole(); return; }
-            $.confirm({
-                title: 'WARNING!',
-                content: '<p>Are you sure you want to change the User Role? </p><br>Make sure you know what you are doing before you confirm the changes.',
-                buttons: {
-                    delete: {
-                        text: 'Change Role', btnClass: 'btn btn-danger mr-1',
-                        action: () => {
-                            axios.post(u + '?qid=008&r=' + userRole.currentUserRole + '&u=' + userRole.currentUserid)
-                                .then(response => {
-                                    if (response.data.result_code == '200') {
-                                        loadTableData();
-                                        overlay.hide();
-                                        $('#roleForm').modal('hide');
-                                        alert.Success('SUCCESS', 'User Role Updated');
-                                    } else {
-                                        overlay.hide();
-                                        alert.Error('ERROR', 'User Role not Updated');
-                                    }
-                                })
-                                .catch(error => {
-                                    overlay.hide();
-                                    alert.Error('ERROR', safeMessage(error));
-                                });
-                        },
-                    },
-                    cancel: () => { overlay.hide(); },
-                },
-            });
-        }
-
-        const refreshData = () => { paginationDefault(); getAllUserGroup(); loadTableData(); };
-        const downloadBadge = (userid) => {
-            overlay.show();
-            window.open(url.value + '?qid=002&e=' + userid, '_parent');
+          },
+          cancel: () => {
             overlay.hide();
-        }
-        const downloadBadges = () => {
-            overlay.show();
-            if (parseInt(selectedID().length) > 0) {
-                window.open(url.value + '?qid=003&e=' + selectedID(), '_parent');
-            } else {
-                alert.Error('Badge Download Failed', 'No user selected');
-            }
-            overlay.hide();
-        }
-        const hideGeoModal = () => {
-            geoLevelForm.currentUserLoginid = '';
-            geoLevelForm.geoLevel = '';
-            geoLevelForm.geoLevelId = '';
-            geoLevelForm.userid = '';
-            geoLevelForm.isBulk = false;
-            $('#geoLevelModal').modal('hide');
-        }
-        const showPassResetModal = (loginid, name, isBulk) => {
-            isBulk = !!isBulk;
-            if (isBulk && (selectedID() || []).length < 1) {
-                alert.Error('ERROR', 'No User selected');
-                hidePassResetModal();
-                return;
-            }
-            userPass.loginid = loginid;
-            userPass.name = (name && name.trim()) || loginid;
-            userPass.isBulk = isBulk;
-            $('#resetPassword').modal('show');
-        }
-        const hidePassResetModal = () => {
-            userPass.pass = '';
-            userPass.loginid = '';
-            userPass.name = '';
-            userPass.isBulk = false;
-            $('#resetPassword').modal('hide');
-        }
-        const resetPassword = () => {
-            var u = common.DataService;
-            var isBulk = userPass.isBulk;
-            var loginid = userPass.loginid;
-            var name = userPass.name;
-            var pass = userPass.pass;
-            var selected = selectedID() || [];
-            var selectedId = isBulk ? JSON.stringify(selected) : loginid;
-            var confirmTitle = isBulk ? selected.length + ' Users' : name;
-            var successMessage = isBulk
-                ? selected.length + ' Users Password Reset Successfully'
-                : name + ' Password Reset Successfully';
-            var qid = isBulk ? '012a' : '012';
-            var confirmationMessage =
-                '<div>Are you sure you want to reset the password for <b>' + confirmTitle + '</b>?<br>' +
-                'Please confirm only if you\'re certain about this action.</div>';
+          },
+        },
+      });
+    };
 
-            $.confirm({
-                title: 'Password Reset Warning!',
-                content: confirmationMessage,
-                buttons: {
-                    delete: {
-                        text: 'Reset Password',
-                        btnClass: 'btn btn-danger btn-sm mr-1',
-                        action: () => {
-                            overlay.show();
-                            axios.post(u + '?qid=' + qid, { loginid: selectedId, new: pass })
-                                .then(res => {
-                                    overlay.hide();
-                                    if (res.data.result_code === 200) {
-                                        alert.Success('SUCCESS', successMessage);
-                                        hidePassResetModal();
-                                        resetSelected();
-                                    } else {
-                                        alert.Error('ERROR', 'User Role not Updated');
-                                    }
-                                })
-                                .catch(error => {
-                                    overlay.hide();
-                                    alert.Error('ERROR', safeMessage(error));
-                                });
-                        },
-                    },
-                    cancel: () => { overlay.hide(); },
-                },
-            });
-        }
+    const goToDetail = (userid, user_status) => {
+      bus.emit("g-event-goto-page", {
+        userid: userid,
+        page: "detail",
+        user_status: user_status,
+        role: roleListData.value,
+      });
+    };
 
-        const showWorkExtensionModal = (isBulk, userId) => {
-            isBulk = !!isBulk;
-            userId = userId || '';
-            var selectedUsers = selectedID() || [];
-            if (isBulk && selectedUsers.length < 1) {
-                alert.Error('ERROR', 'No User selected for Working Hour Extension');
-                hideWorkHourExtensionModal();
-                return;
-            }
-            workHourExtensionForm.affectedUserIds = isBulk ? JSON.stringify(selectedUsers) : userId;
-            workHourExtensionForm.isBulk = isBulk;
-            $('#workHourModal').modal('show');
-        }
-
-        const showRoleModal = () => {
-            var selectedUsers = selectedID() || [];
-            isBulkRole.value = true;
-            if (selectedUsers.length < 1) {
-                alert.Error('ERROR', 'No User selected for Role Change');
-                return;
-            }
-            $('#roleForm').modal('show');
-        }
-        const submitBulkRole = () => {
-            var ids = selectedID() || [];
-            var u = common.DataService;
-            var len = ids.length;
-            $.confirm({
-                title: 'WARNING!',
-                content: '<p>Are you sure you want to change the User Role for ' + len + ' Users? </p><br>Make sure you sure of your action before you confirm the changes.',
-                buttons: {
-                    delete: {
-                        text: 'Change Role', btnClass: 'btn btn-danger mr-1',
-                        action: () => {
-                            axios.post(u + '?qid=008a&r=' + userRole.currentUserRole, JSON.stringify(ids))
-                                .then(response => {
-                                    if (response.data.result_code === 200) {
-                                        isBulkRole.value = false;
-                                        userRole.currentUserRole = '';
-                                        userRole.currentUserid = '';
-                                        loadTableData();
-                                        uncheckAll();
-                                        totalCheckedBox();
-                                        overlay.hide();
-                                        hideRoleModal();
-                                        alert.Success('SUCCESS', len + ' User Role Updated');
-                                    } else {
-                                        overlay.hide();
-                                        alert.Error('ERROR', 'User Role not Updated');
-                                    }
-                                })
-                                .catch(error => {
-                                    overlay.hide();
-                                    alert.Error('ERROR', safeMessage(error));
-                                });
-                        },
-                    },
-                    cancel: () => { overlay.hide(); },
-                },
-            });
-        }
-        const hideRoleModal = () => { $('#roleForm').modal('hide'); };
-        const hideWorkHourExtensionModal = () => {
-            workHourExtensionForm.extensionHour = '';
-            workHourExtensionForm.extensionDate = '';
-            workHourExtensionForm.isBulk = false;
-            workHourExtensionForm.affectedUserIds = [];
-            try {
-                $('#extensionDate').flatpickr({
-                    altInput: true, altFormat: 'F j, Y', dateFormat: 'Y-m-d', minDate: 'today',
-                }).clear();
-            } catch (e) { /* swallow */ }
-            $('#workHourModal').modal('hide');
-        }
-        const onSubmitAddWorkingHour = () => {
-            var extensionHour = workHourExtensionForm.extensionHour;
-            var extensionDate = workHourExtensionForm.extensionDate;
-            var affectedUserIds = workHourExtensionForm.affectedUserIds;
-            var isBulk = workHourExtensionForm.isBulk;
-            var $form = $('.change-working-hour-form');
-            var selectedCount = (selectedID() || []).length;
-
-            if ($form.length && typeof $form.valid === 'function' && !$form.valid()) {
-                alert.Error('Required Fields', 'All Fields with an asterisk (*) are required');
-                return;
-            }
-            if (selectedCount > 200) {
-                alert.Error('Error: Too Many Users', "You can't select more than 200 users.");
-                return;
-            }
-            var titleLabel = isBulk ? selectedCount + ' Users' : '1 User';
-            var successMessage = titleLabel + ' Work Hour Extended Successfully';
-            var confirmationMessage =
-                '<div>Are you sure you want to add work hour for <b>' + titleLabel + '</b>?<br>' +
-                'Please confirm only if you\'re certain about this action.</div>';
-            $.confirm({
-                title: 'WARNING!',
-                content: confirmationMessage,
-                buttons: {
-                    confirm: {
-                        text: 'Extend Work Hour', btnClass: 'btn btn-danger mr-1',
-                        action: () => {
-                            var u = common.DataService + '?qid=015';
-                            var currentUserId = (document.getElementById('v_g_id') && document.getElementById('v_g_id').value) || '';
-                            axios.post(u, {
-                                authorizationUserId: currentUserId,
-                                bulkUserIds: affectedUserIds,
-                                extensionHour: extensionHour,
-                                extensionDate: extensionDate,
-                            })
-                                .then(res => {
-                                    overlay.hide();
-                                    if (res.data.result_code === 200) {
-                                        hideWorkHourExtensionModal();
-                                        resetSelected();
-                                        alert.Success('SUCCESS', successMessage);
-                                    } else {
-                                        alert.Error('ERROR', 'Unable to update the geo level. Please try again later.');
-                                    }
-                                })
-                                .catch(error => {
-                                    overlay.hide();
-                                    alert.Error('ERROR', safeMessage(error));
-                                });
-                        },
-                    },
-                    cancel: () => { overlay.hide(); },
-                },
-            });
-        }
-
-        const getsysDefaultDataSettings = () => {
-            overlay.show();
-            axios.get(common.DataService + '?qid=gen007')
-                .then(response => {
-                    if (response.data.data && response.data.data.length > 0) {
-                        sysDefaultData.value = response.data.data[0];
-                        getLgasLevel(response.data.data[0].stateid);
-                        geoLevelForm.geoLevel = 'state';
-                        geoLevelForm.geoLevelId = response.data.data[0].stateid;
-                        defaultStateId.value = response.data.data[0].stateid;
-                    }
-                    overlay.hide();
-                })
-                .catch(error => {
-                    overlay.hide();
-                    alert.Error('ERROR', safeMessage(error));
-                });
-        }
-        const getGeoLevel = () => {
-            overlay.show();
-            axios.get(common.DataService + '?qid=gen001')
-                .then(response => {
-                    geoLevelData.value = (response.data && response.data.data) || [];
-                    overlay.hide();
-                })
-                .catch(error => {
-                    overlay.hide();
-                    alert.Error('ERROR', safeMessage(error));
-                });
-        }
-        const getLgasLevel = (stateid) => {
-            overlay.show();
-            axios.post(common.DataService + '?qid=gen003', JSON.stringify(stateid))
-                .then(response => {
-                    lgaLevelData.value = (response.data && response.data.data) || [];
-                    overlay.hide();
-                })
-                .catch(error => {
-                    overlay.hide();
-                    alert.Error('ERROR', safeMessage(error));
-                });
-        }
-        const getClusterLevel = () => {
-            overlay.show();
-            axios.get(common.DataService + '?qid=gen004&e=' + geoIndicator.cluster)
-                .then(response => {
-                    clusterLevelData.value = (response.data && response.data.data) || [];
-                    overlay.hide();
-                })
-                .catch(error => {
-                    overlay.hide();
-                    alert.Error('ERROR', safeMessage(error));
-                });
-        }
-        const getWardLevel = () => {
-            overlay.show();
-            axios.get(common.DataService + '?qid=gen005&e=' + geoIndicator.lga)
-                .then(response => {
-                    wardLevelData.value = (response.data && response.data.data) || [];
-                    overlay.hide();
-                })
-                .catch(error => {
-                    overlay.hide();
-                    alert.Error('ERROR', safeMessage(error));
-                });
-        }
-        const getDpLevel = () => {
-            overlay.show();
-            axios.get(common.DataService + '?qid=gen006&wardid=' + geoIndicator.ward)
-                .then(response => {
-                    dpLevelData.value = (response.data && response.data.data) || [];
-                    overlay.hide();
-                })
-                .catch(error => {
-                    overlay.hide();
-                    alert.Error('ERROR', safeMessage(error));
-                });
-        }
-        const changeGeoLevel = () => {
-            if (geoLevelForm.geoLevel == 'country') {
-                alert.Error('ERROR', 'Invalid Geo-Level selected, please select a valid Geo-Level');
-            } else if (geoLevelForm.geoLevel == 'state') {
-                geoLevelForm.geoLevelId = defaultStateId.value;
-            } else {
-                geoLevelForm.geoLevelId = '';
-                geoIndicator.lga = '';
-                geoIndicator.ward = '';
-                geoIndicator.cluster = '';
-            }
-        }
-        const changeUserRoleModal = (userid, roleid) => {
-            userRole.currentUserRole = roleid;
-            userRole.currentUserid = userid;
-        }
-        const onSubmitUpdateGeoLevel = () => {
-            var userid = geoLevelForm.userid;
-            var geoLevel = geoLevelForm.geoLevel;
-            var geoLevelId = geoLevelForm.geoLevelId;
-            var isBulk = geoLevelForm.isBulk;
-            var currentUserLoginid = geoLevelForm.currentUserLoginid;
-            var selectedUsers = selectedID() || [];
-            var userIdentifier = isBulk ? JSON.stringify(selectedUsers) : userid;
-            var titleLabel = isBulk ? selectedUsers.length + ' Users' : currentUserLoginid;
-            var successMessage = titleLabel + ' Geo Level Successfully Changed';
-            var qid = isBulk ? '009a' : '009';
-            var u = common.DataService + '?qid=' + qid;
-            var confirmationMessage =
-                '<div>Are you sure you want to change the User Geo Level for <b>' + titleLabel + '</b>?<br>' +
-                'Please confirm only if you\'re certain about this action.</div>';
-            $.confirm({
-                title: 'WARNING!',
-                content: confirmationMessage,
-                buttons: {
-                    confirm: {
-                        text: 'Update Geo Level', btnClass: 'btn btn-danger mr-1',
-                        action: () => {
-                            axios.post(u, { u: userIdentifier, l: geoLevel, id: geoLevelId })
-                                .then(res => {
-                                    overlay.hide();
-                                    if (res.data.result_code === 200) {
-                                        loadTableData();
-                                        hideGeoModal();
-                                        resetSelected();
-                                        alert.Success('SUCCESS', successMessage);
-                                    } else {
-                                        alert.Error('ERROR', 'Unable to update the geo level. Please try again later.');
-                                    }
-                                })
-                                .catch(error => {
-                                    overlay.hide();
-                                    alert.Error('ERROR', safeMessage(error));
-                                });
-                        },
-                    },
-                    cancel: () => { overlay.hide(); },
-                },
-            });
-        }
-        const getAllUserGroup = () => {
-            overlay.show();
-            axios.get(common.DataService + '?qid=026')
-                .then(response => {
-                    var rows = (response.data && response.data.data) || [];
-                    var group = [];
-                    for (var i = 0; i < rows.length; i++) group.push(rows[i]['user_group']);
-                    userGroup.value = group;
-                    overlay.hide();
-                })
-                .catch(error => {
-                    overlay.hide();
-                    alert.Error('ERROR', safeMessage(error));
-                });
-        }
-
-        // Lightweight autocomplete (preserved from v2). Wires DOM events
-        // onto an input by id and fills tableOptions.filterParam.user_group.
-        const autocomplete = (inp, arr) => {
-            if (!inp) return;
-            var currentFocus;
-            inp.addEventListener('input', function () {
-                var a, b, i, val = this.value;
-                closeAllLists();
-                if (!val) return false;
-                currentFocus = -1;
-                a = document.createElement('DIV');
-                a.setAttribute('id', this.id + 'autocomplete-list');
-                a.setAttribute('class', 'autocomplete-items');
-                this.parentNode.appendChild(a);
-                for (i = 0; i < arr.length; i++) {
-                    if (String(arr[i]).substr(0, val.length).toUpperCase() == val.toUpperCase()) {
-                        b = document.createElement('DIV');
-                        b.innerHTML = '<strong>' + arr[i].substr(0, val.length) + '</strong>' + arr[i].substr(val.length);
-                        b.innerHTML += "<input type='hidden' value='" + arr[i] + "'>";
-                        b.addEventListener('click', function () {
-                            inp.value = this.getElementsByTagName('input')[0].value;
-                            closeAllLists();
-                        });
-                        a.appendChild(b);
-                    }
-                }
-            });
-            inp.addEventListener('keydown', function (e) {
-                var x = document.getElementById(this.id + 'autocomplete-list');
-                if (x) x = x.getElementsByTagName('div');
-                if (e.keyCode == 40) { currentFocus++; addActive(x); }
-                else if (e.keyCode == 38) { currentFocus--; addActive(x); }
-                else if (e.keyCode == 13) {
-                    e.preventDefault();
-                    if (currentFocus > -1 && x) x[currentFocus].click();
-                }
-            });
-            const addActive = (x) => {
-                if (!x) return false;
-                removeActive(x);
-                if (currentFocus >= x.length) currentFocus = 0;
-                if (currentFocus < 0) currentFocus = x.length - 1;
-                x[currentFocus].classList.add('autocomplete-active');
-            }
-            const removeActive = (x) => { for (var i = 0; i < x.length; i++) x[i].classList.remove('autocomplete-active'); };
-            const closeAllLists = (elmnt) => {
-                var x = document.getElementsByClassName('autocomplete-items');
-                for (var i = 0; i < x.length; i++) {
-                    if (elmnt != x[i] && elmnt != inp) {
-                        x[i].parentNode.removeChild(x[i]);
-                        tableOptions.filterParam.user_group = inp.value;
-                    }
-                }
-            }
-            document.addEventListener('click', e => { closeAllLists(e.target); });
-        }
-        const loadAuto = () => { autocomplete(document.getElementById('user_group'), userGroup.value); };
-
-        const verifyAccount = (userid, index, first_name, middle_name, last_name) => {
-            overlay.show();
-            var f_name = first_name == null ? '' : first_name;
-            var l_name = last_name == null ? '' : last_name;
-            axios.post(common.DataService + '?qid=013&userid=' + userid)
-                .then(response => {
-                    if (response.data.result_code == '200') {
-                        if (response.data.data.result == 'success') {
-                            index.is_verified = 1;
-                            index.verification_status = 'success';
-                            overlay.hide();
-                            alert.Success('Account Verified', f_name + ' ' + l_name + ' Bank Account Details Verified');
-                        } else if (response.data.data.result == 'warning') {
-                            index.is_verified = 1;
-                            index.verification_status = 'warning';
-                            overlay.hide();
-                            alert.Warning('Invalid Verified Account Name', 'Bank Name is different from the supplied Name ');
-                        } else {
-                            index.is_verified = 1;
-                            index.verification_status = 'failed';
-                            overlay.hide();
-                            alert.Error('Verification Failed', 'Invalid Account Details');
-                        }
-                    } else {
-                        index.is_verified = 1;
-                        index.verification_status = 'failed';
-                        overlay.hide();
-                        alert.Error('ERROR', 'Invalid Account Details');
-                    }
-                })
-                .catch(error => {
-                    overlay.hide();
-                    alert.Error('ERROR', safeMessage(error));
-                });
-        }
-        const accountVerificationStatus = (status) => {
-            if (status == 'success') return ['txt-success', 'bg-status-success icon-check-circle'];
-            if (status == 'failed')  return ['txt-failed',  'bg-status-failed icon-x-circle'];
-            if (status == 'warning') return ['txt-warning', 'bg-status-warning icon-circle'];
-            return ['', 'icon-circle'];
-        }
-        const totalCheckedBox = () => {
-            var total = selectedID().length;
-            var el = document.getElementById('total-selected');
-            if (!el) return;
-            if (total > 0) {
-                el.innerHTML = '<span id="selected-counter" class="badge badge-primary btn-icon"><span class="badge badge-success">' + total + '</span> Selected</span>';
-            } else {
-                el.replaceChildren();
-            }
-        }
-        const exportUserData = async () => {
-            var common_url =
-                '&draw=' + tableOptions.currentPage +
-                '&order_column=' + tableOptions.orderField +
-                '&length=' + tableOptions.perPage +
-                '&start=' + tableOptions.limitStart +
-                '&order_dir=' + tableOptions.orderDir +
-                '&ac=' + tableOptions.filterParam.user_status +
-                '&lo=' + tableOptions.filterParam.loginid +
-                '&na=' + tableOptions.filterParam.fullname +
-                '&gr=' + tableOptions.filterParam.user_group +
-                '&ph=' + tableOptions.filterParam.phoneno +
-                '&gl=' + tableOptions.filterParam.geo_level +
-                '&gl_id=' + tableOptions.filterParam.geo_level_id +
-                '&bv=' + tableOptions.filterParam.bank_status +
-                '&ri=' + tableOptions.filterParam.role_id;
-            var veriUrl = 'qid=014' + common_url;
-            var dlString = 'qid=001' + common_url;
-            var filename =
-                (tableOptions.filterParam.geo_string ? tableOptions.filterParam.geo_string : 'Recent ') + ' ' +
-                (tableOptions.filterParam.loginid    ? tableOptions.filterParam.loginid    : 'Recent ') + ' User List';
-
-            overlay.show();
-            var count = await new Promise(resolve => {
-                $.ajax({
-                    url: common.DataService, type: 'POST', data: veriUrl, dataType: 'json',
-                    success: (data) => { resolve(data.total); },
-                });
-            });
-            var downloadMax = (window.common && window.common.ExportDownloadLimit) || 25000;
-            if (parseInt(count) > downloadMax) {
-                alert.Error('Download Error', 'Unable to download data because it has exceeded download limit, download limit is ' + downloadMax);
-            } else if (parseInt(count) == 0) {
-                alert.Error('Download Error', 'No data found');
-            } else {
-                alert.Info('DOWNLOADING...', 'Downloading ' + count + ' record(s)');
-                var outcome = await new Promise(resolve => {
-                    $.ajax({
-                        url: common.ExportService, type: 'POST', data: dlString,
-                        success: (data) => { resolve(data); },
-                    });
-                });
-                var exportData = JSON.parse(outcome);
-                if (window.Jhxlsx && typeof window.Jhxlsx.export === 'function') {
-                    window.Jhxlsx.export(exportData, { fileName: filename });
-                }
-            }
-            resetSelected();
-            overlay.hide();
-        }
-
-        const checkIfAndReturnEmpty = (data) => { return data === null || data === '' ? '' : data; };
-        const numbersOnlyWithoutDot = (evt) => {
-            var e = evt || window.event;
-            var charCode = e.which || e.keyCode;
-            if (charCode > 31 && (charCode < 48 || charCode > 57)) e.preventDefault();
-            return true;
-        }
-
-        onMounted(() => {
-            getGeoLocation();
-
-            // jQuery select2 init for the geo dropdown — preserved as-is.
-            var select = $('.select2');
-            select.each(function () {
-                var $this = $(this);
-                $this.wrap('<div class="position-relative"></div>');
-                $this.select2({
-                    dropdownAutoWidth: true,
-                    width: '100%',
-                    dropdownParent: $this.parent(),
-                }).on('change', function () { setLocation(this.value); });
-            });
-            $('.select2-selection__arrow').html('<i class="feather icon-chevron-down"></i>');
-
-            getAllUserGroup();
-            loadTableData();
-            getGeoLevel();
-            getsysDefaultDataSettings();
-            getRoleList();
-            bus.on('g-event-update-user', reloadUserListOnUpdate);
-
-            $('.form-password-toggle1 .input-group-text').on('click', function (e) {
-                e.preventDefault();
-                var $this = $(this);
-                var inputGroupText = $this.closest('.form-password-toggle1');
-                var formPasswordToggleIcon = $this;
-                var formPasswordToggleInput = inputGroupText.find('input');
-                if (formPasswordToggleInput.attr('type') === 'text') {
-                    formPasswordToggleInput.attr('type', 'password');
-                    if (typeof feather !== 'undefined' && feather && feather.icons) {
-                        formPasswordToggleIcon.find('svg').replaceWith(feather.icons['eye'].toSvg({ class: 'font-small-4' }));
-                    }
-                } else if (formPasswordToggleInput.attr('type') === 'password') {
-                    formPasswordToggleInput.attr('type', 'text');
-                    if (typeof feather !== 'undefined' && feather && feather.icons) {
-                        formPasswordToggleIcon.find('svg').replaceWith(feather.icons['eye-off'].toSvg({ class: 'font-small-4' }));
-                    }
-                }
-            });
-
-            var $form = $('.change-working-hour-form');
-            if ($form.length) {
-                $('.date').flatpickr({
-                    altInput: true, altFormat: 'F j, Y', dateFormat: 'Y-m-d', minDate: 'today',
-                });
-                if (typeof $form.validate === 'function') {
-                    $form.validate({
-                        rules: {
-                            extensionHour: { required: true, number: true },
-                            extensionDate: { required: true },
-                        },
-                    });
-                }
-            }
+    const getRoleList = () => {
+      overlay.show();
+      axios
+        .get(common.DataService + "?qid=007")
+        .then((response) => {
+          roleListData.value = (response.data && response.data.data) || [];
+          overlay.hide();
+        })
+        .catch((error) => {
+          overlay.hide();
+          alert.Error("ERROR", safeMessage(error));
         });
+    };
 
-        onBeforeUnmount(() => {
-            bus.off('g-event-update-user', reloadUserListOnUpdate);
+    const getGeoLocation = () => {
+      overlay.show();
+      axios
+        .get(common.DataService + "?qid=gen009")
+        .then((response) => {
+          geoData.value = (response.data && response.data.data) || [];
+          overlay.hide();
+        })
+        .catch((error) => {
+          overlay.hide();
+          alert.Error("ERROR", safeMessage(error));
         });
+    };
+    const setLocation = (select_index) => {
+      var i = select_index ? select_index : 0;
+      var row = geoData.value[i];
+      if (!row) return;
+      tableOptions.filterParam.geo_level = row.geo_level;
+      tableOptions.filterParam.geo_level_id = row.geo_level_id;
+      tableOptions.filterParam.geo_string = row.geo_string;
+    };
+    const setRole = (event) => {
+      tableOptions.filterParam.role =
+        event.target.options[event.target.options.selectedIndex].text;
+    };
 
-        return {
-            // state
-            url, tableData, defaultStateId, roleListData, userRole, geoData,
-            permission, userGroup, checkToggle, filterState, filters, isBulkRole,
-            tableOptions, geoLevelForm, geoIndicator,
-            geoLevelData, sysDefaultData, lgaLevelData, clusterLevelData, wardLevelData, dpLevelData,
-            userPass, workHourExtensionForm,
-            // methods
-            reloadUserListOnUpdate, loadTableData,
-            selectAll, uncheckAll, selectToggle, checkedBg, toggleFilter,
-            selectedItems, selectedID, totalCheckedBox,
-            nextPage, prevPage, resetSelected, currentPage, paginationDefault,
-            changePerPage, sort, applyFilter, removeSingleFilter, clearAllFilter,
-            userActivationDeactivation, goToDetail,
-            getRoleList, getGeoLocation, setLocation, setRole,
-            changeUserGeoLevelModal, updateRole, refreshData,
-            downloadBadge, downloadBadges,
-            hideGeoModal, showPassResetModal, hidePassResetModal, resetPassword,
-            showWorkExtensionModal, showRoleModal, submitBulkRole,
-            hideRoleModal, hideWorkHourExtensionModal, onSubmitAddWorkingHour,
-            getsysDefaultDataSettings, getGeoLevel, getLgasLevel, getClusterLevel,
-            getWardLevel, getDpLevel, changeGeoLevel,
-            changeUserRoleModal, onSubmitUpdateGeoLevel, getAllUserGroup,
-            autocomplete, loadAuto,
-            verifyAccount, accountVerificationStatus,
-            exportUserData, checkIfAndReturnEmpty, numbersOnlyWithoutDot,
-            // utility methods
-            capitalize: fmtUtils.capitalize,
-            formatNumber: fmtUtils.formatNumber,
-            displayDate: fmtUtils.displayDate,
-            fmt: fmtUtils.fmt,
-        };
-    },
-    template: `
+    const changeUserGeoLevelModal = (
+      userid,
+      loginid,
+      geo_level,
+      geolevelid,
+      isBulk,
+    ) => {
+      isBulk = !!isBulk;
+      if (isBulk && selectedID().length < 1) {
+        alert.Error("ERROR", "No User selected");
+        hideGeoModal();
+        return;
+      }
+      geoLevelForm.userid = userid;
+      geoLevelForm.geoLevel = geo_level;
+      geoLevelForm.currentUserLoginid = loginid;
+      geoLevelForm.geoLevelId = geolevelid;
+      if (isBulk) {
+        geoLevelForm.geoLevel = "state";
+        geoLevelForm.geoLevelId = sysDefaultData.value.stateid;
+      }
+      geoLevelForm.isBulk = isBulk;
+      $("#geoLevelModal").modal("show");
+    };
+
+    const updateRole = () => {
+      var u = common.DataService;
+      if (isBulkRole.value === true) {
+        submitBulkRole();
+        return;
+      }
+      $.confirm({
+        title: "WARNING!",
+        content:
+          "<p>Are you sure you want to change the User Role? </p><br>Make sure you know what you are doing before you confirm the changes.",
+        buttons: {
+          delete: {
+            text: "Change Role",
+            btnClass: "btn btn-danger mr-1",
+            action: () => {
+              axios
+                .post(
+                  u +
+                    "?qid=008&r=" +
+                    userRole.currentUserRole +
+                    "&u=" +
+                    userRole.currentUserid,
+                )
+                .then((response) => {
+                  if (response.data.result_code == "200") {
+                    loadTableData();
+                    overlay.hide();
+                    $("#roleForm").modal("hide");
+                    alert.Success("SUCCESS", "User Role Updated");
+                  } else {
+                    overlay.hide();
+                    alert.Error("ERROR", "User Role not Updated");
+                  }
+                })
+                .catch((error) => {
+                  overlay.hide();
+                  alert.Error("ERROR", safeMessage(error));
+                });
+            },
+          },
+          cancel: () => {
+            overlay.hide();
+          },
+        },
+      });
+    };
+
+    const refreshData = () => {
+      paginationDefault();
+      getAllUserGroup();
+      loadTableData();
+    };
+    const downloadBadge = (userid) => {
+      overlay.show();
+      window.open(url.value + "?qid=002&e=" + userid, "_parent");
+      overlay.hide();
+    };
+    const downloadBadges = () => {
+      overlay.show();
+      if (parseInt(selectedID().length) > 0) {
+        window.open(url.value + "?qid=003&e=" + selectedID(), "_parent");
+      } else {
+        alert.Error("Badge Download Failed", "No user selected");
+      }
+      overlay.hide();
+    };
+    const hideGeoModal = () => {
+      geoLevelForm.currentUserLoginid = "";
+      geoLevelForm.geoLevel = "";
+      geoLevelForm.geoLevelId = "";
+      geoLevelForm.userid = "";
+      geoLevelForm.isBulk = false;
+      $("#geoLevelModal").modal("hide");
+    };
+    const showPassResetModal = (loginid, name, isBulk) => {
+      isBulk = !!isBulk;
+      if (isBulk && (selectedID() || []).length < 1) {
+        alert.Error("ERROR", "No User selected");
+        hidePassResetModal();
+        return;
+      }
+      userPass.loginid = loginid;
+      userPass.name = (name && name.trim()) || loginid;
+      userPass.isBulk = isBulk;
+      $("#resetPassword").modal("show");
+    };
+    const hidePassResetModal = () => {
+      userPass.pass = "";
+      userPass.loginid = "";
+      userPass.name = "";
+      userPass.isBulk = false;
+      $("#resetPassword").modal("hide");
+    };
+    const resetPassword = () => {
+      var u = common.DataService;
+      var isBulk = userPass.isBulk;
+      var loginid = userPass.loginid;
+      var name = userPass.name;
+      var pass = userPass.pass;
+      var selected = selectedID() || [];
+      var selectedId = isBulk ? JSON.stringify(selected) : loginid;
+      var confirmTitle = isBulk ? selected.length + " Users" : name;
+      var successMessage = isBulk
+        ? selected.length + " Users Password Reset Successfully"
+        : name + " Password Reset Successfully";
+      var qid = isBulk ? "012a" : "012";
+      var confirmationMessage =
+        "<div>Are you sure you want to reset the password for <b>" +
+        confirmTitle +
+        "</b>?<br>" +
+        "Please confirm only if you're certain about this action.</div>";
+
+      $.confirm({
+        title: "Password Reset Warning!",
+        content: confirmationMessage,
+        buttons: {
+          delete: {
+            text: "Reset Password",
+            btnClass: "btn btn-danger btn-sm mr-1",
+            action: () => {
+              overlay.show();
+              axios
+                .post(u + "?qid=" + qid, { loginid: selectedId, new: pass })
+                .then((res) => {
+                  overlay.hide();
+                  if (res.data.result_code === 200) {
+                    alert.Success("SUCCESS", successMessage);
+                    hidePassResetModal();
+                    resetSelected();
+                  } else {
+                    alert.Error("ERROR", "User Role not Updated");
+                  }
+                })
+                .catch((error) => {
+                  overlay.hide();
+                  alert.Error("ERROR", safeMessage(error));
+                });
+            },
+          },
+          cancel: () => {
+            overlay.hide();
+          },
+        },
+      });
+    };
+
+    const showWorkExtensionModal = (isBulk, userId) => {
+      isBulk = !!isBulk;
+      userId = userId || "";
+      var selectedUsers = selectedID() || [];
+      if (isBulk && selectedUsers.length < 1) {
+        alert.Error("ERROR", "No User selected for Working Hour Extension");
+        hideWorkHourExtensionModal();
+        return;
+      }
+      workHourExtensionForm.affectedUserIds = isBulk
+        ? JSON.stringify(selectedUsers)
+        : userId;
+      workHourExtensionForm.isBulk = isBulk;
+      $("#workHourModal").modal("show");
+    };
+
+    const showRoleModal = () => {
+      var selectedUsers = selectedID() || [];
+      isBulkRole.value = true;
+      if (selectedUsers.length < 1) {
+        alert.Error("ERROR", "No User selected for Role Change");
+        return;
+      }
+      $("#roleForm").modal("show");
+    };
+    const submitBulkRole = () => {
+      var ids = selectedID() || [];
+      var u = common.DataService;
+      var len = ids.length;
+      $.confirm({
+        title: "WARNING!",
+        content:
+          "<p>Are you sure you want to change the User Role for " +
+          len +
+          " Users? </p><br>Make sure you sure of your action before you confirm the changes.",
+        buttons: {
+          delete: {
+            text: "Change Role",
+            btnClass: "btn btn-danger mr-1",
+            action: () => {
+              axios
+                .post(
+                  u + "?qid=008a&r=" + userRole.currentUserRole,
+                  JSON.stringify(ids),
+                )
+                .then((response) => {
+                  if (response.data.result_code === 200) {
+                    isBulkRole.value = false;
+                    userRole.currentUserRole = "";
+                    userRole.currentUserid = "";
+                    loadTableData();
+                    uncheckAll();
+                    totalCheckedBox();
+                    overlay.hide();
+                    hideRoleModal();
+                    alert.Success("SUCCESS", len + " User Role Updated");
+                  } else {
+                    overlay.hide();
+                    alert.Error("ERROR", "User Role not Updated");
+                  }
+                })
+                .catch((error) => {
+                  overlay.hide();
+                  alert.Error("ERROR", safeMessage(error));
+                });
+            },
+          },
+          cancel: () => {
+            overlay.hide();
+          },
+        },
+      });
+    };
+    const hideRoleModal = () => {
+      $("#roleForm").modal("hide");
+    };
+    const hideWorkHourExtensionModal = () => {
+      workHourExtensionForm.extensionHour = "";
+      workHourExtensionForm.extensionDate = "";
+      workHourExtensionForm.isBulk = false;
+      workHourExtensionForm.affectedUserIds = [];
+      try {
+        $("#extensionDate")
+          .flatpickr({
+            altInput: true,
+            altFormat: "F j, Y",
+            dateFormat: "Y-m-d",
+            minDate: "today",
+          })
+          .clear();
+      } catch (e) {
+        /* swallow */
+      }
+      $("#workHourModal").modal("hide");
+    };
+    const onSubmitAddWorkingHour = () => {
+      var extensionHour = workHourExtensionForm.extensionHour;
+      var extensionDate = workHourExtensionForm.extensionDate;
+      var affectedUserIds = workHourExtensionForm.affectedUserIds;
+      var isBulk = workHourExtensionForm.isBulk;
+      var $form = $(".change-working-hour-form");
+      var selectedCount = (selectedID() || []).length;
+
+      if ($form.length && typeof $form.valid === "function" && !$form.valid()) {
+        alert.Error(
+          "Required Fields",
+          "All Fields with an asterisk (*) are required",
+        );
+        return;
+      }
+      if (selectedCount > 200) {
+        alert.Error(
+          "Error: Too Many Users",
+          "You can't select more than 200 users.",
+        );
+        return;
+      }
+      var titleLabel = isBulk ? selectedCount + " Users" : "1 User";
+      var successMessage = titleLabel + " Work Hour Extended Successfully";
+      var confirmationMessage =
+        "<div>Are you sure you want to add work hour for <b>" +
+        titleLabel +
+        "</b>?<br>" +
+        "Please confirm only if you're certain about this action.</div>";
+      $.confirm({
+        title: "WARNING!",
+        content: confirmationMessage,
+        buttons: {
+          confirm: {
+            text: "Extend Work Hour",
+            btnClass: "btn btn-danger mr-1",
+            action: () => {
+              var u = common.DataService + "?qid=015";
+              var currentUserId =
+                (document.getElementById("v_g_id") &&
+                  document.getElementById("v_g_id").value) ||
+                "";
+              axios
+                .post(u, {
+                  authorizationUserId: currentUserId,
+                  bulkUserIds: affectedUserIds,
+                  extensionHour: extensionHour,
+                  extensionDate: extensionDate,
+                })
+                .then((res) => {
+                  overlay.hide();
+                  if (res.data.result_code === 200) {
+                    hideWorkHourExtensionModal();
+                    resetSelected();
+                    alert.Success("SUCCESS", successMessage);
+                  } else {
+                    alert.Error(
+                      "ERROR",
+                      "Unable to update the geo level. Please try again later.",
+                    );
+                  }
+                })
+                .catch((error) => {
+                  overlay.hide();
+                  alert.Error("ERROR", safeMessage(error));
+                });
+            },
+          },
+          cancel: () => {
+            overlay.hide();
+          },
+        },
+      });
+    };
+
+    const getsysDefaultDataSettings = () => {
+      overlay.show();
+      axios
+        .get(common.DataService + "?qid=gen007")
+        .then((response) => {
+          if (response.data.data && response.data.data.length > 0) {
+            sysDefaultData.value = response.data.data[0];
+            getLgasLevel(response.data.data[0].stateid);
+            geoLevelForm.geoLevel = "state";
+            geoLevelForm.geoLevelId = response.data.data[0].stateid;
+            defaultStateId.value = response.data.data[0].stateid;
+          }
+          overlay.hide();
+        })
+        .catch((error) => {
+          overlay.hide();
+          alert.Error("ERROR", safeMessage(error));
+        });
+    };
+    const getGeoLevel = () => {
+      overlay.show();
+      axios
+        .get(common.DataService + "?qid=gen001")
+        .then((response) => {
+          geoLevelData.value = (response.data && response.data.data) || [];
+          overlay.hide();
+        })
+        .catch((error) => {
+          overlay.hide();
+          alert.Error("ERROR", safeMessage(error));
+        });
+    };
+    const getLgasLevel = (stateid) => {
+      overlay.show();
+      axios
+        .post(common.DataService + "?qid=gen003", JSON.stringify(stateid))
+        .then((response) => {
+          lgaLevelData.value = (response.data && response.data.data) || [];
+          overlay.hide();
+        })
+        .catch((error) => {
+          overlay.hide();
+          alert.Error("ERROR", safeMessage(error));
+        });
+    };
+    const getClusterLevel = () => {
+      overlay.show();
+      axios
+        .get(common.DataService + "?qid=gen004&e=" + geoIndicator.cluster)
+        .then((response) => {
+          clusterLevelData.value = (response.data && response.data.data) || [];
+          overlay.hide();
+        })
+        .catch((error) => {
+          overlay.hide();
+          alert.Error("ERROR", safeMessage(error));
+        });
+    };
+    const getWardLevel = () => {
+      overlay.show();
+      axios
+        .get(common.DataService + "?qid=gen005&e=" + geoIndicator.lga)
+        .then((response) => {
+          wardLevelData.value = (response.data && response.data.data) || [];
+          overlay.hide();
+        })
+        .catch((error) => {
+          overlay.hide();
+          alert.Error("ERROR", safeMessage(error));
+        });
+    };
+    const getDpLevel = () => {
+      overlay.show();
+      axios
+        .get(common.DataService + "?qid=gen006&wardid=" + geoIndicator.ward)
+        .then((response) => {
+          dpLevelData.value = (response.data && response.data.data) || [];
+          overlay.hide();
+        })
+        .catch((error) => {
+          overlay.hide();
+          alert.Error("ERROR", safeMessage(error));
+        });
+    };
+    const changeGeoLevel = () => {
+      if (geoLevelForm.geoLevel == "country") {
+        alert.Error(
+          "ERROR",
+          "Invalid Geo-Level selected, please select a valid Geo-Level",
+        );
+      } else if (geoLevelForm.geoLevel == "state") {
+        geoLevelForm.geoLevelId = defaultStateId.value;
+      } else {
+        geoLevelForm.geoLevelId = "";
+        geoIndicator.lga = "";
+        geoIndicator.ward = "";
+        geoIndicator.cluster = "";
+      }
+    };
+    const changeUserRoleModal = (userid, roleid) => {
+      userRole.currentUserRole = roleid;
+      userRole.currentUserid = userid;
+    };
+    const onSubmitUpdateGeoLevel = () => {
+      var userid = geoLevelForm.userid;
+      var geoLevel = geoLevelForm.geoLevel;
+      var geoLevelId = geoLevelForm.geoLevelId;
+      var isBulk = geoLevelForm.isBulk;
+      var currentUserLoginid = geoLevelForm.currentUserLoginid;
+      var selectedUsers = selectedID() || [];
+      var userIdentifier = isBulk ? JSON.stringify(selectedUsers) : userid;
+      var titleLabel = isBulk
+        ? selectedUsers.length + " Users"
+        : currentUserLoginid;
+      var successMessage = titleLabel + " Geo Level Successfully Changed";
+      var qid = isBulk ? "009a" : "009";
+      var u = common.DataService + "?qid=" + qid;
+      var confirmationMessage =
+        "<div>Are you sure you want to change the User Geo Level for <b>" +
+        titleLabel +
+        "</b>?<br>" +
+        "Please confirm only if you're certain about this action.</div>";
+      $.confirm({
+        title: "WARNING!",
+        content: confirmationMessage,
+        buttons: {
+          confirm: {
+            text: "Update Geo Level",
+            btnClass: "btn btn-danger mr-1",
+            action: () => {
+              axios
+                .post(u, { u: userIdentifier, l: geoLevel, id: geoLevelId })
+                .then((res) => {
+                  overlay.hide();
+                  if (res.data.result_code === 200) {
+                    loadTableData();
+                    hideGeoModal();
+                    resetSelected();
+                    alert.Success("SUCCESS", successMessage);
+                  } else {
+                    alert.Error(
+                      "ERROR",
+                      "Unable to update the geo level. Please try again later.",
+                    );
+                  }
+                })
+                .catch((error) => {
+                  overlay.hide();
+                  alert.Error("ERROR", safeMessage(error));
+                });
+            },
+          },
+          cancel: () => {
+            overlay.hide();
+          },
+        },
+      });
+    };
+    const getAllUserGroup = () => {
+      overlay.show();
+      axios
+        .get(common.DataService + "?qid=026")
+        .then((response) => {
+          var rows = (response.data && response.data.data) || [];
+          var group = [];
+          for (var i = 0; i < rows.length; i++)
+            group.push(rows[i]["user_group"]);
+          userGroup.value = group;
+          overlay.hide();
+        })
+        .catch((error) => {
+          overlay.hide();
+          alert.Error("ERROR", safeMessage(error));
+        });
+    };
+
+    // Lightweight autocomplete (preserved from v2). Wires DOM events
+    // onto an input by id and fills tableOptions.filterParam.user_group.
+    const autocomplete = (inp, arr) => {
+      if (!inp) return;
+      var currentFocus;
+      inp.addEventListener("input", function () {
+        var a,
+          b,
+          i,
+          val = this.value;
+        closeAllLists();
+        if (!val) return false;
+        currentFocus = -1;
+        a = document.createElement("DIV");
+        a.setAttribute("id", this.id + "autocomplete-list");
+        a.setAttribute("class", "autocomplete-items");
+        this.parentNode.appendChild(a);
+        for (i = 0; i < arr.length; i++) {
+          if (
+            String(arr[i]).substr(0, val.length).toUpperCase() ==
+            val.toUpperCase()
+          ) {
+            b = document.createElement("DIV");
+            b.innerHTML =
+              "<strong>" +
+              arr[i].substr(0, val.length) +
+              "</strong>" +
+              arr[i].substr(val.length);
+            b.innerHTML += "<input type='hidden' value='" + arr[i] + "'>";
+            b.addEventListener("click", function () {
+              inp.value = this.getElementsByTagName("input")[0].value;
+              closeAllLists();
+            });
+            a.appendChild(b);
+          }
+        }
+      });
+      inp.addEventListener("keydown", function (e) {
+        var x = document.getElementById(this.id + "autocomplete-list");
+        if (x) x = x.getElementsByTagName("div");
+        if (e.keyCode == 40) {
+          currentFocus++;
+          addActive(x);
+        } else if (e.keyCode == 38) {
+          currentFocus--;
+          addActive(x);
+        } else if (e.keyCode == 13) {
+          e.preventDefault();
+          if (currentFocus > -1 && x) x[currentFocus].click();
+        }
+      });
+      const addActive = (x) => {
+        if (!x) return false;
+        removeActive(x);
+        if (currentFocus >= x.length) currentFocus = 0;
+        if (currentFocus < 0) currentFocus = x.length - 1;
+        x[currentFocus].classList.add("autocomplete-active");
+      };
+      const removeActive = (x) => {
+        for (var i = 0; i < x.length; i++)
+          x[i].classList.remove("autocomplete-active");
+      };
+      const closeAllLists = (elmnt) => {
+        var x = document.getElementsByClassName("autocomplete-items");
+        for (var i = 0; i < x.length; i++) {
+          if (elmnt != x[i] && elmnt != inp) {
+            x[i].parentNode.removeChild(x[i]);
+            tableOptions.filterParam.user_group = inp.value;
+          }
+        }
+      };
+      document.addEventListener("click", (e) => {
+        closeAllLists(e.target);
+      });
+    };
+    const loadAuto = () => {
+      autocomplete(document.getElementById("user_group"), userGroup.value);
+    };
+
+    const verifyAccount = (
+      userid,
+      index,
+      first_name,
+      middle_name,
+      last_name,
+    ) => {
+      overlay.show();
+      var f_name = first_name == null ? "" : first_name;
+      var l_name = last_name == null ? "" : last_name;
+      axios
+        .post(common.DataService + "?qid=013&userid=" + userid)
+        .then((response) => {
+          if (response.data.result_code == "200") {
+            if (response.data.data.result == "success") {
+              index.is_verified = 1;
+              index.verification_status = "success";
+              overlay.hide();
+              alert.Success(
+                "Account Verified",
+                f_name + " " + l_name + " Bank Account Details Verified",
+              );
+            } else if (response.data.data.result == "warning") {
+              index.is_verified = 1;
+              index.verification_status = "warning";
+              overlay.hide();
+              alert.Warning(
+                "Invalid Verified Account Name",
+                "Bank Name is different from the supplied Name ",
+              );
+            } else {
+              index.is_verified = 1;
+              index.verification_status = "failed";
+              overlay.hide();
+              alert.Error("Verification Failed", "Invalid Account Details");
+            }
+          } else {
+            index.is_verified = 1;
+            index.verification_status = "failed";
+            overlay.hide();
+            alert.Error("ERROR", "Invalid Account Details");
+          }
+        })
+        .catch((error) => {
+          overlay.hide();
+          alert.Error("ERROR", safeMessage(error));
+        });
+    };
+    const accountVerificationStatus = (status) => {
+      if (status == "success")
+        return ["txt-success", "bg-status-success icon-check-circle"];
+      if (status == "failed")
+        return ["txt-failed", "bg-status-failed icon-x-circle"];
+      if (status == "warning")
+        return ["txt-warning", "bg-status-warning icon-circle"];
+      return ["", "icon-circle"];
+    };
+    const totalCheckedBox = () => {
+      var total = selectedID().length;
+      var el = document.getElementById("total-selected");
+      if (!el) return;
+      if (total > 0) {
+        el.innerHTML =
+          '<span id="selected-counter" class="badge badge-primary btn-icon"><span class="badge badge-success">' +
+          total +
+          "</span> Selected</span>";
+      } else {
+        el.replaceChildren();
+      }
+    };
+    const exportUserData = async () => {
+      var common_url =
+        "&draw=" +
+        tableOptions.currentPage +
+        "&order_column=" +
+        tableOptions.orderField +
+        "&length=" +
+        tableOptions.perPage +
+        "&start=" +
+        tableOptions.limitStart +
+        "&order_dir=" +
+        tableOptions.orderDir +
+        "&ac=" +
+        tableOptions.filterParam.user_status +
+        "&lo=" +
+        tableOptions.filterParam.loginid +
+        "&na=" +
+        tableOptions.filterParam.fullname +
+        "&gr=" +
+        tableOptions.filterParam.user_group +
+        "&ph=" +
+        tableOptions.filterParam.phoneno +
+        "&gl=" +
+        tableOptions.filterParam.geo_level +
+        "&gl_id=" +
+        tableOptions.filterParam.geo_level_id +
+        "&bv=" +
+        tableOptions.filterParam.bank_status +
+        "&ri=" +
+        tableOptions.filterParam.role_id;
+      var veriUrl = "qid=014" + common_url;
+      var dlString = "qid=001" + common_url;
+      var filename =
+        (tableOptions.filterParam.geo_string
+          ? tableOptions.filterParam.geo_string
+          : "Recent ") +
+        " " +
+        (tableOptions.filterParam.loginid
+          ? tableOptions.filterParam.loginid
+          : "Recent ") +
+        " User List";
+
+      overlay.show();
+      var count = await new Promise((resolve) => {
+        $.ajax({
+          url: common.DataService,
+          type: "POST",
+          data: veriUrl,
+          dataType: "json",
+          success: (data) => {
+            resolve(data.total);
+          },
+        });
+      });
+      var downloadMax =
+        (window.common && window.common.ExportDownloadLimit) || 25000;
+      if (parseInt(count) > downloadMax) {
+        alert.Error(
+          "Download Error",
+          "Unable to download data because it has exceeded download limit, download limit is " +
+            downloadMax,
+        );
+      } else if (parseInt(count) == 0) {
+        alert.Error("Download Error", "No data found");
+      } else {
+        alert.Info("DOWNLOADING...", "Downloading " + count + " record(s)");
+        var outcome = await new Promise((resolve) => {
+          $.ajax({
+            url: common.ExportService,
+            type: "POST",
+            data: dlString,
+            success: (data) => {
+              resolve(data);
+            },
+          });
+        });
+        var exportData = JSON.parse(outcome);
+        if (window.Jhxlsx && typeof window.Jhxlsx.export === "function") {
+          window.Jhxlsx.export(exportData, { fileName: filename });
+        }
+      }
+      resetSelected();
+      overlay.hide();
+    };
+
+    const checkIfAndReturnEmpty = (data) => {
+      return data === null || data === "" ? "" : data;
+    };
+    const numbersOnlyWithoutDot = (evt) => {
+      var e = evt || window.event;
+      var charCode = e.which || e.keyCode;
+      if (charCode > 31 && (charCode < 48 || charCode > 57)) e.preventDefault();
+      return true;
+    };
+
+    onMounted(() => {
+      getGeoLocation();
+
+      // jQuery select2 init for the geo dropdown — preserved as-is.
+      var select = $(".select2");
+      select.each(function () {
+        var $this = $(this);
+        $this.wrap('<div class="position-relative"></div>');
+        $this
+          .select2({
+            dropdownAutoWidth: true,
+            width: "100%",
+            dropdownParent: $this.parent(),
+          })
+          .on("change", function () {
+            setLocation(this.value);
+          });
+      });
+      $(".select2-selection__arrow").html(
+        '<i class="feather icon-chevron-down"></i>',
+      );
+
+      getAllUserGroup();
+      loadTableData();
+      getGeoLevel();
+      getsysDefaultDataSettings();
+      getRoleList();
+      bus.on("g-event-update-user", reloadUserListOnUpdate);
+
+      $(".form-password-toggle1 .input-group-text").on("click", function (e) {
+        e.preventDefault();
+        var $this = $(this);
+        var inputGroupText = $this.closest(".form-password-toggle1");
+        var formPasswordToggleIcon = $this;
+        var formPasswordToggleInput = inputGroupText.find("input");
+        if (formPasswordToggleInput.attr("type") === "text") {
+          formPasswordToggleInput.attr("type", "password");
+          if (typeof feather !== "undefined" && feather && feather.icons) {
+            formPasswordToggleIcon
+              .find("svg")
+              .replaceWith(
+                feather.icons["eye"].toSvg({ class: "font-small-4" }),
+              );
+          }
+        } else if (formPasswordToggleInput.attr("type") === "password") {
+          formPasswordToggleInput.attr("type", "text");
+          if (typeof feather !== "undefined" && feather && feather.icons) {
+            formPasswordToggleIcon
+              .find("svg")
+              .replaceWith(
+                feather.icons["eye-off"].toSvg({ class: "font-small-4" }),
+              );
+          }
+        }
+      });
+
+      var $form = $(".change-working-hour-form");
+      if ($form.length) {
+        $(".date").flatpickr({
+          altInput: true,
+          altFormat: "F j, Y",
+          dateFormat: "Y-m-d",
+          minDate: "today",
+        });
+        if (typeof $form.validate === "function") {
+          $form.validate({
+            rules: {
+              extensionHour: { required: true, number: true },
+              extensionDate: { required: true },
+            },
+          });
+        }
+      }
+    });
+
+    onBeforeUnmount(() => {
+      bus.off("g-event-update-user", reloadUserListOnUpdate);
+    });
+
+    return {
+      // state
+      url,
+      tableData,
+      defaultStateId,
+      roleListData,
+      userRole,
+      geoData,
+      permission,
+      userGroup,
+      checkToggle,
+      filterState,
+      filters,
+      isBulkRole,
+      tableOptions,
+      geoLevelForm,
+      geoIndicator,
+      geoLevelData,
+      sysDefaultData,
+      lgaLevelData,
+      clusterLevelData,
+      wardLevelData,
+      dpLevelData,
+      userPass,
+      workHourExtensionForm,
+      // methods
+      reloadUserListOnUpdate,
+      loadTableData,
+      selectAll,
+      uncheckAll,
+      selectToggle,
+      checkedBg,
+      toggleFilter,
+      selectedItems,
+      selectedID,
+      totalCheckedBox,
+      nextPage,
+      prevPage,
+      resetSelected,
+      currentPage,
+      paginationDefault,
+      changePerPage,
+      sort,
+      applyFilter,
+      removeSingleFilter,
+      clearAllFilter,
+      userActivationDeactivation,
+      goToDetail,
+      getRoleList,
+      getGeoLocation,
+      setLocation,
+      setRole,
+      changeUserGeoLevelModal,
+      updateRole,
+      refreshData,
+      downloadBadge,
+      downloadBadges,
+      hideGeoModal,
+      showPassResetModal,
+      hidePassResetModal,
+      resetPassword,
+      showWorkExtensionModal,
+      showRoleModal,
+      submitBulkRole,
+      hideRoleModal,
+      hideWorkHourExtensionModal,
+      onSubmitAddWorkingHour,
+      getsysDefaultDataSettings,
+      getGeoLevel,
+      getLgasLevel,
+      getClusterLevel,
+      getWardLevel,
+      getDpLevel,
+      changeGeoLevel,
+      changeUserRoleModal,
+      onSubmitUpdateGeoLevel,
+      getAllUserGroup,
+      autocomplete,
+      loadAuto,
+      verifyAccount,
+      accountVerificationStatus,
+      exportUserData,
+      checkIfAndReturnEmpty,
+      numbersOnlyWithoutDot,
+      // utility methods
+      capitalize: fmtUtils.capitalize,
+      formatNumber: fmtUtils.formatNumber,
+      displayDate: fmtUtils.displayDate,
+      fmt: fmtUtils.fmt,
+    };
+  },
+  template: `
         <div class="row" id="basic-table">
             <div class="col-md-8 col-sm-12 col-12 mb-0">
                 <h2 class="content-header-title header-txt float-left mb-0">Users</h2>
@@ -1439,183 +1786,229 @@ const UserList = {
 /* user_details                                                         */
 /* ------------------------------------------------------------------ */
 const UserDetails = {
-    setup() {
-        const fmtUtils = useFormat();
-        const userid = ref('');
-        const userDetails = ref(true);
-        const user_status = ref('');
-        const bankListData = ref([]);
-        const roleListData = ref([]);
-        const permission = ref(
-            (typeof getPermission === 'function')
-                ? (getPermission(typeof per !== 'undefined' ? per : null, 'users') || { permission_value: 0 })
-                : { permission_value: 0 }
-        );
-        const userData = reactive({
-            baseData: {}, financeData: {}, identityData: {}, roleData: {},
-        });
+  setup() {
+    const fmtUtils = useFormat();
+    const userid = ref("");
+    const userDetails = ref(true);
+    const user_status = ref("");
+    const bankListData = ref([]);
+    const roleListData = ref([]);
+    const permission = ref(
+      typeof getPermission === "function"
+        ? getPermission(typeof per !== "undefined" ? per : null, "users") || {
+            permission_value: 0,
+          }
+        : { permission_value: 0 },
+    );
+    const userData = reactive({
+      baseData: {},
+      financeData: {},
+      identityData: {},
+      roleData: {},
+    });
 
-        const gotoPageHandler = (data) => {
-            if (!data || data.page !== 'detail') return;
-            userDetails.value = true;
-            userid.value = data.userid;
-            user_status.value = data.user_status;
-            roleListData.value = data.role || [];
-            getUserDetails();
-        }
-        const goToList = () => {
-            bus.emit('g-event-goto-page', { page: 'list', userid: userid.value });
-        }
-        const discardUpdate = () => {
-            $.confirm({
-                title: 'WARNING!',
-                content: '<p>Are you sure you want to discard the changes? </p><br>Discarding the changes means you will lose all changes made',
-                buttons: {
-                    delete: {
-                        text: 'Discard Changes', btnClass: 'btn btn-warning mr-1',
-                        action: () => {
-                            getUserDetails();
-                            userDetails.value = true;
-                            overlay.hide();
-                        },
-                    },
-                    close: {
-                        text: 'Cancel', btnClass: 'btn btn-outline-secondary',
-                        action: () => { overlay.hide(); },
-                    },
-                },
-            });
-        }
-        const getUserDetails = () => {
-            overlay.show();
-            axios.get(common.DataService + '?qid=005&e=' + userid.value)
-                .then(response => {
-                    var d = response.data || {};
-                    userData.baseData     = (d.base     && d.base[0])     || {};
-                    userData.financeData  = (d.finance  && d.finance[0])  || {};
-                    userData.identityData = (d.identity && d.identity[0]) || {};
-                    userData.roleData     = (d.role     && d.role[0])     || {};
-                    overlay.hide();
-                })
-                .catch(error => {
-                    overlay.hide();
-                    alert.Error('ERROR', safeMessage(error));
-                });
-        }
-        const getBankLists = () => {
-            overlay.show();
-            axios.get(common.DataService + '?qid=gen008')
-                .then(response => {
-                    bankListData.value = (response.data && response.data.data) || [];
-                    overlay.hide();
-                })
-                .catch(error => {
-                    overlay.hide();
-                    alert.Error('ERROR', safeMessage(error));
-                });
-        }
-        const updateUserProfile = () => {
-            var updateFormData = {
-                userid:       userid.value,
-                roleid:       userData.baseData.roleid,
-                first:        userData.identityData.first,
-                middle:       userData.identityData.middle,
-                last:         userData.identityData.last,
-                gender:       userData.identityData.gender,
-                email:        userData.identityData.email,
-                phone:        userData.identityData.phone,
-                bank_name:    userData.financeData.bank_name,
-                account_name: userData.financeData.account_name,
-                account_no:   userData.financeData.account_no,
-                bank_code:    userData.financeData.bank_code != '' ? userData.financeData.bank_code : '',
-                bio_feature:  '',
-            };
-            var u = common.DataService;
-            $.confirm({
-                title: 'WARNING!',
-                content: '<p>Are you sure you want to Update the User? </p><br>Updating the User profile means you are changing the user permissions and details',
-                buttons: {
-                    delete: {
-                        text: 'Update Details', btnClass: 'btn btn-warning mr-1',
-                        action: () => {
-                            axios.post(u + '?qid=006', JSON.stringify(updateFormData))
-                                .then(response => {
-                                    overlay.hide();
-                                    if (response.data.result_code == '200') {
-                                        bus.emit('g-event-update-user', {});
-                                        userDetails.value = true;
-                                        alert.Success('SUCCESS', response.data.total + ' User Updated');
-                                    } else {
-                                        alert.Error('ERROR', 'User Details Update failed');
-                                    }
-                                })
-                                .catch(error => {
-                                    overlay.hide();
-                                    alert.Error('ERROR', safeMessage(error));
-                                });
-                        },
-                    },
-                    close: {
-                        text: 'Cancel', btnClass: 'btn btn-outline-secondary',
-                        action: () => { overlay.hide(); },
-                    },
-                },
-            });
-        }
-        const checkIfEmpty = (data) => { return data === null || data === '' || data === undefined ? 'Nil' : data; };
-        const userActivationDeactivation = (actionid) => {
-            overlay.show();
-            axios.post(common.DataService + '?qid=001', JSON.stringify([actionid]))
-                .then(response => {
-                    overlay.hide();
-                    if (response.data.result_code == '200') {
-                        bus.emit('g-event-update-user', {});
-                        user_status.value = String(user_status.value) === '1' ? 0 : 1;
-                        alert.Success('SUCCESS', 'User De/Activation Successful');
-                    } else {
-                        alert.Error('ERROR', 'User De/Activation failed');
-                    }
-                })
-                .catch(error => {
-                    overlay.hide();
-                    alert.Error('ERROR', safeMessage(error));
-                });
-        }
-        const changeRole = (event) => { userData.baseData.role = event.target.options[event.target.options.selectedIndex].text; };
-        const changeBank = (event) => { userData.financeData.bank_name = event.target.options[event.target.options.selectedIndex].text; };
-        const downloadBadge = (id) => {
-            overlay.show();
-            window.open(common.BadgeService + '?qid=002&e=' + id, '_parent');
-            overlay.hide();
-        }
-        const numbersOnlyWithoutDot = (evt) => {
-            var e = evt || window.event;
-            var charCode = e.which || e.keyCode;
-            if (charCode > 31 && (charCode < 48 || charCode > 57)) e.preventDefault();
-            return true;
-        }
-
-        onMounted(() => {
-            bus.on('g-event-goto-page', gotoPageHandler);
-            getBankLists();
+    const gotoPageHandler = (data) => {
+      if (!data || data.page !== "detail") return;
+      userDetails.value = true;
+      userid.value = data.userid;
+      user_status.value = data.user_status;
+      roleListData.value = data.role || [];
+      getUserDetails();
+    };
+    const goToList = () => {
+      bus.emit("g-event-goto-page", { page: "list", userid: userid.value });
+    };
+    const discardUpdate = () => {
+      $.confirm({
+        title: "WARNING!",
+        content:
+          "<p>Are you sure you want to discard the changes? </p><br>Discarding the changes means you will lose all changes made",
+        buttons: {
+          delete: {
+            text: "Discard Changes",
+            btnClass: "btn btn-warning mr-1",
+            action: () => {
+              getUserDetails();
+              userDetails.value = true;
+              overlay.hide();
+            },
+          },
+          close: {
+            text: "Cancel",
+            btnClass: "btn btn-outline-secondary",
+            action: () => {
+              overlay.hide();
+            },
+          },
+        },
+      });
+    };
+    const getUserDetails = () => {
+      overlay.show();
+      axios
+        .get(common.DataService + "?qid=005&e=" + userid.value)
+        .then((response) => {
+          var d = response.data || {};
+          userData.baseData = (d.base && d.base[0]) || {};
+          userData.financeData = (d.finance && d.finance[0]) || {};
+          userData.identityData = (d.identity && d.identity[0]) || {};
+          userData.roleData = (d.role && d.role[0]) || {};
+          overlay.hide();
+        })
+        .catch((error) => {
+          overlay.hide();
+          alert.Error("ERROR", safeMessage(error));
         });
-        onBeforeUnmount(() => {
-            bus.off('g-event-goto-page', gotoPageHandler);
+    };
+    const getBankLists = () => {
+      overlay.show();
+      axios
+        .get(common.DataService + "?qid=gen008")
+        .then((response) => {
+          bankListData.value = (response.data && response.data.data) || [];
+          overlay.hide();
+        })
+        .catch((error) => {
+          overlay.hide();
+          alert.Error("ERROR", safeMessage(error));
         });
+    };
+    const updateUserProfile = () => {
+      var updateFormData = {
+        userid: userid.value,
+        roleid: userData.baseData.roleid,
+        first: userData.identityData.first,
+        middle: userData.identityData.middle,
+        last: userData.identityData.last,
+        gender: userData.identityData.gender,
+        email: userData.identityData.email,
+        phone: userData.identityData.phone,
+        bank_name: userData.financeData.bank_name,
+        account_name: userData.financeData.account_name,
+        account_no: userData.financeData.account_no,
+        bank_code:
+          userData.financeData.bank_code != ""
+            ? userData.financeData.bank_code
+            : "",
+        bio_feature: "",
+      };
+      var u = common.DataService;
+      $.confirm({
+        title: "WARNING!",
+        content:
+          "<p>Are you sure you want to Update the User? </p><br>Updating the User profile means you are changing the user permissions and details",
+        buttons: {
+          delete: {
+            text: "Update Details",
+            btnClass: "btn btn-warning mr-1",
+            action: () => {
+              axios
+                .post(u + "?qid=006", JSON.stringify(updateFormData))
+                .then((response) => {
+                  overlay.hide();
+                  if (response.data.result_code == "200") {
+                    bus.emit("g-event-update-user", {});
+                    userDetails.value = true;
+                    alert.Success(
+                      "SUCCESS",
+                      response.data.total + " User Updated",
+                    );
+                  } else {
+                    alert.Error("ERROR", "User Details Update failed");
+                  }
+                })
+                .catch((error) => {
+                  overlay.hide();
+                  alert.Error("ERROR", safeMessage(error));
+                });
+            },
+          },
+          close: {
+            text: "Cancel",
+            btnClass: "btn btn-outline-secondary",
+            action: () => {
+              overlay.hide();
+            },
+          },
+        },
+      });
+    };
+    const checkIfEmpty = (data) => {
+      return data === null || data === "" || data === undefined ? "Nil" : data;
+    };
+    const userActivationDeactivation = (actionid) => {
+      overlay.show();
+      axios
+        .post(common.DataService + "?qid=001", JSON.stringify([actionid]))
+        .then((response) => {
+          overlay.hide();
+          if (response.data.result_code == "200") {
+            bus.emit("g-event-update-user", {});
+            user_status.value = String(user_status.value) === "1" ? 0 : 1;
+            alert.Success("SUCCESS", "User De/Activation Successful");
+          } else {
+            alert.Error("ERROR", "User De/Activation failed");
+          }
+        })
+        .catch((error) => {
+          overlay.hide();
+          alert.Error("ERROR", safeMessage(error));
+        });
+    };
+    const changeRole = (event) => {
+      userData.baseData.role =
+        event.target.options[event.target.options.selectedIndex].text;
+    };
+    const changeBank = (event) => {
+      userData.financeData.bank_name =
+        event.target.options[event.target.options.selectedIndex].text;
+    };
+    const downloadBadge = (id) => {
+      overlay.show();
+      window.open(common.BadgeService + "?qid=002&e=" + id, "_parent");
+      overlay.hide();
+    };
+    const numbersOnlyWithoutDot = (evt) => {
+      var e = evt || window.event;
+      var charCode = e.which || e.keyCode;
+      if (charCode > 31 && (charCode < 48 || charCode > 57)) e.preventDefault();
+      return true;
+    };
 
-        return {
-            userid, userDetails, user_status,
-            bankListData, roleListData, permission, userData,
-            gotoPageHandler, goToList, discardUpdate,
-            getUserDetails, getBankLists, updateUserProfile,
-            checkIfEmpty, userActivationDeactivation,
-            changeRole, changeBank, downloadBadge, numbersOnlyWithoutDot,
-            displayDate: fmtUtils.displayDate,
-            capitalize: fmtUtils.capitalize,
-            formatNumber: fmtUtils.formatNumber,
-        };
-    },
-    template: `
+    onMounted(() => {
+      bus.on("g-event-goto-page", gotoPageHandler);
+      getBankLists();
+    });
+    onBeforeUnmount(() => {
+      bus.off("g-event-goto-page", gotoPageHandler);
+    });
+
+    return {
+      userid,
+      userDetails,
+      user_status,
+      bankListData,
+      roleListData,
+      permission,
+      userData,
+      gotoPageHandler,
+      goToList,
+      discardUpdate,
+      getUserDetails,
+      getBankLists,
+      updateUserProfile,
+      checkIfEmpty,
+      userActivationDeactivation,
+      changeRole,
+      changeBank,
+      downloadBadge,
+      numbersOnlyWithoutDot,
+      displayDate: fmtUtils.displayDate,
+      capitalize: fmtUtils.capitalize,
+      formatNumber: fmtUtils.formatNumber,
+    };
+  },
+  template: `
         <div class="row">
             <div class="col-md-12 col-sm-12 col-12 mb-1">
                 <h2 class="content-header-title header-txt float-left mb-0">Users</h2>
@@ -1792,7 +2185,7 @@ const UserDetails = {
 /* Mount                                                              */
 /* ------------------------------------------------------------------ */
 useApp({ template: `<div><page-body/></div>` })
-    .component('page-body', PageBody)
-    .component('user_list', UserList)
-    .component('user_details', UserDetails)
-    .mount('#app');
+  .component("page-body", PageBody)
+  .component("user_list", UserList)
+  .component("user_details", UserDetails)
+  .mount("#app");

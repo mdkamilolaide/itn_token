@@ -10,11 +10,11 @@ const { useApp, useFormat, fmt: utilsFmt } = window.utils;
 
 /* ------------------------------------------------------------------ */
 const PageBody = {
-    setup() {
-        const page = ref('dashboard');
-        return { page };
-    },
-    template: `
+  setup() {
+    const page = ref("dashboard");
+    return { page };
+  },
+  template: `
         <div>
             <div class="content-body">
                 <dashboard_container/>
@@ -25,82 +25,104 @@ const PageBody = {
 
 /* ------------------------------------------------------------------ */
 const DashboardContainer = {
-    setup() {
-        const totalUser = ref('');
-        const userStatus = reactive({ totalActiveUser: '', totalInactiveUser: '' });
-        const totalGroup = ref('');
-        const groupData = ref([]);
-        const userGroupData = ref([]);
-        const gender = reactive({ male: 0, female: 0, others: 0 });
-        const geoUserDistribution = reactive({
-            state: 0, lga: 0, cluster: 0, ward: 0, dp: 0,
-        });
+  setup() {
+    const totalUser = ref("");
+    const userStatus = reactive({ totalActiveUser: "", totalInactiveUser: "" });
+    const totalGroup = ref("");
+    const groupData = ref([]);
+    const userGroupData = ref([]);
+    const gender = reactive({ male: 0, female: 0, others: 0 });
+    const geoUserDistribution = reactive({
+      state: 0,
+      lga: 0,
+      cluster: 0,
+      ward: 0,
+      dp: 0,
+    });
 
-        const fmt = utilsFmt;
+    const fmt = utilsFmt;
 
-        const getAllStat = () => {
-            var url = common.DataService;
-            var endpoints = [
-                url + '?qid=020', // Total Users [0]
-                url + '?qid=021', // Active and Inactive Users [1]
-                url + '?qid=022', // Geo Statistics distribution of users [2]
-                url + '?qid=023', // User Counts by Group [3]
-                url + '?qid=024', // Total User Group [4]
-                url + '?qid=025', // Gender Count [5]
-                url + '?qid=010', // User Group Data [6]
-            ];
+    const getAllStat = () => {
+      var url = common.DataService;
+      var endpoints = [
+        url + "?qid=020", // Total Users [0]
+        url + "?qid=021", // Active and Inactive Users [1]
+        url + "?qid=022", // Geo Statistics distribution of users [2]
+        url + "?qid=023", // User Counts by Group [3]
+        url + "?qid=024", // Total User Group [4]
+        url + "?qid=025", // Gender Count [5]
+        url + "?qid=010", // User Group Data [6]
+      ];
 
-            Promise.all(endpoints.map(e => axios.get(e))).then(
-                axios.spread((...allData) => {
-                    overlay.show();
+      Promise.all(endpoints.map((e) => axios.get(e)))
+        .then(
+          axios.spread((...allData) => {
+            overlay.show();
 
-                    var totalUserRow = allData[0]?.data?.total_user?.[0];
-                    totalUser.value = totalUserRow ? fmt(totalUserRow.total) : '0';
+            var totalUserRow = allData[0]?.data?.total_user?.[0];
+            totalUser.value = totalUserRow ? fmt(totalUserRow.total) : "0";
 
-                    var statusRow = allData[1]?.data?.data?.[0];
-                    userStatus.totalActiveUser   = statusRow ? fmt(statusRow.active)   : '0';
-                    userStatus.totalInactiveUser = statusRow ? fmt(statusRow.inactive) : '0';
+            var statusRow = allData[1]?.data?.data?.[0];
+            userStatus.totalActiveUser = statusRow
+              ? fmt(statusRow.active)
+              : "0";
+            userStatus.totalInactiveUser = statusRow
+              ? fmt(statusRow.inactive)
+              : "0";
 
-                    var geoRows = allData[2]?.data?.data || [];
-                    geoRows.forEach(stat => {
-                        if (stat['geo_level'] === 'state')   geoUserDistribution.state   = fmt(stat['total']);
-                        if (stat['geo_level'] === 'lga')     geoUserDistribution.lga     = fmt(stat['total']);
-                        if (stat['geo_level'] === 'cluster') geoUserDistribution.cluster = fmt(stat['total']);
-                        if (stat['geo_level'] === 'ward')    geoUserDistribution.ward    = fmt(stat['total']);
-                        if (stat['geo_level'] === 'dp')      geoUserDistribution.dp      = fmt(stat['total']);
-                    });
-
-                    var groupRow = allData[4]?.data?.data?.[0];
-                    totalGroup.value = groupRow && groupRow.total ? fmt(groupRow.total) : 0;
-
-                    var genderRows = allData[5]?.data?.data || [];
-                    genderRows.forEach(stat => {
-                        if (stat['gender'] == null)         gender.others = fmt(stat['total']);
-                        if (stat['gender'] === 'Male')      gender.male   = fmt(stat['total']);
-                        if (stat['gender'] === 'Female')    gender.female = fmt(stat['total']);
-                    });
-
-                    userGroupData.value = allData[6]?.data?.data || [];
-
-                    overlay.hide();
-                })
-            ).catch(error => {
-                overlay.hide();
-                console.error('[users/dashboard] getAllStat error:', error);
+            var geoRows = allData[2]?.data?.data || [];
+            geoRows.forEach((stat) => {
+              if (stat["geo_level"] === "state")
+                geoUserDistribution.state = fmt(stat["total"]);
+              if (stat["geo_level"] === "lga")
+                geoUserDistribution.lga = fmt(stat["total"]);
+              if (stat["geo_level"] === "cluster")
+                geoUserDistribution.cluster = fmt(stat["total"]);
+              if (stat["geo_level"] === "ward")
+                geoUserDistribution.ward = fmt(stat["total"]);
+              if (stat["geo_level"] === "dp")
+                geoUserDistribution.dp = fmt(stat["total"]);
             });
-        }
 
-        onMounted(() => {
-            getAllStat();
+            var groupRow = allData[4]?.data?.data?.[0];
+            totalGroup.value =
+              groupRow && groupRow.total ? fmt(groupRow.total) : 0;
+
+            var genderRows = allData[5]?.data?.data || [];
+            genderRows.forEach((stat) => {
+              if (stat["gender"] == null) gender.others = fmt(stat["total"]);
+              if (stat["gender"] === "Male") gender.male = fmt(stat["total"]);
+              if (stat["gender"] === "Female")
+                gender.female = fmt(stat["total"]);
+            });
+
+            userGroupData.value = allData[6]?.data?.data || [];
+
+            overlay.hide();
+          }),
+        )
+        .catch((error) => {
+          overlay.hide();
+          console.error("[users/dashboard] getAllStat error:", error);
         });
+    };
 
-        return {
-            totalUser, userStatus, totalGroup, groupData, userGroupData,
-            gender, geoUserDistribution,
-            getAllStat,
-        };
-    },
-    template: `
+    onMounted(() => {
+      getAllStat();
+    });
+
+    return {
+      totalUser,
+      userStatus,
+      totalGroup,
+      groupData,
+      userGroupData,
+      gender,
+      geoUserDistribution,
+      getAllStat,
+    };
+  },
+  template: `
         <div>
             <div class="row">
                 <div class="col-12 mb-2">
@@ -270,6 +292,6 @@ const DashboardContainer = {
 };
 
 useApp({ template: `<div><page-body/></div>` })
-    .component('page-body', PageBody)
-    .component('dashboard_container', DashboardContainer)
-    .mount('#app');
+  .component("page-body", PageBody)
+  .component("dashboard_container", DashboardContainer)
+  .mount("#app");

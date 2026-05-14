@@ -9,114 +9,146 @@ const { ref, reactive, computed, onMounted, onBeforeUnmount } = Vue;
 const { useApp, useFormat, bus, safeMessage } = window.utils;
 
 const appState = Vue.reactive({
-    pageState: { page: 'availability-check', title: '' },
-    permission: (typeof getPermission === 'function')
-        ? (getPermission(typeof per !== 'undefined' ? per : null, 'smc') || { permission_value: 0 })
-        : { permission_value: 0 },
-    userId: (() => { var el = document.getElementById('v_g_id'); return el ? el.value : ''; })(),
-    geoLevelForm: { geoLevel: '', geoLevelId: 0 },
-    defaultStateId: '',
-    sysDefaultData: [],
-    productData: [],
-    lgaData: [],
-    checkData: [],
-    periodData: [],
-    currentPeriodId: '',
-    currentProductCode: '',
+  pageState: { page: "availability-check", title: "" },
+  permission:
+    typeof getPermission === "function"
+      ? getPermission(typeof per !== "undefined" ? per : null, "smc") || {
+          permission_value: 0,
+        }
+      : { permission_value: 0 },
+  userId: (() => {
+    var el = document.getElementById("v_g_id");
+    return el ? el.value : "";
+  })(),
+  geoLevelForm: { geoLevel: "", geoLevelId: 0 },
+  defaultStateId: "",
+  sysDefaultData: [],
+  productData: [],
+  lgaData: [],
+  checkData: [],
+  periodData: [],
+  currentPeriodId: "",
+  currentProductCode: "",
 });
 
 const PageAvailabilityCheck = {
-    setup() {
-        const fmtUtils = useFormat();
-        const searchState = ref(false);
+  setup() {
+    const fmtUtils = useFormat();
+    const searchState = ref(false);
 
-        const getAllPeriodLists = () => {
-            overlay.show();
-            axios.get(common.DataService + '?qid=1004')
-                .then(response => {
-                    appState.periodData = (response.data && response.data.data) || [];
-                    overlay.hide();
-                })
-                .catch(error => {
-                    overlay.hide();
-                    alert.Error('ERROR', safeMessage(error));
-                });
-        }
-        const getProductMaster = () => {
-            overlay.show();
-            axios.get(common.DataService + '?qid=gen011')
-                .then(response => {
-                    var data = ((response.data && response.data.data) || []).slice().sort((a, b) => a.product_code.localeCompare(b.product_code));
-                    appState.productData = data;
-                    overlay.hide();
-                })
-                .catch(error => {
-                    overlay.hide();
-                    alert.Error('ERROR', safeMessage(error));
-                });
-        }
-        const checkProductAvailability = () => {
-            if (appState.currentPeriodId == '') { alert.Error('ERROR', 'Please select a visit'); return; }
-            if (appState.currentProductCode == '') { alert.Error('ERROR', 'Please select a product'); return; }
-            var data = { periodid: appState.currentPeriodId, product_code: appState.currentProductCode };
-            overlay.show();
-            axios.post(common.DataService + '?qid=1131', JSON.stringify(data))
-                .then(response => {
-                    overlay.hide();
-                    if (response.data.result_code == '200') {
-                        appState.checkData = response.data.data || [];
-                        searchState.value = true;
-                    } else {
-                        alert.Error('ERROR', response.data.message);
-                    }
-                })
-                .catch(error => {
-                    overlay.hide();
-                    alert.Error('ERROR', safeMessage(error));
-                });
-        }
-        const resetCheckTable = () => {
-            appState.checkData = [];
-            searchState.value = false;
-        }
-        const resetForm = () => {
-            resetCheckTable();
-            appState.currentPeriodId = '';
-            appState.currentProductCode = '';
-        }
-
-        const validitySummary = computed(() => {
-            var pass = 0, fail = 0;
-            (appState.checkData || []).forEach(item => {
-                if (item.status === 'pass') pass++;
-                else if (item.status === 'fail') fail++;
-            });
-            var total = pass + fail;
-            var passPercentage = total > 0 ? ((pass / total) * 100).toFixed(1) : '0.0';
-            return { pass: pass, fail: fail, total: total, passPercentage: passPercentage };
+    const getAllPeriodLists = () => {
+      overlay.show();
+      axios
+        .get(common.DataService + "?qid=1004")
+        .then((response) => {
+          appState.periodData = (response.data && response.data.data) || [];
+          overlay.hide();
+        })
+        .catch((error) => {
+          overlay.hide();
+          alert.Error("ERROR", safeMessage(error));
         });
-
-        onMounted(() => {
-            getAllPeriodLists();
-            getProductMaster();
-            bus.on('g-event-reset-form', resetForm);
+    };
+    const getProductMaster = () => {
+      overlay.show();
+      axios
+        .get(common.DataService + "?qid=gen011")
+        .then((response) => {
+          var data = ((response.data && response.data.data) || [])
+            .slice()
+            .sort((a, b) => a.product_code.localeCompare(b.product_code));
+          appState.productData = data;
+          overlay.hide();
+        })
+        .catch((error) => {
+          overlay.hide();
+          alert.Error("ERROR", safeMessage(error));
         });
-        onBeforeUnmount(() => {
-            bus.off('g-event-reset-form', resetForm);
+    };
+    const checkProductAvailability = () => {
+      if (appState.currentPeriodId == "") {
+        alert.Error("ERROR", "Please select a visit");
+        return;
+      }
+      if (appState.currentProductCode == "") {
+        alert.Error("ERROR", "Please select a product");
+        return;
+      }
+      var data = {
+        periodid: appState.currentPeriodId,
+        product_code: appState.currentProductCode,
+      };
+      overlay.show();
+      axios
+        .post(common.DataService + "?qid=1131", JSON.stringify(data))
+        .then((response) => {
+          overlay.hide();
+          if (response.data.result_code == "200") {
+            appState.checkData = response.data.data || [];
+            searchState.value = true;
+          } else {
+            alert.Error("ERROR", response.data.message);
+          }
+        })
+        .catch((error) => {
+          overlay.hide();
+          alert.Error("ERROR", safeMessage(error));
         });
+    };
+    const resetCheckTable = () => {
+      appState.checkData = [];
+      searchState.value = false;
+    };
+    const resetForm = () => {
+      resetCheckTable();
+      appState.currentPeriodId = "";
+      appState.currentProductCode = "";
+    };
 
-        return {
-            appState, searchState, validitySummary,
-            getAllPeriodLists, getProductMaster, checkProductAvailability,
-            resetCheckTable, resetForm,
-            capitalize: fmtUtils.capitalize,
-            formatNumber: fmtUtils.formatNumber,
-            convertStringNumberToFigures: fmtUtils.convertStringNumberToFigures,
-            progressBarWidth: fmtUtils.progressBarWidth,
-            progressBarStatus: fmtUtils.progressBarStatus,
-        };
-    },
-    template: `
+    const validitySummary = computed(() => {
+      var pass = 0,
+        fail = 0;
+      (appState.checkData || []).forEach((item) => {
+        if (item.status === "pass") pass++;
+        else if (item.status === "fail") fail++;
+      });
+      var total = pass + fail;
+      var passPercentage =
+        total > 0 ? ((pass / total) * 100).toFixed(1) : "0.0";
+      return {
+        pass: pass,
+        fail: fail,
+        total: total,
+        passPercentage: passPercentage,
+      };
+    });
+
+    onMounted(() => {
+      getAllPeriodLists();
+      getProductMaster();
+      bus.on("g-event-reset-form", resetForm);
+    });
+    onBeforeUnmount(() => {
+      bus.off("g-event-reset-form", resetForm);
+    });
+
+    return {
+      appState,
+      searchState,
+      validitySummary,
+      getAllPeriodLists,
+      getProductMaster,
+      checkProductAvailability,
+      resetCheckTable,
+      resetForm,
+      capitalize: fmtUtils.capitalize,
+      formatNumber: fmtUtils.formatNumber,
+      convertStringNumberToFigures: fmtUtils.convertStringNumberToFigures,
+      progressBarWidth: fmtUtils.progressBarWidth,
+      progressBarStatus: fmtUtils.progressBarStatus,
+    };
+  },
+  template: `
         <div class="row">
             <div class="col-md-8 col-sm-12 col-12 mb-0">
                 <h2 class="content-header-title header-txt float-left mb-0">SMC</h2>
@@ -259,13 +291,15 @@ const PageAvailabilityCheck = {
 };
 
 useApp({
-    template: `
+  template: `
         <div>
             <div v-show="appState.pageState.page == 'table'"></div>
             <div v-show="appState.pageState.page == 'availability-check'"><page-availability-check/></div>
         </div>
     `,
-    setup() { return { appState }; },
+  setup() {
+    return { appState };
+  },
 })
-    .component('page-availability-check', PageAvailabilityCheck)
-    .mount('#app');
+  .component("page-availability-check", PageAvailabilityCheck)
+  .mount("#app");

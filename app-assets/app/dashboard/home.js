@@ -15,23 +15,23 @@ const { useApp, useFormat, bus, safeMessage, dataQuery } = window.utils;
 /* page-body                                                           */
 /* ------------------------------------------------------------------ */
 const PageBody = {
-    setup() {
-        const page = ref('list');
+  setup() {
+    const page = ref("list");
 
-        const gotoPageHandler = (data) => {
-            page.value = data.page;
-        }
+    const gotoPageHandler = (data) => {
+      page.value = data.page;
+    };
 
-        onMounted(() => {
-            bus.on('g-event-goto-page', gotoPageHandler);
-        });
-        onBeforeUnmount(() => {
-            bus.off('g-event-goto-page', gotoPageHandler);
-        });
+    onMounted(() => {
+      bus.on("g-event-goto-page", gotoPageHandler);
+    });
+    onBeforeUnmount(() => {
+      bus.off("g-event-goto-page", gotoPageHandler);
+    });
 
-        return { page };
-    },
-    template: `
+    return { page };
+  },
+  template: `
         <div>
             <div class="content-body">
                 <div v-show="page == 'list'">
@@ -49,71 +49,79 @@ const PageBody = {
 /* user_list — file-manager-style sidebar with jstree placeholder      */
 /* ------------------------------------------------------------------ */
 const UserList = {
-    setup() {
-        const url = ref(window.common && window.common.BadgeService);
-        const geoLevelForm = reactive({
-            geoLevel: '',
-            geoLevelId: 0,
-            currentUserLoginid: '',
-            userid: '',
-        });
-        const geoIndicator = reactive({
-            state: 50,
-            currentLevelId: 0,
-            lga: '',
-            cluster: '',
-            ward: '',
-        });
+  setup() {
+    const url = ref(window.common && window.common.BadgeService);
+    const geoLevelForm = reactive({
+      geoLevel: "",
+      geoLevelId: 0,
+      currentUserLoginid: "",
+      userid: "",
+    });
+    const geoIndicator = reactive({
+      state: 50,
+      currentLevelId: 0,
+      lga: "",
+      cluster: "",
+      ward: "",
+    });
 
-        const reloadUserListOnUpdate = () => { /* placeholder hook */ };
+    const reloadUserListOnUpdate = () => {
+      /* placeholder hook */
+    };
 
-        const initJstree = () => {
-            var filesTreeView = $('.my-drive');
-            if (!filesTreeView.length || !$.fn || !$.fn.jstree) return;
-            filesTreeView
-                .jstree({
-                    core: {
-                        check_callback: true,
-                        themes: { dots: true },
-                        data: {
-                            url: '../../../app-assets/data/jstree-data.json',
-                            dataType: 'json',
-                            data: (node) => { return { id: node.id }; },
-                        },
-                    },
-                    plugins: ['types'],
-                    types: {
-                        default: { icon: 'far fa-folder' },
-                        html: { icon: 'fab fa-html5 text-danger' },
-                        css: { icon: 'fab fa-css3-alt text-info' },
-                        img: { icon: 'far fa-file-image text-success' },
-                        js: { icon: 'fab fa-node-js text-warning' },
-                    },
-                })
-                .bind('select_node.jstree', (e, data) => data.instance.open_node(data.node))
-                .on('changed.jstree', (e, data) => {
-                    var i, j, r = [];
-                    var t = [];
-                    for (i = 0, j = data.selected.length; i < j; i++) {
-                        r.push(data.instance.get_node(data.selected[i]).id);
-                        t.push(data.instance.get_node(data.selected[i]));
-                    }
-                    console.log('Selected: ' + r.join(', '));
-                    if (t[0] && t[0].original) console.log(t[0].original.geo_level_id);
-                });
-        }
-
-        onMounted(() => {
-            initJstree();
-            bus.on('g-event-update-user', reloadUserListOnUpdate);
+    const initJstree = () => {
+      var filesTreeView = $(".my-drive");
+      if (!filesTreeView.length || !$.fn || !$.fn.jstree) return;
+      filesTreeView
+        .jstree({
+          core: {
+            check_callback: true,
+            themes: { dots: true },
+            data: {
+              url: "../../../app-assets/data/jstree-data.json",
+              dataType: "json",
+              data: (node) => {
+                return { id: node.id };
+              },
+            },
+          },
+          plugins: ["types"],
+          types: {
+            default: { icon: "far fa-folder" },
+            html: { icon: "fab fa-html5 text-danger" },
+            css: { icon: "fab fa-css3-alt text-info" },
+            img: { icon: "far fa-file-image text-success" },
+            js: { icon: "fab fa-node-js text-warning" },
+          },
+        })
+        .bind("select_node.jstree", (e, data) =>
+          data.instance.open_node(data.node),
+        )
+        .on("changed.jstree", (e, data) => {
+          var i,
+            j,
+            r = [];
+          var t = [];
+          for (i = 0, j = data.selected.length; i < j; i++) {
+            r.push(data.instance.get_node(data.selected[i]).id);
+            t.push(data.instance.get_node(data.selected[i]));
+          }
+          console.log("Selected: " + r.join(", "));
+          if (t[0] && t[0].original) console.log(t[0].original.geo_level_id);
         });
-        onBeforeUnmount(() => {
-            bus.off('g-event-update-user', reloadUserListOnUpdate);
-        });
+    };
 
-        return { url, geoLevelForm, geoIndicator };
-    },
-    template: `
+    onMounted(() => {
+      initJstree();
+      bus.on("g-event-update-user", reloadUserListOnUpdate);
+    });
+    onBeforeUnmount(() => {
+      bus.off("g-event-update-user", reloadUserListOnUpdate);
+    });
+
+    return { url, geoLevelForm, geoIndicator };
+  },
+  template: `
         <div class="row" id="basic-table">
             <div class="col-12 mt-1">
                 <div class="file-manager-application">
@@ -191,230 +199,259 @@ const UserList = {
 /* user_details — read / edit form                                     */
 /* ------------------------------------------------------------------ */
 const UserDetails = {
-    setup() {
-        const fmtUtils = useFormat();
+  setup() {
+    const fmtUtils = useFormat();
 
-        const userid = ref('');
-        const userDetails = ref(true);
-        const user_status = ref('');
-        const bankListData = ref([]);
-        const roleListData = ref([]);
-        const permission = ref(
-            (typeof getPermission === 'function')
-                ? getPermission(typeof per !== 'undefined' ? per : null, 'users') || { permission_value: 0 }
-                : { permission_value: 0 }
-        );
-        const userData = reactive({
-            baseData: {},
-            financeData: {},
-            identityData: {},
-            roleData: {},
+    const userid = ref("");
+    const userDetails = ref(true);
+    const user_status = ref("");
+    const bankListData = ref([]);
+    const roleListData = ref([]);
+    const permission = ref(
+      typeof getPermission === "function"
+        ? getPermission(typeof per !== "undefined" ? per : null, "users") || {
+            permission_value: 0,
+          }
+        : { permission_value: 0 },
+    );
+    const userData = reactive({
+      baseData: {},
+      financeData: {},
+      identityData: {},
+      roleData: {},
+    });
+
+    const gotoPageHandler = (data) => {
+      if (!data || data.page !== "detail") return;
+      userDetails.value = true;
+      userid.value = data.userid;
+      user_status.value = data.user_status;
+      getUserDetails();
+    };
+
+    const goToList = () => {
+      bus.emit("g-event-goto-page", { page: "list", userid: userid.value });
+    };
+
+    const getUserDetails = () => {
+      overlay.show();
+      axios
+        .get(common.DataService + "?qid=005&e=" + userid.value)
+        .then((response) => {
+          var d = response.data || {};
+          userData.baseData = (d.base && d.base[0]) || {};
+          userData.financeData = (d.finance && d.finance[0]) || {};
+          userData.identityData = (d.identity && d.identity[0]) || {};
+          userData.roleData = (d.role && d.role[0]) || {};
+          overlay.hide();
+        })
+        .catch((error) => {
+          overlay.hide();
+          alert.Error("ERROR", safeMessage(error));
         });
+    };
 
-        const gotoPageHandler = (data) => {
-            if (!data || data.page !== 'detail') return;
-            userDetails.value = true;
-            userid.value = data.userid;
-            user_status.value = data.user_status;
-            getUserDetails();
-        }
-
-        const goToList = () => {
-            bus.emit('g-event-goto-page', { page: 'list', userid: userid.value });
-        }
-
-        const getUserDetails = () => {
-            overlay.show();
-            axios.get(common.DataService + '?qid=005&e=' + userid.value)
-                .then(response => {
-                    var d = response.data || {};
-                    userData.baseData     = (d.base     && d.base[0])     || {};
-                    userData.financeData  = (d.finance  && d.finance[0])  || {};
-                    userData.identityData = (d.identity && d.identity[0]) || {};
-                    userData.roleData     = (d.role     && d.role[0])     || {};
-                    overlay.hide();
-                })
-                .catch(error => {
-                    overlay.hide();
-                    alert.Error('ERROR', safeMessage(error));
-                });
-        }
-
-        const getBankLists = () => {
-            overlay.show();
-            axios.get(common.DataService + '?qid=gen008')
-                .then(response => {
-                    bankListData.value = (response.data && response.data.data) || [];
-                    overlay.hide();
-                })
-                .catch(error => {
-                    overlay.hide();
-                    alert.Error('ERROR', safeMessage(error));
-                });
-        }
-
-        const getRoleList = () => {
-            overlay.show();
-            axios.get(common.DataService + '?qid=007')
-                .then(response => {
-                    roleListData.value = (response.data && response.data.data) || [];
-                    overlay.hide();
-                })
-                .catch(error => {
-                    overlay.hide();
-                    alert.Error('ERROR', safeMessage(error));
-                });
-        }
-
-        const discardUpdate = () => {
-            $.confirm({
-                title: 'WARNING!',
-                content:
-                    '<p>Are you sure you want to discard the changes? </p><br>Discarding the changes means you will lose all changes made',
-                buttons: {
-                    delete: {
-                        text: 'Discard Changes',
-                        btnClass: 'btn btn-warning mr-1',
-                        action: () => {
-                            getUserDetails();
-                            userDetails.value = true;
-                            overlay.hide();
-                        },
-                    },
-                    close: {
-                        text: 'Cancel',
-                        btnClass: 'btn btn-outline-secondary',
-                        action: () => { overlay.hide(); },
-                    },
-                },
-            });
-        }
-
-        const updateUserProfile = () => {
-            var updateFormData = {
-                userid:       userid.value,
-                roleid:       userData.baseData.roleid,
-                first:        userData.identityData.first,
-                middle:       userData.identityData.middle,
-                last:         userData.identityData.last,
-                gender:       userData.identityData.gender,
-                email:        userData.identityData.email,
-                phone:        userData.identityData.phone,
-                bank_name:    userData.financeData.bank_name,
-                account_name: userData.financeData.account_name,
-                account_no:   userData.financeData.account_no,
-                bank_code:    userData.financeData.bank_code,
-                bio_feature:  '',
-            };
-            var url = common.DataService;
-            $.confirm({
-                title: 'WARNING!',
-                content:
-                    '<p>Are you sure you want to Update the User? </p><br>Updating the User profile means you are changing the user permissions and details',
-                buttons: {
-                    delete: {
-                        text: 'Update Details',
-                        btnClass: 'btn btn-warning mr-1',
-                        action: () => {
-                            axios.post(url + '?qid=006', JSON.stringify(updateFormData))
-                                .then(response => {
-                                    overlay.hide();
-                                    if (response.data.result_code == '200') {
-                                        bus.emit('g-event-update-user', {});
-                                        userDetails.value = true;
-                                        alert.Success('SUCCESS', response.data.total + ' User Updated');
-                                    } else {
-                                        alert.Error('ERROR', 'User update failed');
-                                    }
-                                })
-                                .catch(error => {
-                                    overlay.hide();
-                                    alert.Error('ERROR', safeMessage(error));
-                                });
-                        },
-                    },
-                    close: {
-                        text: 'Cancel',
-                        btnClass: 'btn btn-outline-secondary',
-                        action: () => { overlay.hide(); },
-                    },
-                },
-            });
-        }
-
-        const checkIfEmpty = (data) => {
-            return data === null || data === '' || data === undefined ? 'Nil' : data;
-        }
-
-        const userActivationDeactivation = (actionid) => {
-            var selectedId = [actionid];
-            overlay.show();
-            axios.post(common.DataService + '?qid=001', JSON.stringify(selectedId))
-                .then(response => {
-                    overlay.hide();
-                    if (response.data.result_code == '200') {
-                        bus.emit('g-event-update-user', {});
-                        user_status.value = String(user_status.value) === '1' ? 0 : 1;
-                        alert.Success('SUCCESS', 'User De/Activation Successful');
-                    } else {
-                        alert.Error('ERROR', 'User De/Activation failed');
-                    }
-                })
-                .catch(error => {
-                    overlay.hide();
-                    alert.Error('ERROR', safeMessage(error));
-                });
-        }
-
-        const changeRole = (event) => {
-            userData.baseData.role = event.target.options[event.target.options.selectedIndex].text;
-        }
-        const changeBank = (event) => {
-            userData.financeData.bank_name = event.target.options[event.target.options.selectedIndex].text;
-        }
-
-        const downloadBadge = (id) => {
-            overlay.show();
-            window.open(common.BadgeService + '?qid=002&e=' + id, '_parent');
-            overlay.hide();
-        }
-
-        const numbersOnlyWithoutDot = (evt) => {
-            var e = evt || window.event;
-            var charCode = e.which || e.keyCode;
-            if (charCode > 31 && (charCode < 48 || charCode > 57)) e.preventDefault();
-            return true;
-        }
-
-        onMounted(() => {
-            bus.on('g-event-goto-page', gotoPageHandler);
-            getRoleList();
-            getBankLists();
+    const getBankLists = () => {
+      overlay.show();
+      axios
+        .get(common.DataService + "?qid=gen008")
+        .then((response) => {
+          bankListData.value = (response.data && response.data.data) || [];
+          overlay.hide();
+        })
+        .catch((error) => {
+          overlay.hide();
+          alert.Error("ERROR", safeMessage(error));
         });
-        onBeforeUnmount(() => {
-            bus.off('g-event-goto-page', gotoPageHandler);
-        });
+    };
 
-        return {
-            // state
-            userid, userDetails, user_status,
-            bankListData, roleListData, permission, userData,
-            // methods
-            gotoPageHandler, goToList, discardUpdate,
-            getUserDetails, getBankLists, getRoleList,
-            updateUserProfile, checkIfEmpty,
-            userActivationDeactivation, changeRole, changeBank,
-            downloadBadge, numbersOnlyWithoutDot,
-            // utility methods (returned so templates work unchanged)
-            displayDate: fmtUtils.displayDate,
-            capitalize: fmtUtils.capitalize,
-            capitalizeEachWords: fmtUtils.capitalizeEachWords,
-            formatNumber: fmtUtils.formatNumber,
-            convertStringNumberToFigures: fmtUtils.convertStringNumberToFigures,
-            fmt: fmtUtils.fmt,
-        };
-    },
-    template: `
+    const getRoleList = () => {
+      overlay.show();
+      axios
+        .get(common.DataService + "?qid=007")
+        .then((response) => {
+          roleListData.value = (response.data && response.data.data) || [];
+          overlay.hide();
+        })
+        .catch((error) => {
+          overlay.hide();
+          alert.Error("ERROR", safeMessage(error));
+        });
+    };
+
+    const discardUpdate = () => {
+      $.confirm({
+        title: "WARNING!",
+        content:
+          "<p>Are you sure you want to discard the changes? </p><br>Discarding the changes means you will lose all changes made",
+        buttons: {
+          delete: {
+            text: "Discard Changes",
+            btnClass: "btn btn-warning mr-1",
+            action: () => {
+              getUserDetails();
+              userDetails.value = true;
+              overlay.hide();
+            },
+          },
+          close: {
+            text: "Cancel",
+            btnClass: "btn btn-outline-secondary",
+            action: () => {
+              overlay.hide();
+            },
+          },
+        },
+      });
+    };
+
+    const updateUserProfile = () => {
+      var updateFormData = {
+        userid: userid.value,
+        roleid: userData.baseData.roleid,
+        first: userData.identityData.first,
+        middle: userData.identityData.middle,
+        last: userData.identityData.last,
+        gender: userData.identityData.gender,
+        email: userData.identityData.email,
+        phone: userData.identityData.phone,
+        bank_name: userData.financeData.bank_name,
+        account_name: userData.financeData.account_name,
+        account_no: userData.financeData.account_no,
+        bank_code: userData.financeData.bank_code,
+        bio_feature: "",
+      };
+      var url = common.DataService;
+      $.confirm({
+        title: "WARNING!",
+        content:
+          "<p>Are you sure you want to Update the User? </p><br>Updating the User profile means you are changing the user permissions and details",
+        buttons: {
+          delete: {
+            text: "Update Details",
+            btnClass: "btn btn-warning mr-1",
+            action: () => {
+              axios
+                .post(url + "?qid=006", JSON.stringify(updateFormData))
+                .then((response) => {
+                  overlay.hide();
+                  if (response.data.result_code == "200") {
+                    bus.emit("g-event-update-user", {});
+                    userDetails.value = true;
+                    alert.Success(
+                      "SUCCESS",
+                      response.data.total + " User Updated",
+                    );
+                  } else {
+                    alert.Error("ERROR", "User update failed");
+                  }
+                })
+                .catch((error) => {
+                  overlay.hide();
+                  alert.Error("ERROR", safeMessage(error));
+                });
+            },
+          },
+          close: {
+            text: "Cancel",
+            btnClass: "btn btn-outline-secondary",
+            action: () => {
+              overlay.hide();
+            },
+          },
+        },
+      });
+    };
+
+    const checkIfEmpty = (data) => {
+      return data === null || data === "" || data === undefined ? "Nil" : data;
+    };
+
+    const userActivationDeactivation = (actionid) => {
+      var selectedId = [actionid];
+      overlay.show();
+      axios
+        .post(common.DataService + "?qid=001", JSON.stringify(selectedId))
+        .then((response) => {
+          overlay.hide();
+          if (response.data.result_code == "200") {
+            bus.emit("g-event-update-user", {});
+            user_status.value = String(user_status.value) === "1" ? 0 : 1;
+            alert.Success("SUCCESS", "User De/Activation Successful");
+          } else {
+            alert.Error("ERROR", "User De/Activation failed");
+          }
+        })
+        .catch((error) => {
+          overlay.hide();
+          alert.Error("ERROR", safeMessage(error));
+        });
+    };
+
+    const changeRole = (event) => {
+      userData.baseData.role =
+        event.target.options[event.target.options.selectedIndex].text;
+    };
+    const changeBank = (event) => {
+      userData.financeData.bank_name =
+        event.target.options[event.target.options.selectedIndex].text;
+    };
+
+    const downloadBadge = (id) => {
+      overlay.show();
+      window.open(common.BadgeService + "?qid=002&e=" + id, "_parent");
+      overlay.hide();
+    };
+
+    const numbersOnlyWithoutDot = (evt) => {
+      var e = evt || window.event;
+      var charCode = e.which || e.keyCode;
+      if (charCode > 31 && (charCode < 48 || charCode > 57)) e.preventDefault();
+      return true;
+    };
+
+    onMounted(() => {
+      bus.on("g-event-goto-page", gotoPageHandler);
+      getRoleList();
+      getBankLists();
+    });
+    onBeforeUnmount(() => {
+      bus.off("g-event-goto-page", gotoPageHandler);
+    });
+
+    return {
+      // state
+      userid,
+      userDetails,
+      user_status,
+      bankListData,
+      roleListData,
+      permission,
+      userData,
+      // methods
+      gotoPageHandler,
+      goToList,
+      discardUpdate,
+      getUserDetails,
+      getBankLists,
+      getRoleList,
+      updateUserProfile,
+      checkIfEmpty,
+      userActivationDeactivation,
+      changeRole,
+      changeBank,
+      downloadBadge,
+      numbersOnlyWithoutDot,
+      // utility methods (returned so templates work unchanged)
+      displayDate: fmtUtils.displayDate,
+      capitalize: fmtUtils.capitalize,
+      capitalizeEachWords: fmtUtils.capitalizeEachWords,
+      formatNumber: fmtUtils.formatNumber,
+      convertStringNumberToFigures: fmtUtils.convertStringNumberToFigures,
+      fmt: fmtUtils.fmt,
+    };
+  },
+  template: `
         <div class="row">
             <div class="col-md-12 col-sm-12 col-12 mb-1">
                 <h2 class="content-header-title header-txt float-left mb-0">Users</h2>
@@ -626,7 +663,7 @@ const UserDetails = {
 /* Mount                                                              */
 /* ------------------------------------------------------------------ */
 useApp({ template: `<div><page-body/></div>` })
-    .component('page-body', PageBody)
-    .component('user_list', UserList)
-    .component('user_details', UserDetails)
-    .mount('#app');
+  .component("page-body", PageBody)
+  .component("user_list", UserList)
+  .component("user_details", UserDetails)
+  .mount("#app");

@@ -12,14 +12,20 @@ const { ref, reactive, computed, onMounted, onBeforeUnmount } = Vue;
 const { useApp, useFormat, bus, safeMessage } = window.utils;
 
 const PageBody = {
-    setup() {
-        const page = ref('list');
-        const gotoPageHandler = (data) => { page.value = data && data.page; };
-        onMounted(() => { bus.on('g-event-goto-page', gotoPageHandler); });
-        onBeforeUnmount(() => { bus.off('g-event-goto-page', gotoPageHandler); });
-        return { page };
-    },
-    template: `
+  setup() {
+    const page = ref("list");
+    const gotoPageHandler = (data) => {
+      page.value = data && data.page;
+    };
+    onMounted(() => {
+      bus.on("g-event-goto-page", gotoPageHandler);
+    });
+    onBeforeUnmount(() => {
+      bus.off("g-event-goto-page", gotoPageHandler);
+    });
+    return { page };
+  },
+  template: `
         <div>
             <div class="content-body">
                 <div v-show="page == 'list'"><referral_list/></div>
@@ -29,301 +35,452 @@ const PageBody = {
 };
 
 const ReferralList = {
-    setup() {
-        const fmtUtils = useFormat();
+  setup() {
+    const fmtUtils = useFormat();
 
-        const url = ref(window.common && window.common.BadgeService);
-        const tableData = ref([]);
-        const permission = ref(
-            (typeof getPermission === 'function')
-                ? (getPermission(typeof per !== 'undefined' ? per : null, 'smc') || { permission_value: 0 })
-                : { permission_value: 0 }
+    const url = ref(window.common && window.common.BadgeService);
+    const tableData = ref([]);
+    const permission = ref(
+      typeof getPermission === "function"
+        ? getPermission(typeof per !== "undefined" ? per : null, "smc") || {
+            permission_value: 0,
+          }
+        : { permission_value: 0 },
+    );
+    const statData = reactive({ referrals: 0, attended: 0, period: 0 });
+    const statProgessBarStatus = ref("progress-bar-default");
+    const geoData = ref([]);
+    const periodData = ref([]);
+    const checkIfFilterOn = ref(false);
+    const filterState = ref(false);
+    const filters = ref(false);
+    const tableOptions = reactive({
+      total: 1,
+      pageLength: 1,
+      perPage: 10,
+      currentPage: 1,
+      orderDir: "desc",
+      orderField: 0,
+      limitStart: 0,
+      isNext: false,
+      isPrev: false,
+      aLength: [10, 20, 50, 100, 150, 200],
+      filterParam: {
+        periodid: [],
+        visitTitle: "",
+        attendedDate: "",
+        geo_level: "",
+        geo_level_id: "",
+        geo_string: "",
+        referralStatus: "",
+      },
+    });
+
+    const joinWithCommaAnd = (array, status) => {
+      if (!array || array.length === 0) return "";
+      if (array.length === 1) return array[0];
+      var copy = array.slice();
+      var lastElement = copy.pop();
+      return status
+        ? copy.join(",") + "," + lastElement
+        : copy.join(", ") + " and " + lastElement;
+    };
+
+    const loadTableData = async () => {
+      overlay.show();
+      var fp = tableOptions.filterParam;
+      var periodIds = joinWithCommaAnd(fp.periodid, true);
+      var endpoints = [
+        common.TableService +
+          "?qid=703&draw=" +
+          tableOptions.currentPage +
+          "&order_column=" +
+          tableOptions.orderField +
+          "&length=" +
+          tableOptions.perPage +
+          "&start=" +
+          tableOptions.limitStart +
+          "&order_dir=" +
+          tableOptions.orderDir +
+          "&pid=" +
+          periodIds +
+          "&gid=" +
+          fp.geo_level_id +
+          "&gl=" +
+          fp.geo_level +
+          "&atd=" +
+          fp.referralStatus,
+        common.DataService +
+          "?qid=1110&pid=" +
+          periodIds +
+          "&gid=" +
+          fp.geo_level_id +
+          "&gl=" +
+          fp.geo_level +
+          "&atd=" +
+          fp.referralStatus,
+      ];
+      try {
+        var responses = await Promise.all(endpoints.map((e) => axios.get(e)));
+        var t = responses[0] && responses[0].data;
+        tableData.value = Array.isArray(t && t.data) ? t.data : [];
+        tableOptions.total = (t && t.recordsTotal) || 0;
+        var s =
+          responses[1] &&
+          responses[1].data &&
+          responses[1].data.data &&
+          responses[1].data.data[0];
+        if (s) {
+          statData.referrals = s.referrals || 0;
+          statData.attended = s.attended || 0;
+          statData.period = s.period || 0;
+        }
+        if (tableOptions.currentPage === 1) paginationDefault();
+      } catch (error) {
+        alert.Error("ERROR", safeMessage(error));
+      } finally {
+        overlay.hide();
+      }
+    };
+
+    const toggleFilter = () => {
+      if (!filterState.value && !checkIfFilterOn.value) filters.value = false;
+      return (filterState.value = !filterState.value);
+    };
+    const paginationDefault = () => {
+      tableOptions.pageLength = Math.ceil(
+        tableOptions.total / tableOptions.perPage,
+      );
+      tableOptions.limitStart = Math.ceil(
+        (tableOptions.currentPage - 1) * tableOptions.perPage,
+      );
+      tableOptions.isNext = tableOptions.currentPage < tableOptions.pageLength;
+      tableOptions.isPrev = tableOptions.currentPage > 1;
+    };
+    const nextPage = () => {
+      tableOptions.currentPage += 1;
+      paginationDefault();
+      loadTableData();
+    };
+    const prevPage = () => {
+      tableOptions.currentPage -= 1;
+      paginationDefault();
+      loadTableData();
+    };
+    const currentPage = () => {
+      paginationDefault();
+      if (tableOptions.currentPage < 1)
+        alert.Error("ERROR", "The Page requested doesn't exist");
+      else if (tableOptions.currentPage > tableOptions.pageLength)
+        alert.Error("ERROR", "The Page requested doesn't exist");
+      else loadTableData();
+    };
+    const changePerPage = (val) => {
+      var maxPerPage = Math.ceil(tableOptions.total / val);
+      if (maxPerPage < tableOptions.currentPage)
+        tableOptions.currentPage = maxPerPage;
+      tableOptions.perPage = val;
+      paginationDefault();
+      loadTableData();
+    };
+    const sort = (col) => {
+      if (tableOptions.orderField === col)
+        tableOptions.orderDir =
+          tableOptions.orderDir === "asc" ? "desc" : "asc";
+      else tableOptions.orderField = col;
+      paginationDefault();
+      loadTableData();
+    };
+    const applyFilter = () => {
+      var checkFill = 0;
+      if (tableOptions.filterParam.geo_level != "") checkFill++;
+      if (tableOptions.filterParam.geo_level_id != "") checkFill++;
+      if ((tableOptions.filterParam.periodid || []).length > 0) checkFill++;
+      if (tableOptions.filterParam.referralStatus != "") checkFill++;
+      if (checkFill > 0) {
+        toggleFilter();
+        filters.value = checkIfFilterOn.value = true;
+        paginationDefault();
+        loadTableData();
+      } else {
+        alert.Error("ERROR", "Invalid required data");
+      }
+    };
+    const removeSingleFilter = (column_name) => {
+      var fp = tableOptions.filterParam;
+      if (Array.isArray(fp[column_name])) fp[column_name] = [];
+      else fp[column_name] = "";
+      if (
+        ["geo_level", "geo_level_id", "geo_string"].indexOf(column_name) !== -1
+      ) {
+        fp.geo_level = "";
+        fp.geo_level_id = "";
+        try {
+          $(".select2").val("").trigger("change");
+        } catch (e) {}
+      }
+      if (column_name === "visitTitle") {
+        fp.periodid = [];
+        fp.visitTitle = "";
+        try {
+          $(".period").val("").trigger("change");
+        } catch (e) {}
+      }
+      var hasActive = Object.values(fp).some((v) =>
+        Array.isArray(v) ? v.length > 0 : v !== "",
+      );
+      filters.value = checkIfFilterOn.value = hasActive;
+      paginationDefault();
+      loadTableData();
+    };
+    const clearAllFilter = () => {
+      filters.value = false;
+      Object.assign(tableOptions.filterParam, {
+        geo_level: "",
+        geo_level_id: "",
+        geo_string: "",
+        periodid: [],
+        visitTitle: "",
+        attendedDate: "",
+        referralStatus: "",
+      });
+      try {
+        $(".select2").val("").trigger("change");
+      } catch (e) {}
+      try {
+        $(".period").val("").trigger("change");
+      } catch (e) {}
+      paginationDefault();
+      loadTableData();
+    };
+    const checkAndHideFilter = (name) => {
+      return ["periodid", "geo_level_id", "geo_level"].indexOf(name) === -1;
+    };
+    const refreshData = () => {
+      paginationDefault();
+      loadTableData();
+    };
+    const getGeoLocation = () => {
+      overlay.show();
+      axios
+        .get(common.DataService + "?qid=gen009")
+        .then((response) => {
+          geoData.value = (response.data && response.data.data) || [];
+          overlay.hide();
+        })
+        .catch((error) => {
+          overlay.hide();
+          alert.Error("ERROR", safeMessage(error));
+        });
+    };
+    const getAllPeriodLists = () => {
+      overlay.show();
+      axios
+        .get(common.DataService + "?qid=1004")
+        .then((response) => {
+          periodData.value = (response.data && response.data.data) || [];
+          overlay.hide();
+        })
+        .catch((error) => {
+          overlay.hide();
+          alert.Error("ERROR", safeMessage(error));
+        });
+    };
+    const setLocation = (select_index) => {
+      var i = select_index || 0;
+      var row = geoData.value[i];
+      if (!row) return;
+      tableOptions.filterParam.geo_level = row.geo_level;
+      tableOptions.filterParam.geo_level_id = row.geo_level_id;
+      tableOptions.filterParam.geo_string = row.title;
+    };
+    const setPeriodTitle = (event) => {
+      // multi-select. Vue's v-model on a multi-select gives an array of strings.
+      var selected = Array.isArray(event) ? event : [];
+      tableOptions.filterParam.periodid = [];
+      var titles = [];
+      selected.forEach((id) => {
+        tableOptions.filterParam.periodid.push(id);
+        var period = (periodData.value || []).find((p) => p.periodid == id);
+        if (period) titles.push(period.title);
+      });
+      tableOptions.filterParam.visitTitle = joinWithCommaAnd(titles);
+    };
+    const splitWordAndCapitalize = (str) => {
+      var words = String(str || "").split(/(?=[A-Z])|_| /);
+      words = words.map(
+        (w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase(),
+      );
+      return words.join(" ");
+    };
+    const exportChildRefferal = async () => {
+      var fp = tableOptions.filterParam;
+      var periodIds = joinWithCommaAnd(fp.periodid, true);
+      var qs =
+        "&draw=" +
+        tableOptions.currentPage +
+        "&order_column=" +
+        tableOptions.orderField +
+        "&length=" +
+        tableOptions.perPage +
+        "&start=" +
+        tableOptions.limitStart +
+        "&order_dir=" +
+        tableOptions.orderDir +
+        "&pid=" +
+        periodIds +
+        "&gid=" +
+        fp.geo_level_id +
+        "&gl=" +
+        fp.geo_level +
+        "&atd=" +
+        fp.referralStatus;
+      var veriUrl = "qid=1125" + qs;
+      var dlString = "qid=802" + qs;
+      var formattedDate = new Date()
+        .toLocaleString("en-GB", {
+          day: "2-digit",
+          month: "2-digit",
+          year: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+        })
+        .replace(/[\s,\/:]/g, "_");
+      var filename =
+        fp.geo_level +
+        "_" +
+        fp.referralStatus +
+        "_Refferal_Export_" +
+        formattedDate;
+      overlay.show();
+      try {
+        var countResponse = await $.ajax({
+          url: common.DataService,
+          type: "POST",
+          data: veriUrl,
+          dataType: "json",
+        });
+        var count = parseInt(countResponse.total, 10);
+        var downloadMax =
+          (window.common && window.common.ExportDownloadLimit) || 25000;
+        if (count > downloadMax) {
+          alert.Error(
+            "Download Error",
+            "Unable to download data because it has exceeded the download limit of " +
+              downloadMax,
+          );
+        } else if (count === 0) {
+          alert.Error("Download Error", "No data found");
+        } else {
+          alert.Info("DOWNLOADING...", "Downloading " + count + " record(s)");
+          var dl = await $.ajax({
+            url: common.ExportService,
+            type: "POST",
+            data: dlString,
+          });
+          var exportData = JSON.parse(dl);
+          if (window.Jhxlsx && typeof window.Jhxlsx.export === "function") {
+            window.Jhxlsx.export(exportData, { fileName: filename });
+          }
+        }
+      } catch (error) {
+        console.error("Error during export:", error);
+        alert.Error("Export Error", "An error occurred while exporting data.");
+      } finally {
+        overlay.hide();
+      }
+    };
+    const convertStringNumberToFigures = (d) => {
+      var data = d ? parseInt(d) : 0;
+      return data ? data.toLocaleString() : 0;
+    };
+
+    const percentageAttended = computed(() => {
+      if (!statData.referrals) return 0;
+      var p = ((statData.attended / statData.referrals) * 100).toFixed(2);
+      if (p < 50) statProgessBarStatus.value = "progress-bar-danger";
+      else if (p < 70) statProgessBarStatus.value = "progress-bar-warning";
+      else statProgessBarStatus.value = "progress-bar-success";
+      return p;
+    });
+
+    onMounted(() => {
+      getGeoLocation();
+      getAllPeriodLists();
+      loadTableData();
+      try {
+        $(".select2").each(function () {
+          var $this = $(this);
+          $this.wrap('<div class="position-relative"></div>');
+          $this
+            .select2({
+              dropdownAutoWidth: true,
+              width: "100%",
+              dropdownParent: $this.parent(),
+            })
+            .on("change", function () {
+              setLocation(this.value);
+            });
+        });
+        $(".period").each(function () {
+          var $this = $(this);
+          $this.wrap('<div class="position-relative"></div>');
+          $this
+            .select2({
+              multiple: true,
+              dropdownAutoWidth: true,
+              width: "100%",
+              dropdownParent: $this.parent(),
+              placeholder: "Select Visits",
+            })
+            .on("change", function () {
+              setPeriodTitle($(this).val());
+            });
+        });
+        $(".select2-selection__arrow").html(
+          '<i class="feather icon-chevron-down"></i>',
         );
-        const statData = reactive({ referrals: 0, attended: 0, period: 0 });
-        const statProgessBarStatus = ref('progress-bar-default');
-        const geoData = ref([]);
-        const periodData = ref([]);
-        const checkIfFilterOn = ref(false);
-        const filterState = ref(false);
-        const filters = ref(false);
-        const tableOptions = reactive({
-            total: 1, pageLength: 1, perPage: 10, currentPage: 1,
-            orderDir: 'desc', orderField: 0, limitStart: 0,
-            isNext: false, isPrev: false,
-            aLength: [10, 20, 50, 100, 150, 200],
-            filterParam: {
-                periodid: [], visitTitle: '', attendedDate: '',
-                geo_level: '', geo_level_id: '', geo_string: '',
-                referralStatus: '',
-            },
-        });
+      } catch (e) {}
+    });
 
-        const joinWithCommaAnd = (array, status) => {
-            if (!array || array.length === 0) return '';
-            if (array.length === 1) return array[0];
-            var copy = array.slice();
-            var lastElement = copy.pop();
-            return status ? copy.join(',') + ',' + lastElement : copy.join(', ') + ' and ' + lastElement;
-        }
-
-        const loadTableData = async () => {
-            overlay.show();
-            var fp = tableOptions.filterParam;
-            var periodIds = joinWithCommaAnd(fp.periodid, true);
-            var endpoints = [
-                common.TableService + '?qid=703&draw=' + tableOptions.currentPage +
-                '&order_column=' + tableOptions.orderField +
-                '&length=' + tableOptions.perPage +
-                '&start=' + tableOptions.limitStart +
-                '&order_dir=' + tableOptions.orderDir +
-                '&pid=' + periodIds + '&gid=' + fp.geo_level_id + '&gl=' + fp.geo_level + '&atd=' + fp.referralStatus,
-                common.DataService + '?qid=1110&pid=' + periodIds + '&gid=' + fp.geo_level_id + '&gl=' + fp.geo_level + '&atd=' + fp.referralStatus,
-            ];
-            try {
-                var responses = await Promise.all(endpoints.map(e => axios.get(e)));
-                var t = responses[0] && responses[0].data;
-                tableData.value = Array.isArray(t && t.data) ? t.data : [];
-                tableOptions.total = (t && t.recordsTotal) || 0;
-                var s = responses[1] && responses[1].data && responses[1].data.data && responses[1].data.data[0];
-                if (s) {
-                    statData.referrals = s.referrals || 0;
-                    statData.attended = s.attended || 0;
-                    statData.period = s.period || 0;
-                }
-                if (tableOptions.currentPage === 1) paginationDefault();
-            } catch (error) {
-                alert.Error('ERROR', safeMessage(error));
-            } finally {
-                overlay.hide();
-            }
-        }
-
-        const toggleFilter = () => {
-            if (!filterState.value && !checkIfFilterOn.value) filters.value = false;
-            return (filterState.value = !filterState.value);
-        }
-        const paginationDefault = () => {
-            tableOptions.pageLength = Math.ceil(tableOptions.total / tableOptions.perPage);
-            tableOptions.limitStart = Math.ceil((tableOptions.currentPage - 1) * tableOptions.perPage);
-            tableOptions.isNext = tableOptions.currentPage < tableOptions.pageLength;
-            tableOptions.isPrev = tableOptions.currentPage > 1;
-        }
-        const nextPage = () => { tableOptions.currentPage += 1; paginationDefault(); loadTableData(); };
-        const prevPage = () => { tableOptions.currentPage -= 1; paginationDefault(); loadTableData(); };
-        const currentPage = () => {
-            paginationDefault();
-            if (tableOptions.currentPage < 1)                            alert.Error('ERROR', "The Page requested doesn't exist");
-            else if (tableOptions.currentPage > tableOptions.pageLength) alert.Error('ERROR', "The Page requested doesn't exist");
-            else                                                         loadTableData();
-        }
-        const changePerPage = (val) => {
-            var maxPerPage = Math.ceil(tableOptions.total / val);
-            if (maxPerPage < tableOptions.currentPage) tableOptions.currentPage = maxPerPage;
-            tableOptions.perPage = val;
-            paginationDefault();
-            loadTableData();
-        }
-        const sort = (col) => {
-            if (tableOptions.orderField === col) tableOptions.orderDir = tableOptions.orderDir === 'asc' ? 'desc' : 'asc';
-            else                                  tableOptions.orderField = col;
-            paginationDefault();
-            loadTableData();
-        }
-        const applyFilter = () => {
-            var checkFill = 0;
-            if (tableOptions.filterParam.geo_level != '') checkFill++;
-            if (tableOptions.filterParam.geo_level_id != '') checkFill++;
-            if ((tableOptions.filterParam.periodid || []).length > 0) checkFill++;
-            if (tableOptions.filterParam.referralStatus != '') checkFill++;
-            if (checkFill > 0) {
-                toggleFilter();
-                filters.value = checkIfFilterOn.value = true;
-                paginationDefault();
-                loadTableData();
-            } else {
-                alert.Error('ERROR', 'Invalid required data');
-            }
-        }
-        const removeSingleFilter = (column_name) => {
-            var fp = tableOptions.filterParam;
-            if (Array.isArray(fp[column_name])) fp[column_name] = [];
-            else fp[column_name] = '';
-            if (['geo_level', 'geo_level_id', 'geo_string'].indexOf(column_name) !== -1) {
-                fp.geo_level = '';
-                fp.geo_level_id = '';
-                try { $('.select2').val('').trigger('change'); } catch (e) {}
-            }
-            if (column_name === 'visitTitle') {
-                fp.periodid = [];
-                fp.visitTitle = '';
-                try { $('.period').val('').trigger('change'); } catch (e) {}
-            }
-            var hasActive = Object.values(fp).some(v => Array.isArray(v) ? v.length > 0 : v !== '');
-            filters.value = checkIfFilterOn.value = hasActive;
-            paginationDefault();
-            loadTableData();
-        }
-        const clearAllFilter = () => {
-            filters.value = false;
-            Object.assign(tableOptions.filterParam, {
-                geo_level: '', geo_level_id: '', geo_string: '',
-                periodid: [], visitTitle: '', attendedDate: '', referralStatus: '',
-            });
-            try { $('.select2').val('').trigger('change'); } catch (e) {}
-            try { $('.period').val('').trigger('change'); } catch (e) {}
-            paginationDefault();
-            loadTableData();
-        }
-        const checkAndHideFilter = (name) => {
-            return ['periodid', 'geo_level_id', 'geo_level'].indexOf(name) === -1;
-        }
-        const refreshData = () => { paginationDefault(); loadTableData(); };
-        const getGeoLocation = () => {
-            overlay.show();
-            axios.get(common.DataService + '?qid=gen009')
-                .then(response => {
-                    geoData.value = (response.data && response.data.data) || [];
-                    overlay.hide();
-                })
-                .catch(error => {
-                    overlay.hide();
-                    alert.Error('ERROR', safeMessage(error));
-                });
-        }
-        const getAllPeriodLists = () => {
-            overlay.show();
-            axios.get(common.DataService + '?qid=1004')
-                .then(response => {
-                    periodData.value = (response.data && response.data.data) || [];
-                    overlay.hide();
-                })
-                .catch(error => {
-                    overlay.hide();
-                    alert.Error('ERROR', safeMessage(error));
-                });
-        }
-        const setLocation = (select_index) => {
-            var i = select_index || 0;
-            var row = geoData.value[i];
-            if (!row) return;
-            tableOptions.filterParam.geo_level = row.geo_level;
-            tableOptions.filterParam.geo_level_id = row.geo_level_id;
-            tableOptions.filterParam.geo_string = row.title;
-        }
-        const setPeriodTitle = (event) => {
-            // multi-select. Vue's v-model on a multi-select gives an array of strings.
-            var selected = Array.isArray(event) ? event : [];
-            tableOptions.filterParam.periodid = [];
-            var titles = [];
-            selected.forEach(id => {
-                tableOptions.filterParam.periodid.push(id);
-                var period = (periodData.value || []).find(p => p.periodid == id);
-                if (period) titles.push(period.title);
-            });
-            tableOptions.filterParam.visitTitle = joinWithCommaAnd(titles);
-        }
-        const splitWordAndCapitalize = (str) => {
-            var words = String(str || '').split(/(?=[A-Z])|_| /);
-            words = words.map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase());
-            return words.join(' ');
-        }
-        const exportChildRefferal = async () => {
-            var fp = tableOptions.filterParam;
-            var periodIds = joinWithCommaAnd(fp.periodid, true);
-            var qs = '&draw=' + tableOptions.currentPage +
-                '&order_column=' + tableOptions.orderField +
-                '&length=' + tableOptions.perPage +
-                '&start=' + tableOptions.limitStart +
-                '&order_dir=' + tableOptions.orderDir +
-                '&pid=' + periodIds + '&gid=' + fp.geo_level_id + '&gl=' + fp.geo_level + '&atd=' + fp.referralStatus;
-            var veriUrl = 'qid=1125' + qs;
-            var dlString = 'qid=802' + qs;
-            var formattedDate = new Date().toLocaleString('en-GB', {
-                day: '2-digit', month: '2-digit', year: 'numeric',
-                hour: '2-digit', minute: '2-digit',
-            }).replace(/[\s,\/:]/g, '_');
-            var filename = fp.geo_level + '_' + fp.referralStatus + '_Refferal_Export_' + formattedDate;
-            overlay.show();
-            try {
-                var countResponse = await $.ajax({
-                    url: common.DataService, type: 'POST', data: veriUrl, dataType: 'json',
-                });
-                var count = parseInt(countResponse.total, 10);
-                var downloadMax = (window.common && window.common.ExportDownloadLimit) || 25000;
-                if (count > downloadMax) {
-                    alert.Error('Download Error', 'Unable to download data because it has exceeded the download limit of ' + downloadMax);
-                } else if (count === 0) {
-                    alert.Error('Download Error', 'No data found');
-                } else {
-                    alert.Info('DOWNLOADING...', 'Downloading ' + count + ' record(s)');
-                    var dl = await $.ajax({ url: common.ExportService, type: 'POST', data: dlString });
-                    var exportData = JSON.parse(dl);
-                    if (window.Jhxlsx && typeof window.Jhxlsx.export === 'function') {
-                        window.Jhxlsx.export(exportData, { fileName: filename });
-                    }
-                }
-            } catch (error) {
-                console.error('Error during export:', error);
-                alert.Error('Export Error', 'An error occurred while exporting data.');
-            } finally {
-                overlay.hide();
-            }
-        }
-        const convertStringNumberToFigures = (d) => {
-            var data = d ? parseInt(d) : 0;
-            return data ? data.toLocaleString() : 0;
-        }
-
-        const percentageAttended = computed(() => {
-            if (!statData.referrals) return 0;
-            var p = ((statData.attended / statData.referrals) * 100).toFixed(2);
-            if (p < 50)               statProgessBarStatus.value = 'progress-bar-danger';
-            else if (p < 70)          statProgessBarStatus.value = 'progress-bar-warning';
-            else                      statProgessBarStatus.value = 'progress-bar-success';
-            return p;
-        });
-
-        onMounted(() => {
-            getGeoLocation();
-            getAllPeriodLists();
-            loadTableData();
-            try {
-                $('.select2').each(function () {
-                    var $this = $(this);
-                    $this.wrap('<div class="position-relative"></div>');
-                    $this.select2({
-                        dropdownAutoWidth: true, width: '100%',
-                        dropdownParent: $this.parent(),
-                    }).on('change', function () { setLocation(this.value); });
-                });
-                $('.period').each(function () {
-                    var $this = $(this);
-                    $this.wrap('<div class="position-relative"></div>');
-                    $this.select2({
-                        multiple: true, dropdownAutoWidth: true, width: '100%',
-                        dropdownParent: $this.parent(),
-                        placeholder: 'Select Visits',
-                    }).on('change', function () { setPeriodTitle($(this).val()); });
-                });
-                $('.select2-selection__arrow').html('<i class="feather icon-chevron-down"></i>');
-            } catch (e) {}
-        });
-
-        return {
-            url, tableData, permission, statData, statProgessBarStatus,
-            geoData, periodData, checkIfFilterOn, filterState, filters,
-            tableOptions, percentageAttended,
-            loadTableData, toggleFilter, paginationDefault,
-            nextPage, prevPage, currentPage, changePerPage, sort,
-            applyFilter, removeSingleFilter, clearAllFilter, checkAndHideFilter,
-            refreshData, getGeoLocation, getAllPeriodLists, setLocation,
-            setPeriodTitle, splitWordAndCapitalize, exportChildRefferal,
-            convertStringNumberToFigures,
-            capitalize: fmtUtils.capitalize,
-            displayDate: fmtUtils.displayDate,
-        };
-    },
-    template: `
+    return {
+      url,
+      tableData,
+      permission,
+      statData,
+      statProgessBarStatus,
+      geoData,
+      periodData,
+      checkIfFilterOn,
+      filterState,
+      filters,
+      tableOptions,
+      percentageAttended,
+      loadTableData,
+      toggleFilter,
+      paginationDefault,
+      nextPage,
+      prevPage,
+      currentPage,
+      changePerPage,
+      sort,
+      applyFilter,
+      removeSingleFilter,
+      clearAllFilter,
+      checkAndHideFilter,
+      refreshData,
+      getGeoLocation,
+      getAllPeriodLists,
+      setLocation,
+      setPeriodTitle,
+      splitWordAndCapitalize,
+      exportChildRefferal,
+      convertStringNumberToFigures,
+      capitalize: fmtUtils.capitalize,
+      displayDate: fmtUtils.displayDate,
+    };
+  },
+  template: `
         <div class="row" id="basic-table">
             <div class="col-md-8 col-sm-12 col-12 mb-0">
                 <h2 class="content-header-title header-txt float-left mb-0">SMC</h2>
@@ -492,6 +649,6 @@ const ReferralList = {
 };
 
 useApp({ template: `<div><page-body/></div>` })
-    .component('page-body', PageBody)
-    .component('referral_list', ReferralList)
-    .mount('#app');
+  .component("page-body", PageBody)
+  .component("referral_list", ReferralList)
+  .mount("#app");

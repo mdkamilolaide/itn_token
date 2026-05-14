@@ -21,109 +21,127 @@ const { useApp, useFormat, bus, safeMessage } = window.utils;
 
 // In-module event names — distinct from the global g-event-* bus so
 // other modules' listeners don't fire on dashboard filter changes.
-const EVT_APPLY = 'fire-event-apply-filter';
-const EVT_REFRESH = 'fire-event-refresh';
-const EVT_CLEAR = 'fire-event-clear-filter';
-const EVT_REMOVE_SINGLE = 'fire-event-remove-single-filter';
+const EVT_APPLY = "fire-event-apply-filter";
+const EVT_REFRESH = "fire-event-refresh";
+const EVT_CLEAR = "fire-event-clear-filter";
+const EVT_REMOVE_SINGLE = "fire-event-remove-single-filter";
 
 const joinWithCommaAnd = (array, status) => {
-    if (!array || array.length === 0) return '';
-    if (array.length === 1) return array[0];
-    var copy = array.slice();
-    var lastElement = copy.pop();
-    return status ? copy.join(',') + ',' + lastElement : copy.join(', ') + ' and ' + lastElement;
-}
+  if (!array || array.length === 0) return "";
+  if (array.length === 1) return array[0];
+  var copy = array.slice();
+  var lastElement = copy.pop();
+  return status
+    ? copy.join(",") + "," + lastElement
+    : copy.join(", ") + " and " + lastElement;
+};
 
 const cleanUrl = (url) => {
-    var urlObj = new URL(url);
-    var params = urlObj.searchParams;
-    var allowed = ['qid', 'filterId'];
-    var keysToRemove = [];
-    var keys = Array.from(params.keys());
-    keys.forEach(k => { if (allowed.indexOf(k) === -1) keysToRemove.push(k); });
-    keysToRemove.forEach(k => { params.delete(k); });
-    return urlObj.toString();
-}
+  var urlObj = new URL(url);
+  var params = urlObj.searchParams;
+  var allowed = ["qid", "filterId"];
+  var keysToRemove = [];
+  var keys = Array.from(params.keys());
+  keys.forEach((k) => {
+    if (allowed.indexOf(k) === -1) keysToRemove.push(k);
+  });
+  keysToRemove.forEach((k) => {
+    params.delete(k);
+  });
+  return urlObj.toString();
+};
 
 const splitWordAndCapitalize = (str) => {
-    var words = String(str || '').split(/(?=[A-Z])|_| /);
-    return words.map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
-}
+  var words = String(str || "").split(/(?=[A-Z])|_| /);
+  return words
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+    .join(" ");
+};
 
 const buildFilterQs = (periodIds, reportDate) => {
-    var rd = reportDate || '';
-    var parts = rd.split(' to ');
-    var sd = parts[0] || '';
-    var ed = parts[1] || '';
-    return '&pid=' + periodIds + '&sdate=' + sd + '&edate=' + ed;
-}
+  var rd = reportDate || "";
+  var parts = rd.split(" to ");
+  var sd = parts[0] || "";
+  var ed = parts[1] || "";
+  return "&pid=" + periodIds + "&sdate=" + sd + "&edate=" + ed;
+};
 
 const splitDateRange = (reportDate) => {
-    var rd = reportDate || '';
-    var parts = rd.split(' to ');
-    return { start: parts[0] || '', end: parts[1] || '' };
-}
+  var rd = reportDate || "";
+  var parts = rd.split(" to ");
+  return { start: parts[0] || "", end: parts[1] || "" };
+};
 
 // Common chart shell: each panel overrides title/colors/series and reuses
 // the same axis + label formatting.
 const makeBarChartOptions = (opts) => {
-    return {
-        chart: { type: 'bar', stacked: !!opts.stacked },
-        colors: opts.colors,
-        xaxis: { categories: opts.categories || [] },
-        legend: {
-            position: 'bottom',
-            formatter: (seriesName) => { return capitalizeOne(seriesName); },
-            fontFamily: 'Arial, sans-serif',
-            fontSize: '12px',
+  return {
+    chart: { type: "bar", stacked: !!opts.stacked },
+    colors: opts.colors,
+    xaxis: { categories: opts.categories || [] },
+    legend: {
+      position: "bottom",
+      formatter: (seriesName) => {
+        return capitalizeOne(seriesName);
+      },
+      fontFamily: "Arial, sans-serif",
+      fontSize: "12px",
+    },
+    title: { text: opts.title, align: "center" },
+    yaxis: {
+      labels: {
+        formatter: (val) => {
+          return parseInt(val).toLocaleString();
         },
-        title: { text: opts.title, align: 'center' },
-        yaxis: {
-            labels: {
-                formatter: (val) => { return parseInt(val).toLocaleString(); },
-            },
-        },
-        plotOptions: {
-            bar: { horizontal: false, dataLabels: { position: 'top' } },
-        },
-        dataLabels: {
-            enabled: true,
-            formatter: (val) => { return parseInt(val).toLocaleString(); },
-            offsetY: -18,
-            style: { fontSize: '12px', colors: ['#000'] },
-        },
-        noData: {
-            text: 'No data available, kindly refresh',
-            align: 'center',
-            verticalAlign: 'middle',
-            offsetX: 0,
-            offsetY: 0,
-            style: { color: '#333', fontSize: '14px' },
-        },
-    };
-}
+      },
+    },
+    plotOptions: {
+      bar: { horizontal: false, dataLabels: { position: "top" } },
+    },
+    dataLabels: {
+      enabled: true,
+      formatter: (val) => {
+        return parseInt(val).toLocaleString();
+      },
+      offsetY: -18,
+      style: { fontSize: "12px", colors: ["#000"] },
+    },
+    noData: {
+      text: "No data available, kindly refresh",
+      align: "center",
+      verticalAlign: "middle",
+      offsetX: 0,
+      offsetY: 0,
+      style: { color: "#333", fontSize: "14px" },
+    },
+  };
+};
 
 const capitalizeOne = (word) => {
-    if (!word) return word;
-    var lower = String(word).toLowerCase();
-    return lower.charAt(0).toUpperCase() + lower.slice(1);
-}
+  if (!word) return word;
+  var lower = String(word).toLowerCase();
+  return lower.charAt(0).toUpperCase() + lower.slice(1);
+};
 
 // PageBody — simple shell. PerfectScrollbar setup runs after children
 // mount so .scrollBox elements inside each panel are picked up.
 const PageBody = {
-    setup() {
-        onMounted(() => {
-            try {
-                var els = document.querySelectorAll('.scrollBox');
-                if (els && window.PerfectScrollbar) {
-                    els.forEach(el => { new window.PerfectScrollbar(el); });
-                }
-            } catch (e) { /* swallow */ }
-        });
-        return {};
-    },
-    template: `
+  setup() {
+    onMounted(() => {
+      try {
+        var els = document.querySelectorAll(".scrollBox");
+        if (els && window.PerfectScrollbar) {
+          els.forEach((el) => {
+            new window.PerfectScrollbar(el);
+          });
+        }
+      } catch (e) {
+        /* swallow */
+      }
+    });
+    return {};
+  },
+  template: `
         <div>
             <div class="content-body">
                 <div>
@@ -139,249 +157,307 @@ const PageBody = {
 
 // ChildList — owner of the filter UI + the first (registration) panel.
 const ChildList = {
-    setup() {
-        const fmtUtils = useFormat();
+  setup() {
+    const fmtUtils = useFormat();
 
-        const url = ref(window.common && window.common.DataService);
-        const filterUrl = ref('');
-        const periodData = ref([]);
-        const reportLevel = ref(1);
-        const filterId = ref('');
-        const lgaId = ref('');
-        const lgaName = ref('');
-        const wardId = ref('');
-        const wardName = ref('');
-        const dpId = ref('');
-        const dpName = ref('');
-        const checkIfFilterOn = ref(false);
-        const filterState = ref(false);
-        const filters = ref(false);
+    const url = ref(window.common && window.common.DataService);
+    const filterUrl = ref("");
+    const periodData = ref([]);
+    const reportLevel = ref(1);
+    const filterId = ref("");
+    const lgaId = ref("");
+    const lgaName = ref("");
+    const wardId = ref("");
+    const wardName = ref("");
+    const dpId = ref("");
+    const dpName = ref("");
+    const checkIfFilterOn = ref(false);
+    const filterState = ref(false);
+    const filters = ref(false);
 
-        const tableOptions = reactive({
-            filterParam: { periodid: [], visitTitle: '', reportDate: '' },
+    const tableOptions = reactive({
+      filterParam: { periodid: [], visitTitle: "", reportDate: "" },
+    });
+    const statData = reactive({ tableData: [], chartData: [] });
+    const series = ref([]);
+    const chartOptions = ref({ xaxis: { title: { text: "" } } });
+
+    const loadTableData = (fId, title) => {
+      var fp = tableOptions.filterParam;
+      var periodIds = joinWithCommaAnd(fp.periodid.slice(), true);
+      var range = splitDateRange(fp.reportDate);
+
+      var queryUrl = url.value;
+      switch (reportLevel.value) {
+        case 1:
+          filterId.value = 0;
+          queryUrl += "?qid=1111";
+          break;
+        case 2:
+          lgaId.value = fId;
+          lgaName.value = title || lgaName.value;
+          queryUrl += "?qid=1112&filterId=" + lgaId.value;
+          break;
+        case 3:
+          wardId.value = fId;
+          wardName.value = title || wardName.value;
+          queryUrl += "?qid=1113&filterId=" + wardId.value;
+          break;
+        default:
+          return;
+      }
+      if (periodIds) queryUrl += "&pid=" + periodIds;
+      if (range.start) queryUrl += "&sdate=" + range.start;
+      if (range.end) queryUrl += "&edate=" + range.end;
+
+      loadDashboardData(queryUrl);
+    };
+
+    const loadDashboardData = async (u) => {
+      try {
+        overlay.show();
+        filterUrl.value = u;
+        var response = await axios.get(u);
+        if (response.data.result_code == 200) {
+          statData.tableData = response.data.data.table;
+          statData.chartData = response.data.data.chart;
+          statData.chartData.xAxisLabel = "Days";
+          reportLevel.value = response.data.level;
+          plotChart();
+        } else {
+          statData.tableData = [];
+          alert.Error("ERROR", response.data.message);
+        }
+      } catch (error) {
+        alert.Error("ERROR", safeMessage(error));
+      } finally {
+        overlay.hide();
+      }
+    };
+
+    const toggleFilter = () => {
+      if (!filterState.value && !checkIfFilterOn.value) filters.value = false;
+      return (filterState.value = !filterState.value);
+    };
+    const fireFilterEvent = () => {
+      bus.emit(EVT_APPLY, [
+        tableOptions.filterParam.periodid.slice(),
+        tableOptions.filterParam.visitTitle,
+        tableOptions.filterParam.reportDate,
+      ]);
+    };
+    const fireRefreshEvent = () => {
+      bus.emit(EVT_REFRESH);
+    };
+    const fireClearFilter = () => {
+      bus.emit(EVT_CLEAR);
+    };
+    const fireRemoveSingleFilter = (name) => {
+      bus.emit(EVT_REMOVE_SINGLE, name);
+    };
+
+    const applyFilter = () => {
+      var checkFill = 0;
+      if (tableOptions.filterParam.periodid.length > 0) checkFill++;
+      if ((tableOptions.filterParam.reportDate || "").length > 0) checkFill++;
+
+      if (checkFill > 0) {
+        toggleFilter();
+        filters.value = checkIfFilterOn.value = true;
+        fireFilterEvent();
+        var periodIds = joinWithCommaAnd(
+          tableOptions.filterParam.periodid.slice(),
+          true,
+        );
+        var u =
+          cleanUrl(filterUrl.value) +
+          buildFilterQs(periodIds, tableOptions.filterParam.reportDate);
+        loadDashboardData(u);
+      } else {
+        clearAllFilter();
+      }
+    };
+    const loadNewData = () => {
+      var checkFill = 0;
+      if (tableOptions.filterParam.periodid.length > 0) checkFill++;
+      if ((tableOptions.filterParam.reportDate || "").length > 0) checkFill++;
+      var periodIds = joinWithCommaAnd(
+        tableOptions.filterParam.periodid.slice(),
+        true,
+      );
+      var u =
+        cleanUrl(filterUrl.value) +
+        buildFilterQs(periodIds, tableOptions.filterParam.reportDate);
+      loadDashboardData(u);
+      if (checkFill > 0) {
+        toggleFilter();
+        filterState.value = checkIfFilterOn.value = false;
+      } else {
+        filters.value = checkIfFilterOn.value = false;
+      }
+    };
+    const removeSingleFilter = (column_name) => {
+      var fp = tableOptions.filterParam;
+      if (Array.isArray(fp[column_name])) fp[column_name] = [];
+      else fp[column_name] = "";
+      if (column_name === "visitTitle") {
+        fp.periodid = [];
+        fp.visitTitle = "";
+        try {
+          $(".period").val("").trigger("change");
+        } catch (e) {}
+      }
+      if (column_name === "reportDate") clearFlatpickr("date");
+      var hasActive = Object.values(fp).some((v) =>
+        Array.isArray(v) ? v.length > 0 : v !== "",
+      );
+      filters.value = checkIfFilterOn.value = hasActive;
+      fireRemoveSingleFilter(column_name);
+      loadNewData();
+    };
+    const clearAllFilter = () => {
+      filters.value = false;
+      Object.assign(tableOptions.filterParam, {
+        periodid: [],
+        visitTitle: "",
+        reportDate: "",
+      });
+      try {
+        $(".period").val("").trigger("change");
+      } catch (e) {}
+      clearFlatpickr("date");
+      fireClearFilter();
+      loadDashboardData(cleanUrl(filterUrl.value));
+    };
+    const clearFlatpickr = (dateClass) => {
+      try {
+        var inst = $("." + dateClass)[0] && $("." + dateClass)[0]._flatpickr;
+        if (inst) inst.clear();
+      } catch (e) {}
+    };
+    const checkAndHideFilter = (name) => {
+      return name !== "periodid";
+    };
+    const refreshData = () => {
+      getAllPeriodLists();
+      fireRefreshEvent();
+      loadDashboardData(filterUrl.value);
+    };
+    const controlBreadCrum = (fId, level, title) => {
+      reportLevel.value = level;
+      loadTableData(fId, title);
+    };
+    const plotChart = () => {
+      chartOptions.value = makeBarChartOptions({
+        colors: ["#7367f0", "#b9b3f7"],
+        title: "Child Registration",
+        stacked: true,
+        categories: (statData.chartData && statData.chartData[1]) || [],
+      });
+      series.value = (statData.chartData && statData.chartData[0]) || [];
+    };
+    const getAllPeriodLists = () => {
+      overlay.show();
+      axios
+        .get((window.common && window.common.DataService) + "?qid=1004")
+        .then((response) => {
+          periodData.value = (response.data && response.data.data) || [];
+          overlay.hide();
+        })
+        .catch((error) => {
+          overlay.hide();
+          alert.Error("ERROR", safeMessage(error));
         });
-        const statData = reactive({ tableData: [], chartData: [] });
-        const series = ref([]);
-        const chartOptions = ref({ xaxis: { title: { text: '' } } });
+    };
+    const setPeriodTitle = (event) => {
+      var selected = Array.isArray(event) ? event : [];
+      tableOptions.filterParam.periodid = [];
+      var titles = [];
+      selected.forEach((id) => {
+        tableOptions.filterParam.periodid.push(id);
+        var period = (periodData.value || []).find((p) => p.periodid == id);
+        if (period) titles.push(period.title);
+      });
+      tableOptions.filterParam.visitTitle = joinWithCommaAnd(titles);
+    };
 
-        const loadTableData = (fId, title) => {
-            var fp = tableOptions.filterParam;
-            var periodIds = joinWithCommaAnd(fp.periodid.slice(), true);
-            var range = splitDateRange(fp.reportDate);
+    const getTopChildStat = computed(() =>
+      statData.tableData.reduce(
+        (acc, curr) => {
+          acc.male += parseInt(curr.male, 10) || 0;
+          acc.female += parseInt(curr.female, 10) || 0;
+          acc.total += parseInt(curr.total, 10) || 0;
+          return acc;
+        },
+        { male: 0, female: 0, total: 0 },
+      ),
+    );
 
-            var queryUrl = url.value;
-            switch (reportLevel.value) {
-                case 1:
-                    filterId.value = 0;
-                    queryUrl += '?qid=1111';
-                    break;
-                case 2:
-                    lgaId.value = fId;
-                    lgaName.value = title || lgaName.value;
-                    queryUrl += '?qid=1112&filterId=' + lgaId.value;
-                    break;
-                case 3:
-                    wardId.value = fId;
-                    wardName.value = title || wardName.value;
-                    queryUrl += '?qid=1113&filterId=' + wardId.value;
-                    break;
-                default:
-                    return;
-            }
-            if (periodIds) queryUrl += '&pid=' + periodIds;
-            if (range.start) queryUrl += '&sdate=' + range.start;
-            if (range.end) queryUrl += '&edate=' + range.end;
-
-            loadDashboardData(queryUrl);
-        }
-
-        const loadDashboardData = async (u) => {
-            try {
-                overlay.show();
-                filterUrl.value = u;
-                var response = await axios.get(u);
-                if (response.data.result_code == 200) {
-                    statData.tableData = response.data.data.table;
-                    statData.chartData = response.data.data.chart;
-                    statData.chartData.xAxisLabel = 'Days';
-                    reportLevel.value = response.data.level;
-                    plotChart();
-                } else {
-                    statData.tableData = [];
-                    alert.Error('ERROR', response.data.message);
-                }
-            } catch (error) {
-                alert.Error('ERROR', safeMessage(error));
-            } finally {
-                overlay.hide();
-            }
-        }
-
-        const toggleFilter = () => {
-            if (!filterState.value && !checkIfFilterOn.value) filters.value = false;
-            return (filterState.value = !filterState.value);
-        }
-        const fireFilterEvent = () => {
-            bus.emit(EVT_APPLY, [
-                tableOptions.filterParam.periodid.slice(),
-                tableOptions.filterParam.visitTitle,
-                tableOptions.filterParam.reportDate,
-            ]);
-        }
-        const fireRefreshEvent = () => { bus.emit(EVT_REFRESH); };
-        const fireClearFilter = () => { bus.emit(EVT_CLEAR); };
-        const fireRemoveSingleFilter = (name) => { bus.emit(EVT_REMOVE_SINGLE, name); };
-
-        const applyFilter = () => {
-            var checkFill = 0;
-            if (tableOptions.filterParam.periodid.length > 0) checkFill++;
-            if ((tableOptions.filterParam.reportDate || '').length > 0) checkFill++;
-
-            if (checkFill > 0) {
-                toggleFilter();
-                filters.value = checkIfFilterOn.value = true;
-                fireFilterEvent();
-                var periodIds = joinWithCommaAnd(tableOptions.filterParam.periodid.slice(), true);
-                var u = cleanUrl(filterUrl.value) + buildFilterQs(periodIds, tableOptions.filterParam.reportDate);
-                loadDashboardData(u);
-            } else {
-                clearAllFilter();
-            }
-        }
-        const loadNewData = () => {
-            var checkFill = 0;
-            if (tableOptions.filterParam.periodid.length > 0) checkFill++;
-            if ((tableOptions.filterParam.reportDate || '').length > 0) checkFill++;
-            var periodIds = joinWithCommaAnd(tableOptions.filterParam.periodid.slice(), true);
-            var u = cleanUrl(filterUrl.value) + buildFilterQs(periodIds, tableOptions.filterParam.reportDate);
-            loadDashboardData(u);
-            if (checkFill > 0) {
-                toggleFilter();
-                filterState.value = checkIfFilterOn.value = false;
-            } else {
-                filters.value = checkIfFilterOn.value = false;
-            }
-        }
-        const removeSingleFilter = (column_name) => {
-            var fp = tableOptions.filterParam;
-            if (Array.isArray(fp[column_name])) fp[column_name] = [];
-            else fp[column_name] = '';
-            if (column_name === 'visitTitle') {
-                fp.periodid = [];
-                fp.visitTitle = '';
-                try { $('.period').val('').trigger('change'); } catch (e) {}
-            }
-            if (column_name === 'reportDate') clearFlatpickr('date');
-            var hasActive = Object.values(fp).some(v => Array.isArray(v) ? v.length > 0 : v !== '');
-            filters.value = checkIfFilterOn.value = hasActive;
-            fireRemoveSingleFilter(column_name);
-            loadNewData();
-        }
-        const clearAllFilter = () => {
-            filters.value = false;
-            Object.assign(tableOptions.filterParam, { periodid: [], visitTitle: '', reportDate: '' });
-            try { $('.period').val('').trigger('change'); } catch (e) {}
-            clearFlatpickr('date');
-            fireClearFilter();
-            loadDashboardData(cleanUrl(filterUrl.value));
-        }
-        const clearFlatpickr = (dateClass) => {
-            try {
-                var inst = $('.' + dateClass)[0] && $('.' + dateClass)[0]._flatpickr;
-                if (inst) inst.clear();
-            } catch (e) {}
-        }
-        const checkAndHideFilter = (name) => {
-            return name !== 'periodid';
-        }
-        const refreshData = () => {
-            getAllPeriodLists();
-            fireRefreshEvent();
-            loadDashboardData(filterUrl.value);
-        }
-        const controlBreadCrum = (fId, level, title) => {
-            reportLevel.value = level;
-            loadTableData(fId, title);
-        }
-        const plotChart = () => {
-            chartOptions.value = makeBarChartOptions({
-                colors: ['#7367f0', '#b9b3f7'],
-                title: 'Child Registration',
-                stacked: true,
-                categories: (statData.chartData && statData.chartData[1]) || [],
+    onMounted(() => {
+      getAllPeriodLists();
+      loadTableData(0, "");
+      try {
+        $(".period").each(function () {
+          var $this = $(this);
+          $this.wrap('<div class="position-relative"></div>');
+          $this
+            .select2({
+              multiple: true,
+              dropdownAutoWidth: true,
+              width: "100%",
+              dropdownParent: $this.parent(),
+              placeholder: "Select Options",
+            })
+            .on("change", function () {
+              setPeriodTitle($(this).val());
             });
-            series.value = (statData.chartData && statData.chartData[0]) || [];
-        }
-        const getAllPeriodLists = () => {
-            overlay.show();
-            axios.get((window.common && window.common.DataService) + '?qid=1004')
-                .then(response => {
-                    periodData.value = (response.data && response.data.data) || [];
-                    overlay.hide();
-                })
-                .catch(error => {
-                    overlay.hide();
-                    alert.Error('ERROR', safeMessage(error));
-                });
-        }
-        const setPeriodTitle = (event) => {
-            var selected = Array.isArray(event) ? event : [];
-            tableOptions.filterParam.periodid = [];
-            var titles = [];
-            selected.forEach(id => {
-                tableOptions.filterParam.periodid.push(id);
-                var period = (periodData.value || []).find(p => p.periodid == id);
-                if (period) titles.push(period.title);
-            });
-            tableOptions.filterParam.visitTitle = joinWithCommaAnd(titles);
-        }
-
-        const getTopChildStat = computed(() => statData.tableData.reduce((acc, curr) => {
-            acc.male += parseInt(curr.male, 10) || 0;
-            acc.female += parseInt(curr.female, 10) || 0;
-            acc.total += parseInt(curr.total, 10) || 0;
-            return acc;
-        }, { male: 0, female: 0, total: 0 }));
-
-        onMounted(() => {
-            getAllPeriodLists();
-            loadTableData(0, '');
-            try {
-                $('.period').each(function () {
-                    var $this = $(this);
-                    $this.wrap('<div class="position-relative"></div>');
-                    $this.select2({
-                        multiple: true,
-                        dropdownAutoWidth: true,
-                        width: '100%',
-                        dropdownParent: $this.parent(),
-                        placeholder: 'Select Options',
-                    }).on('change', function () { setPeriodTitle($(this).val()); });
-                });
-                $('.select2-selection__arrow').html('<i class="feather icon-chevron-down"></i>');
-                $('.date').flatpickr({
-                    altInput: true,
-                    altFormat: 'F j, Y',
-                    dateFormat: 'Y-m-d',
-                    mode: 'range',
-                });
-            } catch (e) {}
         });
+        $(".select2-selection__arrow").html(
+          '<i class="feather icon-chevron-down"></i>',
+        );
+        $(".date").flatpickr({
+          altInput: true,
+          altFormat: "F j, Y",
+          dateFormat: "Y-m-d",
+          mode: "range",
+        });
+      } catch (e) {}
+    });
 
-        return {
-            url, filterUrl, periodData, reportLevel,
-            lgaId, lgaName, wardId, wardName, dpId, dpName,
-            checkIfFilterOn, filterState, filters,
-            tableOptions, statData, series, chartOptions,
-            getTopChildStat,
-            loadTableData, toggleFilter, applyFilter, removeSingleFilter,
-            clearAllFilter, checkAndHideFilter, refreshData, controlBreadCrum,
-            setPeriodTitle, splitWordAndCapitalize,
-            capitalize: fmtUtils.capitalize,
-            convertStringNumberToFigures: fmtUtils.convertStringNumberToFigures,
-        };
-    },
-    template: `
+    return {
+      url,
+      filterUrl,
+      periodData,
+      reportLevel,
+      lgaId,
+      lgaName,
+      wardId,
+      wardName,
+      dpId,
+      dpName,
+      checkIfFilterOn,
+      filterState,
+      filters,
+      tableOptions,
+      statData,
+      series,
+      chartOptions,
+      getTopChildStat,
+      loadTableData,
+      toggleFilter,
+      applyFilter,
+      removeSingleFilter,
+      clearAllFilter,
+      checkAndHideFilter,
+      refreshData,
+      controlBreadCrum,
+      setPeriodTitle,
+      splitWordAndCapitalize,
+      capitalize: fmtUtils.capitalize,
+      convertStringNumberToFigures: fmtUtils.convertStringNumberToFigures,
+    };
+  },
+  template: `
         <div class="row" id="basic-table">
 
             <div class="col-md-6 col-sm-6 col-6 col-sm-6">
@@ -532,160 +608,195 @@ const ChildList = {
 
 // DrugAdmin — listens for filter events from ChildList and re-fetches.
 const DrugAdmin = {
-    setup() {
-        const fmtUtils = useFormat();
+  setup() {
+    const fmtUtils = useFormat();
 
-        const url = ref(window.common && window.common.DataService);
-        const filterUrl = ref('');
-        const reportLevel = ref(1);
-        const filterId = ref('');
-        const lgaId = ref('');
-        const lgaName = ref('');
-        const wardId = ref('');
-        const wardName = ref('');
-        const dpId = ref('');
-        const dpName = ref('');
+    const url = ref(window.common && window.common.DataService);
+    const filterUrl = ref("");
+    const reportLevel = ref(1);
+    const filterId = ref("");
+    const lgaId = ref("");
+    const lgaName = ref("");
+    const wardId = ref("");
+    const wardName = ref("");
+    const dpId = ref("");
+    const dpName = ref("");
 
-        const tableOptions = reactive({
-            filterParam: { periodid: [], visitTitle: '', reportDate: '' },
-        });
-        const statData = reactive({ tableData: [], chartData: [] });
-        const series = ref([]);
-        const chartOptions = ref({ xaxis: { title: { text: '' } } });
+    const tableOptions = reactive({
+      filterParam: { periodid: [], visitTitle: "", reportDate: "" },
+    });
+    const statData = reactive({ tableData: [], chartData: [] });
+    const series = ref([]);
+    const chartOptions = ref({ xaxis: { title: { text: "" } } });
 
-        const loadTableData = (fId, title) => {
-            var fp = tableOptions.filterParam;
-            var periodIds = joinWithCommaAnd(fp.periodid.slice(), true);
-            var range = splitDateRange(fp.reportDate);
+    const loadTableData = (fId, title) => {
+      var fp = tableOptions.filterParam;
+      var periodIds = joinWithCommaAnd(fp.periodid.slice(), true);
+      var range = splitDateRange(fp.reportDate);
 
-            var queryUrl = url.value;
-            switch (reportLevel.value) {
-                case 1:
-                    filterId.value = 0;
-                    queryUrl += '?qid=1114';
-                    break;
-                case 2:
-                    lgaId.value = fId;
-                    lgaName.value = title || lgaName.value;
-                    queryUrl += '?qid=1115&filterId=' + lgaId.value;
-                    break;
-                case 3:
-                    wardId.value = fId;
-                    wardName.value = title || wardName.value;
-                    queryUrl += '?qid=1116&filterId=' + wardId.value;
-                    break;
-                default:
-                    return;
-            }
-            if (periodIds) queryUrl += '&pid=' + periodIds;
-            if (range.start) queryUrl += '&sdate=' + range.start;
-            if (range.end) queryUrl += '&edate=' + range.end;
+      var queryUrl = url.value;
+      switch (reportLevel.value) {
+        case 1:
+          filterId.value = 0;
+          queryUrl += "?qid=1114";
+          break;
+        case 2:
+          lgaId.value = fId;
+          lgaName.value = title || lgaName.value;
+          queryUrl += "?qid=1115&filterId=" + lgaId.value;
+          break;
+        case 3:
+          wardId.value = fId;
+          wardName.value = title || wardName.value;
+          queryUrl += "?qid=1116&filterId=" + wardId.value;
+          break;
+        default:
+          return;
+      }
+      if (periodIds) queryUrl += "&pid=" + periodIds;
+      if (range.start) queryUrl += "&sdate=" + range.start;
+      if (range.end) queryUrl += "&edate=" + range.end;
 
-            loadDashboardData(queryUrl);
+      loadDashboardData(queryUrl);
+    };
+    const loadDashboardData = async (u) => {
+      try {
+        overlay.show();
+        filterUrl.value = u;
+        var response = await axios.get(u);
+        if (response.data.result_code == 200) {
+          statData.tableData = response.data.data.table;
+          statData.chartData = response.data.data.chart;
+          statData.chartData.xAxisLabel = "Days";
+          reportLevel.value = response.data.level;
+          plotChart();
+        } else {
+          statData.tableData = [];
+          alert.Error("ERROR", response.data.message);
         }
-        const loadDashboardData = async (u) => {
-            try {
-                overlay.show();
-                filterUrl.value = u;
-                var response = await axios.get(u);
-                if (response.data.result_code == 200) {
-                    statData.tableData = response.data.data.table;
-                    statData.chartData = response.data.data.chart;
-                    statData.chartData.xAxisLabel = 'Days';
-                    reportLevel.value = response.data.level;
-                    plotChart();
-                } else {
-                    statData.tableData = [];
-                    alert.Error('ERROR', response.data.message);
-                }
-            } catch (error) {
-                alert.Error('ERROR', safeMessage(error));
-            } finally {
-                overlay.hide();
-            }
-        }
-        const handleFilterChange = (data) => {
-            tableOptions.filterParam.periodid = (data && data[0]) ? data[0].slice() : [];
-            tableOptions.filterParam.visitTitle = (data && data[1]) || '';
-            tableOptions.filterParam.reportDate = (data && data[2]) || '';
-            applyFilter();
-        }
-        const controlBreadCrum = (fId, level, title) => {
-            reportLevel.value = level;
-            loadTableData(fId, title);
-        }
-        const plotChart = () => {
-            chartOptions.value = makeBarChartOptions({
-                colors: ['#FF9800', '#7367f0'],
-                title: 'Drug Administration',
-                stacked: false,
-                categories: (statData.chartData && statData.chartData[1]) || [],
-            });
-            series.value = (statData.chartData && statData.chartData[0]) || [];
-        }
-        const refreshData = () => { loadDashboardData(filterUrl.value); };
-        const applyFilter = () => {
-            var checkFill = 0;
-            if (tableOptions.filterParam.periodid.length > 0) checkFill++;
-            if ((tableOptions.filterParam.reportDate || '').length > 0) checkFill++;
-            if (checkFill > 0) {
-                var periodIds = joinWithCommaAnd(tableOptions.filterParam.periodid.slice(), true);
-                var u = cleanUrl(filterUrl.value) + buildFilterQs(periodIds, tableOptions.filterParam.reportDate);
-                loadDashboardData(u);
-            } else {
-                clearAllFilter();
-            }
-        }
-        const clearAllFilter = () => {
-            Object.assign(tableOptions.filterParam, { periodid: [], visitTitle: '', reportDate: '' });
-            loadDashboardData(cleanUrl(filterUrl.value));
-        }
-        const removeSingleFilter = (column_name) => {
-            var fp = tableOptions.filterParam;
-            if (Array.isArray(fp[column_name])) fp[column_name] = [];
-            else fp[column_name] = '';
-            if (column_name === 'visitTitle') {
-                fp.periodid = [];
-                fp.visitTitle = '';
-            }
-            applyFilter();
-        }
+      } catch (error) {
+        alert.Error("ERROR", safeMessage(error));
+      } finally {
+        overlay.hide();
+      }
+    };
+    const handleFilterChange = (data) => {
+      tableOptions.filterParam.periodid =
+        data && data[0] ? data[0].slice() : [];
+      tableOptions.filterParam.visitTitle = (data && data[1]) || "";
+      tableOptions.filterParam.reportDate = (data && data[2]) || "";
+      applyFilter();
+    };
+    const controlBreadCrum = (fId, level, title) => {
+      reportLevel.value = level;
+      loadTableData(fId, title);
+    };
+    const plotChart = () => {
+      chartOptions.value = makeBarChartOptions({
+        colors: ["#FF9800", "#7367f0"],
+        title: "Drug Administration",
+        stacked: false,
+        categories: (statData.chartData && statData.chartData[1]) || [],
+      });
+      series.value = (statData.chartData && statData.chartData[0]) || [];
+    };
+    const refreshData = () => {
+      loadDashboardData(filterUrl.value);
+    };
+    const applyFilter = () => {
+      var checkFill = 0;
+      if (tableOptions.filterParam.periodid.length > 0) checkFill++;
+      if ((tableOptions.filterParam.reportDate || "").length > 0) checkFill++;
+      if (checkFill > 0) {
+        var periodIds = joinWithCommaAnd(
+          tableOptions.filterParam.periodid.slice(),
+          true,
+        );
+        var u =
+          cleanUrl(filterUrl.value) +
+          buildFilterQs(periodIds, tableOptions.filterParam.reportDate);
+        loadDashboardData(u);
+      } else {
+        clearAllFilter();
+      }
+    };
+    const clearAllFilter = () => {
+      Object.assign(tableOptions.filterParam, {
+        periodid: [],
+        visitTitle: "",
+        reportDate: "",
+      });
+      loadDashboardData(cleanUrl(filterUrl.value));
+    };
+    const removeSingleFilter = (column_name) => {
+      var fp = tableOptions.filterParam;
+      if (Array.isArray(fp[column_name])) fp[column_name] = [];
+      else fp[column_name] = "";
+      if (column_name === "visitTitle") {
+        fp.periodid = [];
+        fp.visitTitle = "";
+      }
+      applyFilter();
+    };
 
-        const getTopChildStat = computed(() => statData.tableData.reduce((acc, curr) => {
-            acc.eligible += parseInt(curr.eligible, 10) || 0;
-            acc.non_eligible += parseInt(curr.non_eligible, 10) || 0;
-            acc.referral += parseInt(curr.referral, 10) || 0;
-            acc.spaq1 += parseInt(curr.spaq1, 10) || 0;
-            acc.spaq2 += parseInt(curr.spaq2, 10) || 0;
-            acc.total += parseInt(curr.total, 10) || 0;
-            return acc;
-        }, { eligible: 0, non_eligible: 0, referral: 0, spaq1: 0, spaq2: 0, total: 0 }));
+    const getTopChildStat = computed(() =>
+      statData.tableData.reduce(
+        (acc, curr) => {
+          acc.eligible += parseInt(curr.eligible, 10) || 0;
+          acc.non_eligible += parseInt(curr.non_eligible, 10) || 0;
+          acc.referral += parseInt(curr.referral, 10) || 0;
+          acc.spaq1 += parseInt(curr.spaq1, 10) || 0;
+          acc.spaq2 += parseInt(curr.spaq2, 10) || 0;
+          acc.total += parseInt(curr.total, 10) || 0;
+          return acc;
+        },
+        {
+          eligible: 0,
+          non_eligible: 0,
+          referral: 0,
+          spaq1: 0,
+          spaq2: 0,
+          total: 0,
+        },
+      ),
+    );
 
-        onMounted(() => {
-            bus.on(EVT_APPLY, handleFilterChange);
-            bus.on(EVT_REFRESH, refreshData);
-            bus.on(EVT_CLEAR, clearAllFilter);
-            bus.on(EVT_REMOVE_SINGLE, removeSingleFilter);
-            loadTableData(0, '');
-        });
-        onBeforeUnmount(() => {
-            bus.off(EVT_APPLY, handleFilterChange);
-            bus.off(EVT_REFRESH, refreshData);
-            bus.off(EVT_CLEAR, clearAllFilter);
-            bus.off(EVT_REMOVE_SINGLE, removeSingleFilter);
-        });
+    onMounted(() => {
+      bus.on(EVT_APPLY, handleFilterChange);
+      bus.on(EVT_REFRESH, refreshData);
+      bus.on(EVT_CLEAR, clearAllFilter);
+      bus.on(EVT_REMOVE_SINGLE, removeSingleFilter);
+      loadTableData(0, "");
+    });
+    onBeforeUnmount(() => {
+      bus.off(EVT_APPLY, handleFilterChange);
+      bus.off(EVT_REFRESH, refreshData);
+      bus.off(EVT_CLEAR, clearAllFilter);
+      bus.off(EVT_REMOVE_SINGLE, removeSingleFilter);
+    });
 
-        return {
-            url, filterUrl, reportLevel,
-            lgaId, lgaName, wardId, wardName, dpId, dpName,
-            tableOptions, statData, series, chartOptions,
-            getTopChildStat,
-            loadTableData, controlBreadCrum,
-            capitalize: fmtUtils.capitalize,
-            convertStringNumberToFigures: fmtUtils.convertStringNumberToFigures,
-        };
-    },
-    template: `
+    return {
+      url,
+      filterUrl,
+      reportLevel,
+      lgaId,
+      lgaName,
+      wardId,
+      wardName,
+      dpId,
+      dpName,
+      tableOptions,
+      statData,
+      series,
+      chartOptions,
+      getTopChildStat,
+      loadTableData,
+      controlBreadCrum,
+      capitalize: fmtUtils.capitalize,
+      convertStringNumberToFigures: fmtUtils.convertStringNumberToFigures,
+    };
+  },
+  template: `
         <div class="row" id="basic-table">
             <div class="col-12">
                 <div class="breadcrumb-wrapper reporting-dashboard">
@@ -822,157 +933,185 @@ const DrugAdmin = {
 
 // ReferralAdmin — same event-driven shape as DrugAdmin (qid 1117/1118/1119).
 const ReferralAdmin = {
-    setup() {
-        const fmtUtils = useFormat();
+  setup() {
+    const fmtUtils = useFormat();
 
-        const url = ref(window.common && window.common.DataService);
-        const filterUrl = ref('');
-        const reportLevel = ref(1);
-        const filterId = ref('');
-        const lgaId = ref('');
-        const lgaName = ref('');
-        const wardId = ref('');
-        const wardName = ref('');
-        const dpId = ref('');
-        const dpName = ref('');
+    const url = ref(window.common && window.common.DataService);
+    const filterUrl = ref("");
+    const reportLevel = ref(1);
+    const filterId = ref("");
+    const lgaId = ref("");
+    const lgaName = ref("");
+    const wardId = ref("");
+    const wardName = ref("");
+    const dpId = ref("");
+    const dpName = ref("");
 
-        const tableOptions = reactive({
-            filterParam: { periodid: [], visitTitle: '', reportDate: '' },
-        });
-        const statData = reactive({ tableData: [], chartData: [] });
-        const series = ref([]);
-        const chartOptions = ref({ xaxis: { title: { text: '' } } });
+    const tableOptions = reactive({
+      filterParam: { periodid: [], visitTitle: "", reportDate: "" },
+    });
+    const statData = reactive({ tableData: [], chartData: [] });
+    const series = ref([]);
+    const chartOptions = ref({ xaxis: { title: { text: "" } } });
 
-        const loadTableData = (fId, title) => {
-            var fp = tableOptions.filterParam;
-            var periodIds = joinWithCommaAnd(fp.periodid.slice(), true);
-            var range = splitDateRange(fp.reportDate);
+    const loadTableData = (fId, title) => {
+      var fp = tableOptions.filterParam;
+      var periodIds = joinWithCommaAnd(fp.periodid.slice(), true);
+      var range = splitDateRange(fp.reportDate);
 
-            var queryUrl = url.value;
-            switch (reportLevel.value) {
-                case 1:
-                    filterId.value = 0;
-                    queryUrl += '?qid=1117';
-                    break;
-                case 2:
-                    lgaId.value = fId;
-                    lgaName.value = title || lgaName.value;
-                    queryUrl += '?qid=1118&filterId=' + lgaId.value;
-                    break;
-                case 3:
-                    wardId.value = fId;
-                    wardName.value = title || wardName.value;
-                    queryUrl += '?qid=1119&filterId=' + wardId.value;
-                    break;
-                default:
-                    return;
-            }
-            if (periodIds) queryUrl += '&pid=' + periodIds;
-            if (range.start) queryUrl += '&sdate=' + range.start;
-            if (range.end) queryUrl += '&edate=' + range.end;
+      var queryUrl = url.value;
+      switch (reportLevel.value) {
+        case 1:
+          filterId.value = 0;
+          queryUrl += "?qid=1117";
+          break;
+        case 2:
+          lgaId.value = fId;
+          lgaName.value = title || lgaName.value;
+          queryUrl += "?qid=1118&filterId=" + lgaId.value;
+          break;
+        case 3:
+          wardId.value = fId;
+          wardName.value = title || wardName.value;
+          queryUrl += "?qid=1119&filterId=" + wardId.value;
+          break;
+        default:
+          return;
+      }
+      if (periodIds) queryUrl += "&pid=" + periodIds;
+      if (range.start) queryUrl += "&sdate=" + range.start;
+      if (range.end) queryUrl += "&edate=" + range.end;
 
-            loadDashboardData(queryUrl);
+      loadDashboardData(queryUrl);
+    };
+    const loadDashboardData = async (u) => {
+      try {
+        overlay.show();
+        filterUrl.value = u;
+        var response = await axios.get(u);
+        if (response.data.result_code == 200) {
+          statData.tableData = response.data.data.table;
+          statData.chartData = response.data.data.chart;
+          statData.chartData.xAxisLabel = "Days";
+          reportLevel.value = response.data.level;
+          plotChart();
+        } else {
+          statData.tableData = [];
+          alert.Error("ERROR", response.data.message);
         }
-        const loadDashboardData = async (u) => {
-            try {
-                overlay.show();
-                filterUrl.value = u;
-                var response = await axios.get(u);
-                if (response.data.result_code == 200) {
-                    statData.tableData = response.data.data.table;
-                    statData.chartData = response.data.data.chart;
-                    statData.chartData.xAxisLabel = 'Days';
-                    reportLevel.value = response.data.level;
-                    plotChart();
-                } else {
-                    statData.tableData = [];
-                    alert.Error('ERROR', response.data.message);
-                }
-            } catch (error) {
-                alert.Error('ERROR', safeMessage(error));
-            } finally {
-                overlay.hide();
-            }
-        }
-        const handleFilterChange = (data) => {
-            tableOptions.filterParam.periodid = (data && data[0]) ? data[0].slice() : [];
-            tableOptions.filterParam.visitTitle = (data && data[1]) || '';
-            tableOptions.filterParam.reportDate = (data && data[2]) || '';
-            applyFilter();
-        }
-        const controlBreadCrum = (fId, level, title) => {
-            reportLevel.value = level;
-            loadTableData(fId, title);
-        }
-        const plotChart = () => {
-            chartOptions.value = makeBarChartOptions({
-                colors: ['#D7D8E2', '#4351F4'],
-                title: 'Referral',
-                stacked: false,
-                categories: (statData.chartData && statData.chartData[1]) || [],
-            });
-            series.value = (statData.chartData && statData.chartData[0]) || [];
-        }
-        const refreshData = () => { loadDashboardData(filterUrl.value); };
-        const applyFilter = () => {
-            var checkFill = 0;
-            if (tableOptions.filterParam.periodid.length > 0) checkFill++;
-            if ((tableOptions.filterParam.reportDate || '').length > 0) checkFill++;
-            if (checkFill > 0) {
-                var periodIds = joinWithCommaAnd(tableOptions.filterParam.periodid.slice(), true);
-                var u = cleanUrl(filterUrl.value) + buildFilterQs(periodIds, tableOptions.filterParam.reportDate);
-                loadDashboardData(u);
-            } else {
-                clearAllFilter();
-            }
-        }
-        const clearAllFilter = () => {
-            Object.assign(tableOptions.filterParam, { periodid: [], visitTitle: '', reportDate: '' });
-            loadDashboardData(cleanUrl(filterUrl.value));
-        }
-        const removeSingleFilter = (column_name) => {
-            var fp = tableOptions.filterParam;
-            if (Array.isArray(fp[column_name])) fp[column_name] = [];
-            else fp[column_name] = '';
-            if (column_name === 'visitTitle') {
-                fp.periodid = [];
-                fp.visitTitle = '';
-            }
-            applyFilter();
-        }
+      } catch (error) {
+        alert.Error("ERROR", safeMessage(error));
+      } finally {
+        overlay.hide();
+      }
+    };
+    const handleFilterChange = (data) => {
+      tableOptions.filterParam.periodid =
+        data && data[0] ? data[0].slice() : [];
+      tableOptions.filterParam.visitTitle = (data && data[1]) || "";
+      tableOptions.filterParam.reportDate = (data && data[2]) || "";
+      applyFilter();
+    };
+    const controlBreadCrum = (fId, level, title) => {
+      reportLevel.value = level;
+      loadTableData(fId, title);
+    };
+    const plotChart = () => {
+      chartOptions.value = makeBarChartOptions({
+        colors: ["#D7D8E2", "#4351F4"],
+        title: "Referral",
+        stacked: false,
+        categories: (statData.chartData && statData.chartData[1]) || [],
+      });
+      series.value = (statData.chartData && statData.chartData[0]) || [];
+    };
+    const refreshData = () => {
+      loadDashboardData(filterUrl.value);
+    };
+    const applyFilter = () => {
+      var checkFill = 0;
+      if (tableOptions.filterParam.periodid.length > 0) checkFill++;
+      if ((tableOptions.filterParam.reportDate || "").length > 0) checkFill++;
+      if (checkFill > 0) {
+        var periodIds = joinWithCommaAnd(
+          tableOptions.filterParam.periodid.slice(),
+          true,
+        );
+        var u =
+          cleanUrl(filterUrl.value) +
+          buildFilterQs(periodIds, tableOptions.filterParam.reportDate);
+        loadDashboardData(u);
+      } else {
+        clearAllFilter();
+      }
+    };
+    const clearAllFilter = () => {
+      Object.assign(tableOptions.filterParam, {
+        periodid: [],
+        visitTitle: "",
+        reportDate: "",
+      });
+      loadDashboardData(cleanUrl(filterUrl.value));
+    };
+    const removeSingleFilter = (column_name) => {
+      var fp = tableOptions.filterParam;
+      if (Array.isArray(fp[column_name])) fp[column_name] = [];
+      else fp[column_name] = "";
+      if (column_name === "visitTitle") {
+        fp.periodid = [];
+        fp.visitTitle = "";
+      }
+      applyFilter();
+    };
 
-        const getTopChildStat = computed(() => statData.tableData.reduce((acc, curr) => {
-            acc.referred += parseInt(curr.referred, 10) || 0;
-            acc.attended += parseInt(curr.attended, 10) || 0;
-            acc.total += parseInt(curr.total, 10) || 0;
-            return acc;
-        }, { referred: 0, attended: 0, total: 0 }));
+    const getTopChildStat = computed(() =>
+      statData.tableData.reduce(
+        (acc, curr) => {
+          acc.referred += parseInt(curr.referred, 10) || 0;
+          acc.attended += parseInt(curr.attended, 10) || 0;
+          acc.total += parseInt(curr.total, 10) || 0;
+          return acc;
+        },
+        { referred: 0, attended: 0, total: 0 },
+      ),
+    );
 
-        onMounted(() => {
-            bus.on(EVT_APPLY, handleFilterChange);
-            bus.on(EVT_REFRESH, refreshData);
-            bus.on(EVT_CLEAR, clearAllFilter);
-            bus.on(EVT_REMOVE_SINGLE, removeSingleFilter);
-            loadTableData(0, '');
-        });
-        onBeforeUnmount(() => {
-            bus.off(EVT_APPLY, handleFilterChange);
-            bus.off(EVT_REFRESH, refreshData);
-            bus.off(EVT_CLEAR, clearAllFilter);
-            bus.off(EVT_REMOVE_SINGLE, removeSingleFilter);
-        });
+    onMounted(() => {
+      bus.on(EVT_APPLY, handleFilterChange);
+      bus.on(EVT_REFRESH, refreshData);
+      bus.on(EVT_CLEAR, clearAllFilter);
+      bus.on(EVT_REMOVE_SINGLE, removeSingleFilter);
+      loadTableData(0, "");
+    });
+    onBeforeUnmount(() => {
+      bus.off(EVT_APPLY, handleFilterChange);
+      bus.off(EVT_REFRESH, refreshData);
+      bus.off(EVT_CLEAR, clearAllFilter);
+      bus.off(EVT_REMOVE_SINGLE, removeSingleFilter);
+    });
 
-        return {
-            url, filterUrl, reportLevel,
-            lgaId, lgaName, wardId, wardName, dpId, dpName,
-            tableOptions, statData, series, chartOptions,
-            getTopChildStat,
-            loadTableData, controlBreadCrum,
-            capitalize: fmtUtils.capitalize,
-            convertStringNumberToFigures: fmtUtils.convertStringNumberToFigures,
-        };
-    },
-    template: `
+    return {
+      url,
+      filterUrl,
+      reportLevel,
+      lgaId,
+      lgaName,
+      wardId,
+      wardName,
+      dpId,
+      dpName,
+      tableOptions,
+      statData,
+      series,
+      chartOptions,
+      getTopChildStat,
+      loadTableData,
+      controlBreadCrum,
+      capitalize: fmtUtils.capitalize,
+      convertStringNumberToFigures: fmtUtils.convertStringNumberToFigures,
+    };
+  },
+  template: `
         <div class="row" id="basic-table">
             <div class="col-12">
                 <div class="breadcrumb-wrapper reporting-dashboard">
@@ -1074,198 +1213,243 @@ const ReferralAdmin = {
 // of consecutive same-id rows; rowColSpan/hideCell drive the rowspan
 // markup). Has no chart of its own.
 const IccAdmin = {
-    setup() {
-        const fmtUtils = useFormat();
+  setup() {
+    const fmtUtils = useFormat();
 
-        const url = ref(window.common && window.common.DataService);
-        const filterUrl = ref('');
-        const reportLevel = ref(1);
-        const filterId = ref('');
-        const lgaId = ref('');
-        const lgaName = ref('');
-        const wardId = ref('');
-        const wardName = ref('');
-        const dpId = ref('');
-        const dpName = ref('');
+    const url = ref(window.common && window.common.DataService);
+    const filterUrl = ref("");
+    const reportLevel = ref(1);
+    const filterId = ref("");
+    const lgaId = ref("");
+    const lgaName = ref("");
+    const wardId = ref("");
+    const wardName = ref("");
+    const dpId = ref("");
+    const dpName = ref("");
 
-        const tableOptions = reactive({
-            filterParam: { periodid: [], visitTitle: '', reportDate: '' },
-        });
-        const statData = reactive({
-            tableData: [],
-            chartData: [],
-            firstDuplicateIds: [],
-            secondDuplicateIds: [],
-        });
+    const tableOptions = reactive({
+      filterParam: { periodid: [], visitTitle: "", reportDate: "" },
+    });
+    const statData = reactive({
+      tableData: [],
+      chartData: [],
+      firstDuplicateIds: [],
+      secondDuplicateIds: [],
+    });
 
-        const loadTableData = (fId, title) => {
-            var fp = tableOptions.filterParam;
-            var periodIds = joinWithCommaAnd(fp.periodid.slice(), true);
-            var range = splitDateRange(fp.reportDate);
+    const loadTableData = (fId, title) => {
+      var fp = tableOptions.filterParam;
+      var periodIds = joinWithCommaAnd(fp.periodid.slice(), true);
+      var range = splitDateRange(fp.reportDate);
 
-            var queryUrl = url.value;
-            switch (reportLevel.value) {
-                case 1:
-                    filterId.value = 0;
-                    queryUrl += '?qid=1120';
-                    break;
-                case 2:
-                    lgaId.value = fId;
-                    lgaName.value = title || lgaName.value;
-                    queryUrl += '?qid=1121&filterId=' + lgaId.value;
-                    break;
-                case 3:
-                    wardId.value = fId;
-                    wardName.value = title || wardName.value;
-                    queryUrl += '?qid=1122&filterId=' + wardId.value;
-                    break;
-                default:
-                    return;
-            }
-            if (periodIds) queryUrl += '&pid=' + periodIds;
-            if (range.start) queryUrl += '&sdate=' + range.start;
-            if (range.end) queryUrl += '&edate=' + range.end;
+      var queryUrl = url.value;
+      switch (reportLevel.value) {
+        case 1:
+          filterId.value = 0;
+          queryUrl += "?qid=1120";
+          break;
+        case 2:
+          lgaId.value = fId;
+          lgaName.value = title || lgaName.value;
+          queryUrl += "?qid=1121&filterId=" + lgaId.value;
+          break;
+        case 3:
+          wardId.value = fId;
+          wardName.value = title || wardName.value;
+          queryUrl += "?qid=1122&filterId=" + wardId.value;
+          break;
+        default:
+          return;
+      }
+      if (periodIds) queryUrl += "&pid=" + periodIds;
+      if (range.start) queryUrl += "&sdate=" + range.start;
+      if (range.end) queryUrl += "&edate=" + range.end;
 
-            loadDashboardData(queryUrl);
+      loadDashboardData(queryUrl);
+    };
+    const loadDashboardData = async (u) => {
+      try {
+        overlay.show();
+        filterUrl.value = u;
+        var response = await axios.get(u);
+        if (response.data.result_code == 200) {
+          statData.tableData = response.data.data;
+          var dupes = findDuplicateIds(response.data.data || []);
+          statData.firstDuplicateIds = dupes.duplicates;
+          statData.secondDuplicateIds = dupes.firstDuplicateOccurence;
+          reportLevel.value = response.data.level;
+        } else {
+          statData.tableData = [];
+          alert.Error("ERROR", response.data.message);
         }
-        const loadDashboardData = async (u) => {
-            try {
-                overlay.show();
-                filterUrl.value = u;
-                var response = await axios.get(u);
-                if (response.data.result_code == 200) {
-                    statData.tableData = response.data.data;
-                    var dupes = findDuplicateIds(response.data.data || []);
-                    statData.firstDuplicateIds = dupes.duplicates;
-                    statData.secondDuplicateIds = dupes.firstDuplicateOccurence;
-                    reportLevel.value = response.data.level;
-                } else {
-                    statData.tableData = [];
-                    alert.Error('ERROR', response.data.message);
-                }
-            } catch (error) {
-                alert.Error('ERROR', safeMessage(error));
-            } finally {
-                overlay.hide();
-            }
-        }
-        const handleFilterChange = (data) => {
-            tableOptions.filterParam.periodid = (data && data[0]) ? data[0].slice() : [];
-            tableOptions.filterParam.visitTitle = (data && data[1]) || '';
-            tableOptions.filterParam.reportDate = (data && data[2]) || '';
-            applyFilter();
-        }
-        const controlBreadCrum = (fId, level, title) => {
-            reportLevel.value = level;
-            loadTableData(fId, title);
-        }
-        const refreshData = () => { loadDashboardData(filterUrl.value); };
-        const applyFilter = () => {
-            var checkFill = 0;
-            if (tableOptions.filterParam.periodid.length > 0) checkFill++;
-            if ((tableOptions.filterParam.reportDate || '').length > 0) checkFill++;
-            if (checkFill > 0) {
-                var periodIds = joinWithCommaAnd(tableOptions.filterParam.periodid.slice(), true);
-                var u = cleanUrl(filterUrl.value) + buildFilterQs(periodIds, tableOptions.filterParam.reportDate);
-                loadDashboardData(u);
-            } else {
-                clearAllFilter();
-            }
-        }
-        const clearAllFilter = () => {
-            Object.assign(tableOptions.filterParam, { periodid: [], visitTitle: '', reportDate: '' });
-            loadDashboardData(cleanUrl(filterUrl.value));
-        }
-        const removeSingleFilter = (column_name) => {
-            var fp = tableOptions.filterParam;
-            if (Array.isArray(fp[column_name])) fp[column_name] = [];
-            else fp[column_name] = '';
-            if (column_name === 'visitTitle') {
-                fp.periodid = [];
-                fp.visitTitle = '';
-            }
-            applyFilter();
-        }
+      } catch (error) {
+        alert.Error("ERROR", safeMessage(error));
+      } finally {
+        overlay.hide();
+      }
+    };
+    const handleFilterChange = (data) => {
+      tableOptions.filterParam.periodid =
+        data && data[0] ? data[0].slice() : [];
+      tableOptions.filterParam.visitTitle = (data && data[1]) || "";
+      tableOptions.filterParam.reportDate = (data && data[2]) || "";
+      applyFilter();
+    };
+    const controlBreadCrum = (fId, level, title) => {
+      reportLevel.value = level;
+      loadTableData(fId, title);
+    };
+    const refreshData = () => {
+      loadDashboardData(filterUrl.value);
+    };
+    const applyFilter = () => {
+      var checkFill = 0;
+      if (tableOptions.filterParam.periodid.length > 0) checkFill++;
+      if ((tableOptions.filterParam.reportDate || "").length > 0) checkFill++;
+      if (checkFill > 0) {
+        var periodIds = joinWithCommaAnd(
+          tableOptions.filterParam.periodid.slice(),
+          true,
+        );
+        var u =
+          cleanUrl(filterUrl.value) +
+          buildFilterQs(periodIds, tableOptions.filterParam.reportDate);
+        loadDashboardData(u);
+      } else {
+        clearAllFilter();
+      }
+    };
+    const clearAllFilter = () => {
+      Object.assign(tableOptions.filterParam, {
+        periodid: [],
+        visitTitle: "",
+        reportDate: "",
+      });
+      loadDashboardData(cleanUrl(filterUrl.value));
+    };
+    const removeSingleFilter = (column_name) => {
+      var fp = tableOptions.filterParam;
+      if (Array.isArray(fp[column_name])) fp[column_name] = [];
+      else fp[column_name] = "";
+      if (column_name === "visitTitle") {
+        fp.periodid = [];
+        fp.visitTitle = "";
+      }
+      applyFilter();
+    };
 
-        const findDuplicateIds = (data) => {
-            var idMap = {};
-            var duplicates = [];
-            var firstDuplicateOccurence = [];
-            (data || []).forEach((item, index) => {
-                if (idMap[item.id] !== undefined) {
-                    duplicates.push(index);
-                    firstDuplicateOccurence.push(index - 1);
-                } else {
-                    idMap[item.id] = index;
-                }
-            });
-            return { duplicates: duplicates, firstDuplicateOccurence: firstDuplicateOccurence };
+    const findDuplicateIds = (data) => {
+      var idMap = {};
+      var duplicates = [];
+      var firstDuplicateOccurence = [];
+      (data || []).forEach((item, index) => {
+        if (idMap[item.id] !== undefined) {
+          duplicates.push(index);
+          firstDuplicateOccurence.push(index - 1);
+        } else {
+          idMap[item.id] = index;
         }
-        const rowColSpan = (index) => {
-            return statData.firstDuplicateIds.indexOf(index) !== -1;
-        }
-        const hideCell = (index) => {
-            return statData.secondDuplicateIds.indexOf(index) !== -1;
-        }
-        const groupStyle = (i) => {
-            var merged = statData.firstDuplicateIds.concat(statData.secondDuplicateIds);
-            return merged.indexOf(i) !== -1;
-        }
-        const total = (g) => {
-            return ['administered', 'redosed', 'wasted', 'loss'].reduce((sum, key) => sum + (parseInt(g[key] || 0, 10) || 0), 0);
-        }
+      });
+      return {
+        duplicates: duplicates,
+        firstDuplicateOccurence: firstDuplicateOccurence,
+      };
+    };
+    const rowColSpan = (index) => {
+      return statData.firstDuplicateIds.indexOf(index) !== -1;
+    };
+    const hideCell = (index) => {
+      return statData.secondDuplicateIds.indexOf(index) !== -1;
+    };
+    const groupStyle = (i) => {
+      var merged = statData.firstDuplicateIds.concat(
+        statData.secondDuplicateIds,
+      );
+      return merged.indexOf(i) !== -1;
+    };
+    const total = (g) => {
+      return ["administered", "redosed", "wasted", "loss"].reduce(
+        (sum, key) => sum + (parseInt(g[key] || 0, 10) || 0),
+        0,
+      );
+    };
 
-        const getTopIccStat = computed(() => statData.tableData.reduce((acc, item) => {
-            if (item.drug === 'SPAQ 1') {
-                acc.sumSpaq1Issued += parseInt(item.total_issued) || 0;
-                acc.sumSpaq1Administered += parseInt(item.administered) || 0;
-                acc.sumSpaq1Redosed += parseInt(item.redosed) || 0;
-                acc.sumSpaq1Wasted += parseInt(item.wasted) || 0;
-                acc.sumSpaq1Loss += parseInt(item.loss) || 0;
-                acc.sumSpaq1Facility += parseInt(item.count_facility) || 0;
-            } else if (item.drug === 'SPAQ 2') {
-                acc.sumSpaq2Issued += parseInt(item.total_issued) || 0;
-                acc.sumSpaq2Administered += parseInt(item.administered) || 0;
-                acc.sumSpaq2Redosed += parseInt(item.redosed) || 0;
-                acc.sumSpaq2Wasted += parseInt(item.wasted) || 0;
-                acc.sumSpaq2Loss += parseInt(item.loss) || 0;
-                acc.sumSpaq2Facility += parseInt(item.count_facility) || 0;
-            }
-            return acc;
-        }, {
-            sumSpaq1Issued: 0, sumSpaq1Administered: 0, sumSpaq1Redosed: 0,
-            sumSpaq1Wasted: 0, sumSpaq1Loss: 0, sumSpaq1Facility: 0,
-            sumSpaq2Issued: 0, sumSpaq2Administered: 0, sumSpaq2Redosed: 0,
-            sumSpaq2Wasted: 0, sumSpaq2Loss: 0, sumSpaq2Facility: 0,
-        }));
+    const getTopIccStat = computed(() =>
+      statData.tableData.reduce(
+        (acc, item) => {
+          if (item.drug === "SPAQ 1") {
+            acc.sumSpaq1Issued += parseInt(item.total_issued) || 0;
+            acc.sumSpaq1Administered += parseInt(item.administered) || 0;
+            acc.sumSpaq1Redosed += parseInt(item.redosed) || 0;
+            acc.sumSpaq1Wasted += parseInt(item.wasted) || 0;
+            acc.sumSpaq1Loss += parseInt(item.loss) || 0;
+            acc.sumSpaq1Facility += parseInt(item.count_facility) || 0;
+          } else if (item.drug === "SPAQ 2") {
+            acc.sumSpaq2Issued += parseInt(item.total_issued) || 0;
+            acc.sumSpaq2Administered += parseInt(item.administered) || 0;
+            acc.sumSpaq2Redosed += parseInt(item.redosed) || 0;
+            acc.sumSpaq2Wasted += parseInt(item.wasted) || 0;
+            acc.sumSpaq2Loss += parseInt(item.loss) || 0;
+            acc.sumSpaq2Facility += parseInt(item.count_facility) || 0;
+          }
+          return acc;
+        },
+        {
+          sumSpaq1Issued: 0,
+          sumSpaq1Administered: 0,
+          sumSpaq1Redosed: 0,
+          sumSpaq1Wasted: 0,
+          sumSpaq1Loss: 0,
+          sumSpaq1Facility: 0,
+          sumSpaq2Issued: 0,
+          sumSpaq2Administered: 0,
+          sumSpaq2Redosed: 0,
+          sumSpaq2Wasted: 0,
+          sumSpaq2Loss: 0,
+          sumSpaq2Facility: 0,
+        },
+      ),
+    );
 
-        onMounted(() => {
-            bus.on(EVT_APPLY, handleFilterChange);
-            bus.on(EVT_REFRESH, refreshData);
-            bus.on(EVT_CLEAR, clearAllFilter);
-            bus.on(EVT_REMOVE_SINGLE, removeSingleFilter);
-            loadTableData(0, '');
-        });
-        onBeforeUnmount(() => {
-            bus.off(EVT_APPLY, handleFilterChange);
-            bus.off(EVT_REFRESH, refreshData);
-            bus.off(EVT_CLEAR, clearAllFilter);
-            bus.off(EVT_REMOVE_SINGLE, removeSingleFilter);
-        });
+    onMounted(() => {
+      bus.on(EVT_APPLY, handleFilterChange);
+      bus.on(EVT_REFRESH, refreshData);
+      bus.on(EVT_CLEAR, clearAllFilter);
+      bus.on(EVT_REMOVE_SINGLE, removeSingleFilter);
+      loadTableData(0, "");
+    });
+    onBeforeUnmount(() => {
+      bus.off(EVT_APPLY, handleFilterChange);
+      bus.off(EVT_REFRESH, refreshData);
+      bus.off(EVT_CLEAR, clearAllFilter);
+      bus.off(EVT_REMOVE_SINGLE, removeSingleFilter);
+    });
 
-        return {
-            url, filterUrl, reportLevel,
-            lgaId, lgaName, wardId, wardName, dpId, dpName,
-            tableOptions, statData,
-            getTopIccStat,
-            loadTableData, controlBreadCrum,
-            rowColSpan, hideCell, groupStyle, total,
-            convertStringNumberToFigures: fmtUtils.convertStringNumberToFigures,
-            progressBarWidth: fmtUtils.progressBarWidth,
-            progressBarStatus: fmtUtils.progressBarStatus,
-        };
-    },
-    template: `
+    return {
+      url,
+      filterUrl,
+      reportLevel,
+      lgaId,
+      lgaName,
+      wardId,
+      wardName,
+      dpId,
+      dpName,
+      tableOptions,
+      statData,
+      getTopIccStat,
+      loadTableData,
+      controlBreadCrum,
+      rowColSpan,
+      hideCell,
+      groupStyle,
+      total,
+      convertStringNumberToFigures: fmtUtils.convertStringNumberToFigures,
+      progressBarWidth: fmtUtils.progressBarWidth,
+      progressBarStatus: fmtUtils.progressBarStatus,
+    };
+  },
+  template: `
         <div class="row" id="basic-table">
             <div class="col-12">
                 <div class="breadcrumb-wrapper reporting-dashboard">
@@ -1527,9 +1711,9 @@ const IccAdmin = {
 };
 
 useApp({ template: `<div><page-body/></div>` })
-    .component('page-body', PageBody)
-    .component('child_list', ChildList)
-    .component('drug_admin', DrugAdmin)
-    .component('referral_admin', ReferralAdmin)
-    .component('icc_admin', IccAdmin)
-    .mount('#app');
+  .component("page-body", PageBody)
+  .component("child_list", ChildList)
+  .component("drug_admin", DrugAdmin)
+  .component("referral_admin", ReferralAdmin)
+  .component("icc_admin", IccAdmin)
+  .mount("#app");

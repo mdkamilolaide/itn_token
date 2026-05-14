@@ -11,14 +11,20 @@ const { ref, reactive, onMounted, onBeforeUnmount } = Vue;
 const { useApp, useFormat, bus, safeMessage } = window.utils;
 
 const PageBody = {
-    setup() {
-        const page = ref('list');
-        const gotoPageHandler = (data) => { page.value = data && data.page; };
-        onMounted(() => { bus.on('g-event-goto-page', gotoPageHandler); });
-        onBeforeUnmount(() => { bus.off('g-event-goto-page', gotoPageHandler); });
-        return { page };
-    },
-    template: `
+  setup() {
+    const page = ref("list");
+    const gotoPageHandler = (data) => {
+      page.value = data && data.page;
+    };
+    onMounted(() => {
+      bus.on("g-event-goto-page", gotoPageHandler);
+    });
+    onBeforeUnmount(() => {
+      bus.off("g-event-goto-page", gotoPageHandler);
+    });
+    return { page };
+  },
+  template: `
         <div>
             <div class="content-body">
                 <div v-show="page == 'list'"><child_list/></div>
@@ -28,110 +34,138 @@ const PageBody = {
 };
 
 const ChildList = {
-    setup() {
-        const fmtUtils = useFormat();
+  setup() {
+    const fmtUtils = useFormat();
 
-        const url = ref(window.common && window.common.DataService);
-        const filterUrl = ref('');
-        const tableData = ref([]);
-        const childDetails = ref([]);
-        const reportLevel = ref(1);
-        const filterId = ref('');
-        const lgaId = ref('');
-        const lgaName = ref('');
-        const wardId = ref('');
-        const wardName = ref('');
-        const dpId = ref('');
-        const dpName = ref('');
-        const selectedChild = ref({});
+    const url = ref(window.common && window.common.DataService);
+    const filterUrl = ref("");
+    const tableData = ref([]);
+    const childDetails = ref([]);
+    const reportLevel = ref(1);
+    const filterId = ref("");
+    const lgaId = ref("");
+    const lgaName = ref("");
+    const wardId = ref("");
+    const wardName = ref("");
+    const dpId = ref("");
+    const dpName = ref("");
+    const selectedChild = ref({});
 
-        const loadTableData = (fid, title) => {
-            var lvl = reportLevel.value;
-            if (lvl == 1) {
-                filterId.value = 0;
-                loadCohortData(url.value + '?qid=1005');
-            } else if (lvl == 2) {
-                lgaId.value = fid;
-                lgaName.value = title != '' ? title : lgaName.value;
-                loadCohortData(url.value + '?qid=1006&filterId=' + lgaId.value);
-            } else if (lvl == 3) {
-                wardId.value = fid;
-                wardName.value = title != '' ? title : wardName.value;
-                loadCohortData(url.value + '?qid=1007&filterId=' + wardId.value);
-            } else if (lvl == 4) {
-                dpId.value = fid;
-                dpName.value = title != '' ? title : dpName.value;
-                loadCohortData(url.value + '?qid=1008&filterId=' + dpId.value);
-            }
+    const loadTableData = (fid, title) => {
+      var lvl = reportLevel.value;
+      if (lvl == 1) {
+        filterId.value = 0;
+        loadCohortData(url.value + "?qid=1005");
+      } else if (lvl == 2) {
+        lgaId.value = fid;
+        lgaName.value = title != "" ? title : lgaName.value;
+        loadCohortData(url.value + "?qid=1006&filterId=" + lgaId.value);
+      } else if (lvl == 3) {
+        wardId.value = fid;
+        wardName.value = title != "" ? title : wardName.value;
+        loadCohortData(url.value + "?qid=1007&filterId=" + wardId.value);
+      } else if (lvl == 4) {
+        dpId.value = fid;
+        dpName.value = title != "" ? title : dpName.value;
+        loadCohortData(url.value + "?qid=1008&filterId=" + dpId.value);
+      }
+    };
+    const loadCohortData = async (u) => {
+      try {
+        overlay.show();
+        filterUrl.value = u;
+        var response = await axios.get(u);
+        if (response.data.result_code == 200) {
+          tableData.value = response.data.data || [];
+          reportLevel.value = response.data.level;
+        } else {
+          tableData.value = [];
+          alert.Error("ERROR", response.data.message);
         }
-        const loadCohortData = async (u) => {
-            try {
-                overlay.show();
-                filterUrl.value = u;
-                var response = await axios.get(u);
-                if (response.data.result_code == 200) {
-                    tableData.value = response.data.data || [];
-                    reportLevel.value = response.data.level;
-                } else {
-                    tableData.value = [];
-                    alert.Error('ERROR', response.data.message);
-                }
-                overlay.hide();
-            } catch (error) {
-                overlay.hide();
-                alert.Error('ERROR', safeMessage(error));
-            }
+        overlay.hide();
+      } catch (error) {
+        overlay.hide();
+        alert.Error("ERROR", safeMessage(error));
+      }
+    };
+    const refreshData = () => {
+      loadCohortData(filterUrl.value);
+    };
+    const controlBreadCrum = (fid, lvl, title) => {
+      reportLevel.value = lvl;
+      loadTableData(fid, title);
+    };
+    const displayDayMonthYear = (d) => {
+      var date = new Date(d);
+      return date.toLocaleString("en-us", {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      });
+    };
+    const viewChildAdminDetails = async (beneficiary_id, id) => {
+      overlay.show();
+      selectedChild.value = tableData.value[id] || {};
+      try {
+        var response = await axios.get(
+          url.value + "?qid=1009&bid=" + beneficiary_id,
+        );
+        if (response.data.result_code == 200) {
+          childDetails.value = response.data.data || [];
+        } else {
+          childDetails.value = [];
+          selectedChild.value = {};
+          alert.Error("ERROR", response.data.message);
         }
-        const refreshData = () => { loadCohortData(filterUrl.value); };
-        const controlBreadCrum = (fid, lvl, title) => {
-            reportLevel.value = lvl;
-            loadTableData(fid, title);
-        }
-        const displayDayMonthYear = (d) => {
-            var date = new Date(d);
-            return date.toLocaleString('en-us', { year: 'numeric', month: 'long', day: 'numeric' });
-        }
-        const viewChildAdminDetails = async (beneficiary_id, id) => {
-            overlay.show();
-            selectedChild.value = tableData.value[id] || {};
-            try {
-                var response = await axios.get(url.value + '?qid=1009&bid=' + beneficiary_id);
-                if (response.data.result_code == 200) {
-                    childDetails.value = response.data.data || [];
-                } else {
-                    childDetails.value = [];
-                    selectedChild.value = {};
-                    alert.Error('ERROR', response.data.message);
-                }
-            } catch (error) {
-                alert.Error('ERROR', safeMessage(error));
-            }
-            $('#childAdminDetails').modal('show');
-            overlay.hide();
-        }
-        const hideViewChildAdminDetails = () => {
-            overlay.show();
-            selectedChild.value = {};
-            $('#childAdminDetails').modal('hide');
-            childDetails.value = [];
-            overlay.hide();
-        }
-        const checkIfEmpty = (data) => { return data === null || data === '' ? 'Nil' : data; };
+      } catch (error) {
+        alert.Error("ERROR", safeMessage(error));
+      }
+      $("#childAdminDetails").modal("show");
+      overlay.hide();
+    };
+    const hideViewChildAdminDetails = () => {
+      overlay.show();
+      selectedChild.value = {};
+      $("#childAdminDetails").modal("hide");
+      childDetails.value = [];
+      overlay.hide();
+    };
+    const checkIfEmpty = (data) => {
+      return data === null || data === "" ? "Nil" : data;
+    };
 
-        onMounted(() => { loadTableData(0, ''); });
+    onMounted(() => {
+      loadTableData(0, "");
+    });
 
-        return {
-            url, filterUrl, tableData, childDetails, reportLevel, filterId,
-            lgaId, lgaName, wardId, wardName, dpId, dpName, selectedChild,
-            loadTableData, loadCohortData, refreshData, controlBreadCrum,
-            displayDayMonthYear, viewChildAdminDetails, hideViewChildAdminDetails,
-            checkIfEmpty,
-            capitalize: fmtUtils.capitalize,
-            displayDate: fmtUtils.displayDate,
-            convertStringNumberToFigures: fmtUtils.convertStringNumberToFigures,
-        };
-    },
-    template: `
+    return {
+      url,
+      filterUrl,
+      tableData,
+      childDetails,
+      reportLevel,
+      filterId,
+      lgaId,
+      lgaName,
+      wardId,
+      wardName,
+      dpId,
+      dpName,
+      selectedChild,
+      loadTableData,
+      loadCohortData,
+      refreshData,
+      controlBreadCrum,
+      displayDayMonthYear,
+      viewChildAdminDetails,
+      hideViewChildAdminDetails,
+      checkIfEmpty,
+      capitalize: fmtUtils.capitalize,
+      displayDate: fmtUtils.displayDate,
+      convertStringNumberToFigures: fmtUtils.convertStringNumberToFigures,
+    };
+  },
+  template: `
         <div class="row" id="basic-table">
             <div class="col-md-10 col-sm-10 col-12 mb-0">
                 <h2 class="content-header-title header-txt float-left mb-0">SMC</h2>
@@ -260,6 +294,6 @@ const ChildList = {
 };
 
 useApp({ template: `<div><page-body/></div>` })
-    .component('page-body', PageBody)
-    .component('child_list', ChildList)
-    .mount('#app');
+  .component("page-body", PageBody)
+  .component("child_list", ChildList)
+  .mount("#app");

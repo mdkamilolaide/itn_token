@@ -8,11 +8,11 @@ const { useApp, useFormat, safeMessage } = window.utils;
 
 /* ------------------------------------------------------------------ */
 const PageBody = {
-    setup() {
-        const page = ref('home');
-        return { page };
-    },
-    template: `
+  setup() {
+    const page = ref("home");
+    return { page };
+  },
+  template: `
         <div>
             <div class="content-body">
                 <sample_table/>
@@ -23,174 +23,247 @@ const PageBody = {
 
 /* ------------------------------------------------------------------ */
 const SampleTable = {
-    setup() {
-        const fmtUtils = useFormat();
+  setup() {
+    const fmtUtils = useFormat();
 
-        const tableData = ref([]);
-        const filterState = ref(false);
-        const filters = ref(false);
-        const checkToggle = ref(false);
-        const userGroup = ref([]);
-        const permission = ref(
-            (typeof getPermission === 'function')
-                ? (getPermission(typeof per !== 'undefined' ? per : null, 'device') || { permission_value: 0 })
-                : { permission_value: 0 }
-        );
-        const tableOptions = reactive({
-            total: 1,
-            pageLength: 1,
-            perPage: 10,
-            currentPage: 1,
-            orderDir: 'desc',
-            orderField: 0,
-            limitStart: 0,
-            isNext: false,
-            isPrev: false,
-            aLength: [10, 20, 50, 100],
-            filterParam: { date: '', loginid: '', serial_no: '' },
+    const tableData = ref([]);
+    const filterState = ref(false);
+    const filters = ref(false);
+    const checkToggle = ref(false);
+    const userGroup = ref([]);
+    const permission = ref(
+      typeof getPermission === "function"
+        ? getPermission(typeof per !== "undefined" ? per : null, "device") || {
+            permission_value: 0,
+          }
+        : { permission_value: 0 },
+    );
+    const tableOptions = reactive({
+      total: 1,
+      pageLength: 1,
+      perPage: 10,
+      currentPage: 1,
+      orderDir: "desc",
+      orderField: 0,
+      limitStart: 0,
+      isNext: false,
+      isPrev: false,
+      aLength: [10, 20, 50, 100],
+      filterParam: { date: "", loginid: "", serial_no: "" },
+    });
+
+    let dateFlatpickr = null;
+
+    const loadTableData = () => {
+      overlay.show();
+      var url = common.TableService;
+      axios
+        .get(
+          url +
+            "?qid=602&draw=" +
+            tableOptions.currentPage +
+            "&order_column=" +
+            tableOptions.orderField +
+            "&length=" +
+            tableOptions.perPage +
+            "&start=" +
+            tableOptions.limitStart +
+            "&order_dir=" +
+            tableOptions.orderDir +
+            "&dat=" +
+            tableOptions.filterParam.date +
+            "&lid=" +
+            tableOptions.filterParam.loginid +
+            "&sno=" +
+            tableOptions.filterParam.serial_no,
+        )
+        .then((response) => {
+          var d = response && response.data;
+          tableData.value = Array.isArray(d && d.data) ? d.data : [];
+          tableOptions.total = (d && d.recordsTotal) || 0;
+          if (tableOptions.currentPage == 1) paginationDefault();
+          overlay.hide();
+        })
+        .catch((error) => {
+          overlay.hide();
+          alert.Error("ERROR", safeMessage(error));
         });
+    };
 
-        let dateFlatpickr = null;
+    const selectAll = () => {
+      for (var i = 0; i < tableData.value.length; i++)
+        tableData.value[i].pick = true;
+    };
+    const uncheckAll = () => {
+      for (var i = 0; i < tableData.value.length; i++)
+        tableData.value[i].pick = false;
+    };
+    const selectToggle = () => {
+      if (checkToggle.value === false) {
+        selectAll();
+        checkToggle.value = true;
+      } else {
+        uncheckAll();
+        checkToggle.value = false;
+      }
+    };
+    const checkedBg = (pickOne) => {
+      return pickOne != "" ? "bg-select" : "";
+    };
 
-        const loadTableData = () => {
-            overlay.show();
-            var url = common.TableService;
-            axios.get(
-                url +
-                '?qid=602&draw=' + tableOptions.currentPage +
-                '&order_column=' + tableOptions.orderField +
-                '&length=' + tableOptions.perPage +
-                '&start=' + tableOptions.limitStart +
-                '&order_dir=' + tableOptions.orderDir +
-                '&dat=' + tableOptions.filterParam.date +
-                '&lid=' + tableOptions.filterParam.loginid +
-                '&sno=' + tableOptions.filterParam.serial_no
-            )
-                .then(response => {
-                    var d = response && response.data;
-                    tableData.value = Array.isArray(d && d.data) ? d.data : [];
-                    tableOptions.total = (d && d.recordsTotal) || 0;
-                    if (tableOptions.currentPage == 1) paginationDefault();
-                    overlay.hide();
-                })
-                .catch(error => {
-                    overlay.hide();
-                    alert.Error('ERROR', safeMessage(error));
-                });
-        }
+    const toggleFilter = () => {
+      if (filterState.value === false) filters.value = false;
+      return (filterState.value = !filterState.value);
+    };
 
-        const selectAll = () => { for (var i = 0; i < tableData.value.length; i++) tableData.value[i].pick = true; };
-        const uncheckAll = () => { for (var i = 0; i < tableData.value.length; i++) tableData.value[i].pick = false; };
-        const selectToggle = () => {
-            if (checkToggle.value === false) { selectAll(); checkToggle.value = true; }
-            else                              { uncheckAll(); checkToggle.value = false; }
-        }
-        const checkedBg = (pickOne) => { return pickOne != '' ? 'bg-select' : ''; };
+    const selectedItems = () => {
+      return tableData.value.filter((r) => r.pick);
+    };
+    const selectedID = () => {
+      return tableData.value.filter((r) => r.pick).map((r) => r.serial_no);
+    };
 
-        const toggleFilter = () => {
-            if (filterState.value === false) filters.value = false;
-            return (filterState.value = !filterState.value);
-        }
+    const paginationDefault = () => {
+      tableOptions.pageLength = Math.ceil(
+        tableOptions.total / tableOptions.perPage,
+      );
+      tableOptions.limitStart = Math.ceil(
+        (tableOptions.currentPage - 1) * tableOptions.perPage,
+      );
+      tableOptions.isNext = tableOptions.currentPage < tableOptions.pageLength;
+      tableOptions.isPrev = tableOptions.currentPage > 1;
+    };
+    const nextPage = () => {
+      tableOptions.currentPage += 1;
+      paginationDefault();
+      loadTableData();
+    };
+    const prevPage = () => {
+      tableOptions.currentPage -= 1;
+      paginationDefault();
+      loadTableData();
+    };
+    const currentPage = () => {
+      paginationDefault();
+      if (tableOptions.currentPage < 1)
+        alert.Error("ERROR", "The Page requested doesn't exist");
+      else if (tableOptions.currentPage > tableOptions.pageLength)
+        alert.Error("ERROR", "The Page requested doesn't exist");
+      else loadTableData();
+    };
+    const changePerPage = (val) => {
+      var maxPerPage = Math.ceil(tableOptions.total / val);
+      if (maxPerPage < tableOptions.currentPage)
+        tableOptions.currentPage = maxPerPage;
+      tableOptions.perPage = val;
+      paginationDefault();
+      loadTableData();
+    };
+    const sort = (col) => {
+      if (tableOptions.orderField === col)
+        tableOptions.orderDir =
+          tableOptions.orderDir === "asc" ? "desc" : "asc";
+      else tableOptions.orderField = col;
+      paginationDefault();
+      loadTableData();
+    };
+    const applyFilter = () => {
+      var checkFill = 0;
+      checkFill += tableOptions.filterParam.loginid != "" ? 1 : 0;
+      checkFill += tableOptions.filterParam.serial_no != "" ? 1 : 0;
+      checkFill += tableOptions.filterParam.date != "" ? 1 : 0;
+      if (checkFill > 0) {
+        toggleFilter();
+        filters.value = true;
+        paginationDefault();
+        loadTableData();
+      } else {
+        alert.Error("ERROR", "Invalid required data");
+      }
+    };
+    const removeSingleFilter = (column_name) => {
+      tableOptions.filterParam[column_name] = "";
+      var g = 0;
+      for (var k in tableOptions.filterParam) {
+        if (tableOptions.filterParam[k] != "") g++;
+      }
+      if (g == 0) filters.value = false;
+      paginationDefault();
+      loadTableData();
+    };
+    const clearAllFilter = () => {
+      if (dateFlatpickr && typeof dateFlatpickr.clear === "function")
+        dateFlatpickr.clear();
+      filters.value = false;
+      tableOptions.filterParam.loginid = "";
+      tableOptions.filterParam.serial_no = "";
+      tableOptions.filterParam.date = "";
+      paginationDefault();
+      loadTableData();
+    };
+    const refreshData = () => {
+      paginationDefault();
+      loadTableData();
+    };
 
-        const selectedItems = () => { return tableData.value.filter(r => r.pick); };
-        const selectedID = () => { return tableData.value.filter(r => r.pick).map(r => r.serial_no); };
-
-        const paginationDefault = () => {
-            tableOptions.pageLength = Math.ceil(tableOptions.total / tableOptions.perPage);
-            tableOptions.limitStart = Math.ceil((tableOptions.currentPage - 1) * tableOptions.perPage);
-            tableOptions.isNext = tableOptions.currentPage < tableOptions.pageLength;
-            tableOptions.isPrev = tableOptions.currentPage > 1;
-        }
-        const nextPage = () => { tableOptions.currentPage += 1; paginationDefault(); loadTableData(); };
-        const prevPage = () => { tableOptions.currentPage -= 1; paginationDefault(); loadTableData(); };
-        const currentPage = () => {
-            paginationDefault();
-            if (tableOptions.currentPage < 1)                            alert.Error('ERROR', "The Page requested doesn't exist");
-            else if (tableOptions.currentPage > tableOptions.pageLength) alert.Error('ERROR', "The Page requested doesn't exist");
-            else                                                         loadTableData();
-        }
-        const changePerPage = (val) => {
-            var maxPerPage = Math.ceil(tableOptions.total / val);
-            if (maxPerPage < tableOptions.currentPage) tableOptions.currentPage = maxPerPage;
-            tableOptions.perPage = val;
-            paginationDefault();
-            loadTableData();
-        }
-        const sort = (col) => {
-            if (tableOptions.orderField === col) tableOptions.orderDir = tableOptions.orderDir === 'asc' ? 'desc' : 'asc';
-            else                                  tableOptions.orderField = col;
-            paginationDefault();
-            loadTableData();
-        }
-        const applyFilter = () => {
-            var checkFill = 0;
-            checkFill += tableOptions.filterParam.loginid   != '' ? 1 : 0;
-            checkFill += tableOptions.filterParam.serial_no != '' ? 1 : 0;
-            checkFill += tableOptions.filterParam.date      != '' ? 1 : 0;
-            if (checkFill > 0) {
-                toggleFilter();
-                filters.value = true;
-                paginationDefault();
-                loadTableData();
-            } else {
-                alert.Error('ERROR', 'Invalid required data');
-            }
-        }
-        const removeSingleFilter = (column_name) => {
-            tableOptions.filterParam[column_name] = '';
-            var g = 0;
-            for (var k in tableOptions.filterParam) {
-                if (tableOptions.filterParam[k] != '') g++;
-            }
-            if (g == 0) filters.value = false;
-            paginationDefault();
-            loadTableData();
-        }
-        const clearAllFilter = () => {
-            if (dateFlatpickr && typeof dateFlatpickr.clear === 'function') dateFlatpickr.clear();
-            filters.value = false;
-            tableOptions.filterParam.loginid = '';
-            tableOptions.filterParam.serial_no = '';
-            tableOptions.filterParam.date = '';
-            paginationDefault();
-            loadTableData();
-        }
-        const refreshData = () => { paginationDefault(); loadTableData(); };
-
-        onMounted(() => {
-            var $el = $('#date');
-            if ($el.length && typeof $el.flatpickr === 'function') {
-                dateFlatpickr = $el.flatpickr({
-                    altInput: true,
-                    altFormat: 'F j, Y',
-                    dateFormat: 'Y-m-d',
-                    onChange: (selectedDates, dateStr) => {
-                        tableOptions.filterParam.date = dateStr;
-                    },
-                });
-            }
-            loadTableData();
+    onMounted(() => {
+      var $el = $("#date");
+      if ($el.length && typeof $el.flatpickr === "function") {
+        dateFlatpickr = $el.flatpickr({
+          altInput: true,
+          altFormat: "F j, Y",
+          dateFormat: "Y-m-d",
+          onChange: (selectedDates, dateStr) => {
+            tableOptions.filterParam.date = dateStr;
+          },
         });
+      }
+      loadTableData();
+    });
 
-        onBeforeUnmount(() => {
-            if (dateFlatpickr && typeof dateFlatpickr.destroy === 'function') {
-                try { dateFlatpickr.destroy(); } catch (e) { /* swallow */ }
-                dateFlatpickr = null;
-            }
-        });
+    onBeforeUnmount(() => {
+      if (dateFlatpickr && typeof dateFlatpickr.destroy === "function") {
+        try {
+          dateFlatpickr.destroy();
+        } catch (e) {
+          /* swallow */
+        }
+        dateFlatpickr = null;
+      }
+    });
 
-        return {
-            tableData, filterState, filters, checkToggle, userGroup, permission, tableOptions,
-            loadTableData, selectAll, uncheckAll, selectToggle, checkedBg,
-            toggleFilter, selectedItems, selectedID,
-            nextPage, prevPage, currentPage, paginationDefault, changePerPage,
-            sort, applyFilter, removeSingleFilter, clearAllFilter, refreshData,
-            capitalize: fmtUtils.capitalize,
-            formatNumber: fmtUtils.formatNumber,
-            displayDate: fmtUtils.displayDate,
-        };
-    },
-    template: `
+    return {
+      tableData,
+      filterState,
+      filters,
+      checkToggle,
+      userGroup,
+      permission,
+      tableOptions,
+      loadTableData,
+      selectAll,
+      uncheckAll,
+      selectToggle,
+      checkedBg,
+      toggleFilter,
+      selectedItems,
+      selectedID,
+      nextPage,
+      prevPage,
+      currentPage,
+      paginationDefault,
+      changePerPage,
+      sort,
+      applyFilter,
+      removeSingleFilter,
+      clearAllFilter,
+      refreshData,
+      capitalize: fmtUtils.capitalize,
+      formatNumber: fmtUtils.formatNumber,
+      displayDate: fmtUtils.displayDate,
+    };
+  },
+  template: `
         <div class="row" id="basic-table">
 
             <div class="col-md-8 col-sm-12 col-12 mb-0">
@@ -367,6 +440,6 @@ const SampleTable = {
 };
 
 useApp({ template: `<div><page-body/></div>` })
-    .component('page-body', PageBody)
-    .component('sample_table', SampleTable)
-    .mount('#app');
+  .component("page-body", PageBody)
+  .component("sample_table", SampleTable)
+  .mount("#app");
